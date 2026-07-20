@@ -1,0 +1,763 @@
+from __future__ import annotations
+
+import csv
+import re
+import tkinter as tk
+import unicodedata
+import warnings
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from pathlib import Path
+from tkinter import filedialog, messagebox
+from typing import Any
+
+import customtkinter as ctk
+from openpyxl import Workbook, load_workbook
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+from automations.base import Automation
+from automations.ui import TableColumn, clear_table, create_result_table
+
+
+SOURCE_LABELS = {
+    "summary": "Folha mensal",
+    "inss": "INSS mensal",
+    "fgts": "FGTS mensal",
+    "vacation_receipt": "Recibo de férias",
+    "vacation_liquid": "Líquido de férias",
+    "vacation_provision": "Provisão de férias",
+    "thirteenth_provision": "Provisão de 13º",
+}
+REQUIRED_SOURCES = set(SOURCE_LABELS)
+DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "PROCESSOS AUTOMAÇÃO" / "ATIVIDADE 2 - FOLHA DE PAGAMENTO"
+
+
+@dataclass(frozen=True)
+class PostingRow:
+    source: str
+    source_line: int
+    organogram: str
+    cost_center: str
+    cost_center_name: str
+    event: str
+    description: str
+    debit: str
+    credit: str
+    value: Decimal
+    month_reference: int | None = None
+    credit_cost_center_only: bool = False
+
+    @property
+    def ready(self) -> bool:
+        return bool(self.cost_center and self.debit and self.credit and self.value)
+
+    @property
+    def status(self) -> str:
+        return "Dados completos" if self.ready else "De/para incompleto"
+
+
+@dataclass(frozen=True)
+class PayrollResult:
+    company: str
+    period_end: datetime
+    rows: list[PostingRow]
+    ignored_rows: int
+    files: dict[str, str]
+    warnings: list[str]
+
+    @property
+    def total(self) -> Decimal:
+        return sum((row.value for row in self.rows), Decimal())
+
+    @property
+    def ready(self) -> int:
+        return sum(row.ready for row in self.rows)
+
+    @property
+    def by_source(self) -> dict[str, list[PostingRow]]:
+        grouped: dict[str, list[PostingRow]] = defaultdict(list)
+        for row in self.rows:
+            grouped[row.source].append(row)
+        return dict(grouped)
+
+
+@dataclass(frozen=True)
+class Mappings:
+    descriptions: set[str]
+    events: dict[str, tuple[str, str]]
+    organograms: dict[str, tuple[str, str]]
+    organogram_codes: dict[str, tuple[str, str]]
+    provisions: dict[str, tuple[str, str]]
+    vacations: dict[str, tuple[str, str, str]]
+    rate_totals: dict[str, Decimal]
+
+
+def normalize(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    return re.sub(r"[^A-Z0-9]", "", "".join(char for char in text if not unicodedata.combining(char)).upper())
+
+
+def decimal_value(value: Any) -> Decimal:
+    if value in (None, "", "NULL", "-"):
+        return Decimal()
+    text = str(value).strip().replace("R$", "").replace(" ", "")
+    if "," in text:
+        text = text.replace(".", "").replace(",", ".")
+    try:
+        return Decimal(text)
+    except InvalidOperation:
+        return Decimal()
+
+
+def money(value: Decimal) -> str:
+    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def read_csv(path: Path) -> list[list[str]]:
+    raw = path.read_bytes()
+    for encoding in ("utf-8-sig", "cp1252", "latin1"):
+        try:
+            text = raw.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    return list(csv.reader(text.splitlines(), delimiter=";"))
+
+
+def identify_file(path: Path) -> str:
+    if path.suffix.lower() == ".csv":
+        sample = normalize("\n".join(";".join(row) for row in read_csv(path)[:80]))
+        markers = (
+            ("DEMONSTRATIVODEINSS", "inss"),
+            ("LIQUIDOSDEFERIAS", "vacation_liquid"),
+            ("RECIBODEFERIAS", "vacation_receipt"),
+            ("PROVISAODEFERIAS", "vacation_provision"),
+            ("PROVISAO13", "thirteenth_provision"),
+            ("RELACAODEEVENTOS", "fgts"),
+            ("RELACAODECALCULO", "summary"),
+        )
+        return next((kind for marker, kind in markers if marker in sample), "unknown")
+    if path.suffix.lower() not in {".xlsx", ".xlsm"}:
+        return "unknown"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        workbook = load_workbook(path, data_only=False, read_only=True)
+    sheets = {normalize(name) for name in workbook.sheetnames}
+    workbook.close()
+    return "template" if {"DEPARA", "RESULTADO"}.issubset(sheets) else "unknown"
+
+
+def _account(value: Any) -> str:
+    if value in (None, "", "#N/A"):
+        return ""
+    return str(int(value)) if isinstance(value, float) and value.is_integer() else str(value).strip()
+
+
+def _organogram_code(value: str) -> str:
+    match = re.search(r"(?:ORGRANOGRAMA|ORGANOGRAMA)(\d+(?:\d|\.)*)", normalize(value))
+    return (match.group(1).strip(".") if match else "")
+
+
+def read_mappings(path: Path) -> Mappings:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        formulas = load_workbook(path, data_only=False, read_only=False, keep_vba=path.suffix.lower() == ".xlsm")
+        values = load_workbook(path, data_only=True, read_only=False, keep_vba=path.suffix.lower() == ".xlsm")
+    try:
+        sheet = values["DEPARA"]
+        descriptions = {normalize(sheet.cell(row, 2).value) for row in range(3, sheet.max_row + 1) if sheet.cell(row, 2).value}
+        events: dict[str, tuple[str, str]] = {}
+        for row in range(3, sheet.max_row + 1):
+            event = sheet.cell(row, 4).value
+            if event is not None:
+                events[str(int(event)) if isinstance(event, float) else str(event).strip()] = (
+                    _account(sheet.cell(row, 7).value), _account(sheet.cell(row, 8).value)
+                )
+
+        organograms: dict[str, tuple[str, str]] = {}
+        organogram_codes: dict[str, tuple[str, str]] = {}
+        for row in range(3, 60):
+            source = sheet.cell(row, 12).value
+            if not source:
+                continue
+            mapped = (_account(sheet.cell(row, 13).value), str(sheet.cell(row, 14).value or "").strip())
+            organograms[normalize(source)] = mapped
+            code = _organogram_code(str(source))
+            if code:
+                organogram_codes[code] = mapped
+
+        provisions = {}
+        for row in range(3, 30):
+            event = sheet.cell(row, 20).value
+            if event:
+                provisions[normalize(event)] = (_account(sheet.cell(row, 21).value), _account(sheet.cell(row, 22).value))
+
+        vacations = {}
+        for row in range(3, 40):
+            code = sheet.cell(row, 26).value
+            if code is not None:
+                vacations[str(int(code)) if isinstance(code, float) else str(code).strip()] = (
+                    str(sheet.cell(row, 27).value or "").strip(),
+                    _account(sheet.cell(row, 28).value),
+                    _account(sheet.cell(row, 29).value),
+                )
+
+        rate_events = ("REF PLANO ODONTOLOGICO", "REF PLANO DE SAUDE", "REF INSS MENSAL", "REF FGTS MENSAL")
+        rate_totals = {
+            event: decimal_value(values["C"].cell(2, column).value)
+            for event, column in zip(rate_events, range(14, 18))
+        }
+        return Mappings(descriptions, events, organograms, organogram_codes, provisions, vacations, rate_totals)
+    finally:
+        formulas.close()
+        values.close()
+
+
+def lookup_organogram(mappings: Mappings, value: str) -> tuple[str, str]:
+    exact = mappings.organograms.get(normalize(value))
+    if exact:
+        return exact
+    return mappings.organogram_codes.get(_organogram_code(value), ("", ""))
+
+
+def extract_period(rows: list[list[str]]) -> datetime:
+    for row in rows:
+        text = " ".join(row)
+        if "PER" not in normalize(text) and "COMPETENCIA" not in normalize(text):
+            continue
+        dates = re.findall(r"\d{2}/\d{2}/\d{4}", text)
+        if dates:
+            return datetime.strptime(dates[-1], "%d/%m/%Y")
+        month = re.search(r"(\d{2})/(\d{4})", text)
+        if month:
+            month_number, year = map(int, month.groups())
+            next_month = datetime(year + (month_number == 12), month_number % 12 + 1, 1)
+            return datetime.fromtimestamp(next_month.timestamp() - 86400)
+    raise ValueError("Não foi possível identificar a competência dos relatórios.")
+
+
+def parse_monthly(rows: list[list[str]], mappings: Mappings) -> tuple[list[PostingRow], int]:
+    current_organogram = ""
+    include = False
+    completed = False
+    selected_since_total = 0
+    ignored = 0
+    result: list[PostingRow] = []
+    for line_number, row in enumerate(rows, 1):
+        first = row[0].strip() if row else ""
+        description = row[1].strip() if len(row) > 1 else ""
+        marker = normalize(first)
+        if marker.startswith(("ORGRANOGRAMA", "ORGANOGRAMA")):
+            current_organogram, include, completed, selected_since_total = first, False, False, 0
+        if marker.endswith("NORMAL") or marker.startswith("SITUACAO"):
+            include = False
+        elif marker == "TOTALIRRF":
+            if selected_since_total:
+                completed, include = True, False
+            elif not completed:
+                include = True
+        is_event = bool(re.fullmatch(r"\d+(?:\.0+)?", first)) and normalize(description) in mappings.descriptions
+        if not is_event:
+            continue
+        if completed or not include:
+            ignored += 1
+            continue
+        event = str(int(float(first)))
+        earnings = decimal_value(row[3] if len(row) > 3 else None)
+        deductions = decimal_value(row[4] if len(row) > 4 else None)
+        value = earnings or deductions
+        if not value:
+            continue
+        debit, credit = mappings.events.get(event, ("", ""))
+        cost_center, cost_center_name = lookup_organogram(mappings, current_organogram)
+        result.append(PostingRow("Folha mensal", line_number, current_organogram, cost_center,
+                                 cost_center_name, event, description, debit, credit, value))
+        selected_since_total += 1
+    return result, ignored
+
+
+def parse_provision(rows: list[list[str]], mappings: Mappings, thirteenth: bool) -> tuple[list[PostingRow], int]:
+    current_organogram = ""
+    aggregate_section = False
+    result: list[PostingRow] = []
+    ignored = 0
+    labels = (
+        (("Provisão 13°", 1), ("Provisão 13° INSS", 2), ("Provisão 13° FGTS", 3))
+        if thirteenth else
+        (("Provisão Férias", 1), ("1/3 s/ Férias", 2), ("Provisão Férias INSS", 3), ("Provisão Férias FGTS", 4))
+    )
+    source = "Provisão de 13º" if thirteenth else "Provisão de férias"
+    for line_number, row in enumerate(rows, 1):
+        first = row[0].strip() if row else ""
+        marker = normalize(first)
+        if marker.startswith("ORGANOGRAMA"):
+            current_organogram = first
+            aggregate_section = False
+        elif marker.startswith(("TOTALDAFILIAL", "TOTALDAEMPRESA")):
+            aggregate_section = True
+        if marker != "PROVISAOMES" or not current_organogram:
+            continue
+        if aggregate_section:
+            ignored += 1
+            continue
+        cost_center, cost_center_name = lookup_organogram(mappings, current_organogram)
+        for description, column in labels:
+            value = decimal_value(row[column] if len(row) > column else None)
+            if not value:
+                continue
+            debit, credit = mappings.provisions.get(normalize(description), ("", ""))
+            result.append(PostingRow(source, line_number, current_organogram, cost_center,
+                                     cost_center_name, "", description, debit, credit, value))
+    return result, ignored
+
+
+def parse_vacation_employees(rows: list[list[str]], mappings: Mappings) -> tuple[dict[str, tuple[str, str, str]], int]:
+    current_organogram = ""
+    employees: dict[str, tuple[str, str, str]] = {}
+    ignored = 0
+    for row in rows:
+        first = row[0].strip() if row else ""
+        marker = normalize(first)
+        if marker.startswith("ORGANOGRAMA"):
+            current_organogram = first
+        elif marker.startswith("TOTAL"):
+            ignored += 1
+        elif re.fullmatch(r"\d+", first) and len(row) > 1:
+            cost_center, cost_center_name = lookup_organogram(mappings, current_organogram)
+            employees[normalize(row[1])] = (cost_center, cost_center_name, current_organogram)
+    return employees, ignored
+
+
+def parse_vacation_receipts(rows: list[list[str]], employees: dict[str, tuple[str, str, str]],
+                            mappings: Mappings, month: int) -> list[PostingRow]:
+    employee = ""
+    result: list[PostingRow] = []
+    for line_number, row in enumerate(rows, 1):
+        first = row[0].strip() if row else ""
+        if normalize(first).startswith("FUNCIONARIO"):
+            employee = next((str(value).strip() for value in row[3:] if str(value).strip()), "")
+            continue
+        if not employee or not re.fullmatch(r"\d+(?:\.0+)?", first):
+            continue
+        event = str(int(float(first)))
+        if event not in mappings.vacations:
+            continue
+        description, debit, credit = mappings.vacations[event]
+        value = decimal_value(row[4] if len(row) > 4 else None) or decimal_value(row[5] if len(row) > 5 else None)
+        if not value:
+            continue
+        cost_center, cost_center_name, organogram = employees.get(normalize(employee), ("", "", ""))
+        result.append(PostingRow("Férias", line_number, organogram, cost_center, cost_center_name,
+                                 event, f"{employee} - {description}", debit, credit, value, month, True))
+    return result
+
+
+def extract_fgts_total(rows: list[list[str]]) -> Decimal:
+    totals = [decimal_value(row[3]) for row in rows if len(row) > 3 and normalize(row[0]).startswith("QUANTIDADEFUNC")]
+    return next((value for value in reversed(totals) if value), Decimal())
+
+
+def extract_inss_total(rows: list[list[str]]) -> Decimal:
+    total_row = next((row for row in reversed(rows) if row and normalize(row[0]).startswith("TOTALEMPRESATIPOCALCULO")), [])
+    gps_row = next((row for row in reversed(rows) if row and normalize(row[0]).startswith("TOTALGPS")), [])
+    if len(total_row) <= 7 or len(gps_row) <= 1:
+        return Decimal()
+    return decimal_value(gps_row[1]) - decimal_value(total_row[4]) - decimal_value(total_row[7])
+
+
+def allocate(total: Decimal, weights: dict[str, Decimal]) -> dict[str, Decimal]:
+    active = [(key, value) for key, value in sorted(weights.items()) if value > 0]
+    denominator = sum((value for _, value in active), Decimal())
+    if not total or not denominator:
+        return {}
+    result: dict[str, Decimal] = {}
+    assigned = Decimal()
+    for index, (key, weight) in enumerate(active):
+        value = total - assigned if index == len(active) - 1 else (total * weight / denominator).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        result[key] = value
+        assigned += value
+    return result
+
+
+def build_rates(monthly: list[PostingRow], mappings: Mappings, inss_total: Decimal,
+                fgts_total: Decimal, period_end: datetime) -> tuple[list[PostingRow], list[str]]:
+    weights: dict[str, Decimal] = defaultdict(Decimal)
+    names: dict[str, str] = {}
+    for row in monthly:
+        if row.cost_center:
+            weights[row.cost_center] += row.value
+            names[row.cost_center] = row.cost_center_name
+    totals = dict(mappings.rate_totals)
+    validation: list[str] = []
+    for event, source_total in (("REF INSS MENSAL", inss_total), ("REF FGTS MENSAL", fgts_total)):
+        model_total = totals.get(event, Decimal())
+        if source_total:
+            totals[event] = source_total
+            if model_total and abs(model_total - source_total) > Decimal("0.01"):
+                validation.append(f"{event}: modelo {money(model_total)}; relatório atual {money(source_total)}. Foi usado o relatório.")
+    result: list[PostingRow] = []
+    for event, total in totals.items():
+        debit, credit = mappings.provisions.get(normalize(event), ("", ""))
+        for cost_center, value in allocate(total, weights).items():
+            result.append(PostingRow("Rateios mensais", 0, "Rateio proporcional da folha", cost_center,
+                                     names.get(cost_center, ""), "", event, debit, credit, value))
+    return result, validation
+
+
+def _default_template() -> Path | None:
+    return next(DEFAULT_TEMPLATE_DIR.glob("*.xlsm"), None) if DEFAULT_TEMPLATE_DIR.exists() else None
+
+
+def analyze(paths: list[Path]) -> PayrollResult:
+    identified = [(path, identify_file(path)) for path in paths]
+    unknown = [path.name for path, kind in identified if kind == "unknown"]
+    if unknown:
+        raise ValueError(f"Arquivo não reconhecido pelo conteúdo: {', '.join(unknown)}.")
+    grouped: dict[str, list[Path]] = defaultdict(list)
+    for path, kind in identified:
+        grouped[kind].append(path)
+    duplicated = [SOURCE_LABELS.get(kind, kind) for kind, items in grouped.items() if kind != "template" and len(items) > 1]
+    if duplicated:
+        raise ValueError(f"Há mais de um arquivo para: {', '.join(duplicated)}.")
+    missing = [SOURCE_LABELS[kind] for kind in SOURCE_LABELS if not grouped.get(kind)]
+    if missing:
+        raise ValueError(f"Faltam {len(missing)} relatório(s): {', '.join(sorted(missing))}.")
+    templates = grouped.get("template", [])
+    template = templates[0] if len(templates) == 1 else _default_template()
+    if len(templates) > 1:
+        raise ValueError("Selecione no máximo uma planilha modelo .xlsm.")
+    if not template:
+        raise ValueError("A planilha modelo da atividade 2 não foi encontrada.")
+
+    sources = {kind: read_csv(grouped[kind][0]) for kind in REQUIRED_SOURCES}
+    mappings = read_mappings(template)
+    period_end = extract_period(sources["summary"])
+    company = next((row[0].strip() for row in sources["summary"] if row and "HOTEL" in normalize(row[0])), "Empresa não identificada")
+
+    monthly, monthly_ignored = parse_monthly(sources["summary"], mappings)
+    vacation_provision, vacation_ignored = parse_provision(sources["vacation_provision"], mappings, False)
+    thirteenth, thirteenth_ignored = parse_provision(sources["thirteenth_provision"], mappings, True)
+    employees, liquid_ignored = parse_vacation_employees(sources["vacation_liquid"], mappings)
+    vacations = parse_vacation_receipts(sources["vacation_receipt"], employees, mappings, period_end.month)
+    rates, validation = build_rates(monthly, mappings, extract_inss_total(sources["inss"]),
+                                    extract_fgts_total(sources["fgts"]), period_end)
+    rows = monthly + vacations + vacation_provision + thirteenth + rates
+    if not rows:
+        raise ValueError("Nenhum lançamento foi encontrado nos relatórios selecionados.")
+    rows.sort(key=lambda item: (item.source, not item.ready, item.cost_center, item.description, item.source_line))
+    files = {SOURCE_LABELS[kind]: grouped[kind][0].name for kind in REQUIRED_SOURCES}
+    return PayrollResult(company, period_end, rows,
+                         monthly_ignored + vacation_ignored + thirteenth_ignored + liquid_ignored,
+                         files, validation)
+
+
+def _write_import_sheet(workbook: Workbook, title: str, rows: list[PostingRow], period_end: datetime) -> None:
+    sheet = workbook.create_sheet(title)
+    for row in rows:
+        if not row.ready:
+            continue
+        sheet.append([1, "A", period_end, None, int(row.debit), None,
+                      "" if row.credit_cost_center_only else row.cost_center,
+                      int(row.credit), None, row.cost_center, row.description,
+                      row.month_reference, float(row.value)])
+    sheet.column_dimensions["C"].width = 13
+    sheet.column_dimensions["K"].width = 58
+    for cell in sheet["C"]:
+        cell.number_format = "dd/mm/yyyy"
+    for cell in sheet["M"]:
+        cell.number_format = "#,##0.00"
+
+
+def save_excel(result: PayrollResult, path: Path) -> None:
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    names = {
+        "Folha mensal": "Folha_Mensal",
+        "Férias": "Ferias",
+        "Provisão de férias": "Provisao_Ferias",
+        "Provisão de 13º": "Provisao_13",
+        "Rateios mensais": "Rateios_Mensais",
+    }
+    for source, title in names.items():
+        _write_import_sheet(workbook, title, result.by_source.get(source, []), result.period_end)
+
+    summary = workbook.create_sheet("Resumo", 0)
+    summary.append(["Indicador", "Resultado"])
+    indicators = [
+        ("Empresa", result.company), ("Competência", result.period_end.strftime("%m/%Y")),
+        ("Relatórios reconhecidos", len(result.files)), ("Lançamentos gerados", len(result.rows)),
+        ("Lançamentos com dados completos", result.ready), ("De/para incompleto", len(result.rows) - result.ready),
+        ("Totalizadores/duplicadores excluídos", result.ignored_rows), ("Valor total dos lançamentos", float(result.total)),
+    ]
+    for label, value in indicators:
+        summary.append([label, value])
+    summary.append([])
+    summary.append(["Origem", "Arquivo", "Lançamentos", "Valor"])
+    for source, filename in sorted(result.files.items()):
+        label = SOURCE_LABELS.get(next((key for key, value in SOURCE_LABELS.items() if value == source), ""), source)
+        posting_source = "Férias" if source == "Recibo de férias" else source
+        rows = result.by_source.get(posting_source, [])
+        summary.append([label, filename, len(rows), float(sum((row.value for row in rows), Decimal()))])
+    if result.warnings:
+        summary.append([])
+        summary.append(["Validações"])
+        for warning in result.warnings:
+            summary.append([warning])
+    for cell in summary[1]:
+        cell.style = "Headline 4"
+    summary.column_dimensions["A"].width = 48
+    summary.column_dimensions["B"].width = 75
+    summary.column_dimensions["C"].width = 18
+    summary.column_dimensions["D"].width = 22
+    for row in summary.iter_rows():
+        for cell in row:
+            if cell.column == 4 and isinstance(cell.value, float):
+                cell.number_format = 'R$ #,##0.00'
+
+    details = workbook.create_sheet("Detalhamento")
+    details.append(["Fonte", "Linha origem", "Organograma", "Centro de custo", "Nome do CC", "Evento",
+                    "Descrição", "Débito", "Crédito", "Valor", "Situação"])
+    for row in result.rows:
+        details.append([row.source, row.source_line or "Rateio", row.organogram, row.cost_center,
+                        row.cost_center_name, row.event, row.description, row.debit, row.credit,
+                        float(row.value), row.status])
+    for cell in details[1]:
+        cell.style = "Headline 4"
+    for cell in details["J"][1:]:
+        cell.number_format = 'R$ #,##0.00'
+    for column, width in {"A": 23, "B": 14, "C": 42, "D": 16, "E": 25, "F": 12,
+                          "G": 58, "H": 16, "I": 16, "J": 18, "K": 23}.items():
+        details.column_dimensions[column].width = width
+    details.freeze_panes = "A2"
+    details.auto_filter.ref = details.dimensions
+    workbook.save(path)
+
+
+def save_pdf(result: PayrollResult, path: Path) -> None:
+    styles = getSampleStyleSheet()
+    data = [["Saída", "Lançamentos", "Valor"]]
+    for source, rows in result.by_source.items():
+        data.append([source, str(len(rows)), money(sum((row.value for row in rows), Decimal()))])
+    data.append(["TOTAL", str(len(result.rows)), money(result.total)])
+    table = Table(data, colWidths=[80 * mm, 45 * mm, 55 * mm])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#24588A")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), .5, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.HexColor("#EEF3F8")]),
+    ]))
+    story = [Paragraph("Lançamento da Folha de Pagamento", styles["Title"]), Spacer(1, 3 * mm),
+             Paragraph(f"{result.company} — competência {result.period_end:%m/%Y}", styles["BodyText"]),
+             Spacer(1, 5 * mm), table, Spacer(1, 5 * mm),
+             Paragraph(f"Foram excluídos {result.ignored_rows} totalizadores ou registros duplicadores.", styles["BodyText"])]
+    for warning in result.warnings:
+        story.append(Paragraph(f"Validação: {warning}", styles["BodyText"]))
+    document = SimpleDocTemplate(str(path), pagesize=landscape(A4), title="Lançamento da Folha de Pagamento")
+    document.build(story)
+
+
+class PayrollPostingAutomation(Automation):
+    name = "Lançamento da Folha de Pagamento"
+
+    def __init__(self, app, container):
+        super().__init__(app, container)
+        self.paths: list[Path] = []
+        self.result: PayrollResult | None = None
+        self.output_format = ctk.StringVar(value="Excel")
+        self.status_filter = ctk.StringVar(value="Todos")
+        self.source_filter = ctk.StringVar(value="Todas as saídas")
+        self.search = ctk.StringVar()
+        self.page = 0
+        self.page_size = 50
+
+    def render(self):
+        self.container.grid_columnconfigure(0, weight=1)
+        self.container.grid_rowconfigure(6, weight=1)
+        ctk.CTkLabel(self.container, text=self.name, font=ctk.CTkFont(size=26, weight="bold")).grid(row=0, column=0, padx=30, pady=(22, 3), sticky="w")
+        ctk.CTkLabel(self.container, text="Transforma os sete relatórios do DP em lançamentos contábeis por centro de custo, sem totalizadores duplicados.", text_color="gray70").grid(row=1, column=0, padx=30, pady=(0, 10), sticky="w")
+        controls = ctk.CTkFrame(self.container, fg_color="transparent")
+        controls.grid(row=2, column=0, padx=30, sticky="ew")
+        self.select = ctk.CTkButton(controls, text="Selecionar os 7 relatórios", command=self._select)
+        self.select.pack(side="left", padx=(0, 10))
+        ctk.CTkSegmentedButton(controls, values=["Excel", "PDF"], variable=self.output_format).pack(side="left", padx=10)
+        self.export = ctk.CTkButton(controls, text="Exportar resultado", state="disabled", command=self._export)
+        self.export.pack(side="left", padx=10)
+        ctk.CTkButton(controls, text="Limpar", fg_color="gray35", command=self._clear).pack(side="left", padx=10)
+        self.info = ctk.CTkLabel(self.container, text="Selecione: resumo mensal, INSS, FGTS, recibo e líquido de férias, provisão de férias e provisão de 13º.", text_color="gray70", anchor="w")
+        self.info.grid(row=3, column=0, padx=30, pady=(10, 6), sticky="ew")
+
+        dashboard = ctk.CTkFrame(self.container, fg_color="transparent")
+        dashboard.grid(row=4, column=0, padx=30, pady=(0, 8), sticky="ew")
+        dashboard.grid_columnconfigure(0, weight=3)
+        dashboard.grid_columnconfigure(1, weight=1)
+        cards = ctk.CTkFrame(dashboard, fg_color="transparent")
+        cards.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
+        self.cards = {}
+        for index, title in enumerate(("Arquivos reconhecidos", "Dados completos", "Valor processado", "Totalizadores excluídos")):
+            cards.grid_columnconfigure(index, weight=1)
+            card = ctk.CTkFrame(cards)
+            card.grid(row=0, column=index, padx=(0 if index == 0 else 5, 0), sticky="nsew")
+            ctk.CTkLabel(card, text=title, text_color="gray70").pack(pady=(8, 0))
+            label = ctk.CTkLabel(card, text="—", font=ctk.CTkFont(size=16, weight="bold"))
+            label.pack(pady=(0, 8))
+            self.cards[title] = label
+        chart_frame = ctk.CTkFrame(dashboard)
+        chart_frame.grid(row=0, column=1, sticky="nsew")
+        ctk.CTkLabel(chart_frame, text="Validação dos lançamentos", font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(6, 0))
+        self.chart = tk.Canvas(chart_frame, height=125, bg="#2b2b2b", highlightthickness=0)
+        self.chart.pack(fill="x", padx=8)
+        self.chart.bind("<Configure>", lambda _: self._draw_chart())
+
+        filters = ctk.CTkFrame(self.container, fg_color="transparent")
+        filters.grid(row=5, column=0, padx=30, pady=(0, 8), sticky="ew")
+        filters.grid_columnconfigure(4, weight=1)
+        ctk.CTkSegmentedButton(filters, values=["Todos", "Completos", "De/para incompleto"], variable=self.status_filter, command=lambda _: self._reset()).grid(row=0, column=0, padx=(0, 12))
+        self.source_menu = ctk.CTkOptionMenu(filters, values=["Todas as saídas"], variable=self.source_filter, command=lambda _: self._reset(), width=180)
+        self.source_menu.grid(row=0, column=1, padx=(0, 12))
+        ctk.CTkLabel(filters, text="Buscar:").grid(row=0, column=2, padx=(0, 8))
+        entry = ctk.CTkEntry(filters, textvariable=self.search, placeholder_text="Fonte, evento, descrição, organograma ou centro de custo")
+        entry.grid(row=0, column=4, sticky="ew")
+        entry.bind("<KeyRelease>", lambda _: self._reset())
+        ctk.CTkLabel(filters, text="Dados completos: valor, débito, crédito e centro de custo preenchidos  •  Pendência: de/para incompleto", text_color="gray70", anchor="w").grid(row=1, column=0, columnspan=5, pady=(6, 0), sticky="ew")
+
+        self.preview = create_result_table(self.container, (
+            TableColumn("source", "Fonte", 155), TableColumn("cc", "Centro de custo", 115),
+            TableColumn("event", "Evento", 80), TableColumn("description", "Descrição", 440),
+            TableColumn("debit", "Débito", 120), TableColumn("credit", "Crédito", 120),
+            TableColumn("value", "Valor", 135, "e"), TableColumn("status", "Situação", 175),
+        ), row=6)
+        pagination = ctk.CTkFrame(self.container, fg_color="transparent")
+        pagination.grid(row=7, column=0, padx=30, pady=(7, 14), sticky="ew")
+        pagination.grid_columnconfigure(1, weight=1)
+        self.previous = ctk.CTkButton(pagination, text="Anterior", width=100, command=self._previous)
+        self.previous.grid(row=0, column=0)
+        self.page_label = ctk.CTkLabel(pagination, text="Página 0 de 0")
+        self.page_label.grid(row=0, column=1)
+        self.next = ctk.CTkButton(pagination, text="Próxima", width=100, command=self._next)
+        self.next.grid(row=0, column=2)
+        self._show()
+
+    def _select(self):
+        names = filedialog.askopenfilenames(title="Sete relatórios da folha de pagamento", filetypes=[("CSV e modelo Excel", "*.csv *.xlsx *.xlsm")])
+        if not names:
+            return
+        self.paths = [Path(name) for name in names]
+        self.select.configure(state="disabled")
+        self.app.set_status("Processando os relatórios da folha...", .1)
+        self.app.run_background(lambda: analyze(self.paths), self._done, self._failed)
+
+    def _done(self, result):
+        self.result = result
+        self.page = 0
+        self.select.configure(state="normal")
+        self.export.configure(state="normal")
+        sources = ["Todas as saídas", *result.by_source.keys()]
+        self.source_menu.configure(values=sources)
+        self.source_filter.set("Todas as saídas")
+        warning = f" • {len(result.warnings)} validação(ões) no resumo" if result.warnings else ""
+        self.info.configure(text=f"{result.company} • Competência {result.period_end:%m/%Y} • 7 relatórios reconhecidos • {len(result.rows)} lançamentos{warning}")
+        self.app.set_status("Lançamentos da folha preparados", 1)
+        self._show()
+
+    def _failed(self):
+        self.select.configure(state="normal")
+
+    def _filtered(self):
+        if not self.result:
+            return []
+        status, source, search = self.status_filter.get(), self.source_filter.get(), normalize(self.search.get())
+        return [row for row in self.result.rows
+                if (status == "Todos" or status == "Completos" and row.ready or status == "De/para incompleto" and not row.ready)
+                and (source == "Todas as saídas" or row.source == source)
+                and (not search or search in normalize(row.source + row.organogram + row.cost_center + row.event + row.description))]
+
+    def _show(self):
+        clear_table(self.preview)
+        if not self.result:
+            self.page_label.configure(text="Página 0 de 0")
+            self.previous.configure(state="disabled")
+            self.next.configure(state="disabled")
+        else:
+            values = ("7 de 7", str(self.result.ready), money(self.result.total), str(self.result.ignored_rows))
+            for title, value in zip(self.cards, values):
+                self.cards[title].configure(text=value)
+            filtered = self._filtered()
+            pages = max(1, (len(filtered) + self.page_size - 1) // self.page_size)
+            self.page = min(self.page, pages - 1)
+            for row in filtered[self.page * self.page_size:(self.page + 1) * self.page_size]:
+                self.preview.insert("", "end", values=(row.source, row.cost_center or "Não mapeado", row.event or "—",
+                                    row.description, row.debit or "Não mapeado", row.credit or "Não mapeado",
+                                    money(row.value), row.status), tags=("ok" if row.ready else "error",))
+            self.page_label.configure(text=f"Página {self.page + 1} de {pages} • {len(filtered)} lançamentos")
+            self.previous.configure(state="normal" if self.page else "disabled")
+            self.next.configure(state="normal" if self.page + 1 < pages else "disabled")
+        self.app.after_idle(self._draw_chart)
+
+    def _draw_chart(self):
+        self.chart.delete("all")
+        width = max(self.chart.winfo_width(), 180)
+        if not self.result:
+            self.chart.create_text(width / 2, 62, text="Aguardando análise", fill="#9ca3af")
+            return
+        ratio = self.result.ready / len(self.result.rows) if self.result.rows else 0
+        size, top, left = 70, 24, (width - 70) / 2
+        ring_color = "#21a67a" if ratio >= 1 else "#dc5a5a"
+        self.chart.create_oval(left, top, left + size, top + size, outline=ring_color, width=13)
+        if 0 < ratio < 1:
+            self.chart.create_arc(left, top, left + size, top + size, start=90, extent=-360 * ratio,
+                                  style="arc", outline="#21a67a", width=13)
+        self.chart.create_text(width / 2, top + size / 2, text=f"{ratio:.1%}", fill="white", font=("Segoe UI", 11, "bold"))
+        self.chart.create_text(width / 2, 108, text=f"{self.result.ready} completos • {len(self.result.rows) - self.result.ready} pendentes", fill="#d1d5db", font=("Segoe UI", 9))
+
+    def _reset(self):
+        self.page = 0
+        self._show()
+
+    def _previous(self):
+        if self.page:
+            self.page -= 1
+            self._show()
+
+    def _next(self):
+        self.page += 1
+        self._show()
+
+    def _export(self):
+        if not self.result:
+            return
+        extension = ".xlsx" if self.output_format.get() == "Excel" else ".pdf"
+        name = filedialog.asksaveasfilename(title="Exportar folha", defaultextension=extension,
+                                            initialfile=f"lancamento_folha_{self.result.period_end:%Y_%m}{extension}",
+                                            filetypes=[(self.output_format.get(), f"*{extension}")])
+        if not name:
+            return
+        result = self.result
+        task = save_excel if extension == ".xlsx" else save_pdf
+        self.app.set_status("Exportando lançamento da folha...", .5)
+        self.app.run_background(lambda: task(result, Path(name)),
+                                lambda _: (self.app.set_status("Resultado exportado", 1), messagebox.showinfo("Concluído", "Resultado exportado com sucesso.")))
+
+    def _clear(self):
+        self.paths = []
+        self.result = None
+        self.search.set("")
+        self.status_filter.set("Todos")
+        self.source_filter.set("Todas as saídas")
+        self.source_menu.configure(values=["Todas as saídas"])
+        self.page = 0
+        self.export.configure(state="disabled")
+        self.info.configure(text="Selecione: resumo mensal, INSS, FGTS, recibo e líquido de férias, provisão de férias e provisão de 13º.")
+        self._show()
+        self.app.set_status("Seleção limpa", 0)
+
+
+AUTOMATION_CLASS = PayrollPostingAutomation

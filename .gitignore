@@ -5,7 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
-* PROCESSOS AUTOMAÇÃO/
+PROCESSOS AUTOMAÇÃO/
 
 # Virtual environments
 .venv

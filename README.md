@@ -54,6 +54,8 @@ Execute sempre o `main.py` pela raiz do projeto. Os módulos dentro de `automati
 | Automação | Arquivos | Finalidade |
 |---|---:|---|
 | Conciliação de Receita | 2 | Compara Movimento da Contabilidade com `CASHIER_DEBIT` do Opera. |
+| Conciliação da Receita de Diárias | 2 | Classifica e totaliza o `CASHIER_DEBIT` pelos `TRX_CODE` marcados como diária e diária média para cada hotel. |
+| Lançamento da Folha de Pagamento | 7 | Reconhece os relatórios pelo conteúdo e gera as importações da folha mensal, férias, provisões de férias e 13º, além dos rateios de INSS, FGTS e planos por centro de custo. Todos os totalizadores são excluídos para impedir valores duplicados. |
 | Relatório de Notas de Débito | 1 ou mais | Consolida hotel, comprador, nota, emissão, item e valor. |
 | Notas Fiscais de Entrada em Atraso | 2 | Compara Manifesto e Detalhe, aplicando prazo de 11 dias para o Ceará e 30 dias para outros estados. |
 | Conferência dos Cupons | 3 | Compara Simphony, Fiscal e SEFAZ por chave e valor, distinguindo NFC-e e NF-e/Unknown. |
@@ -64,6 +66,14 @@ Execute sempre o `main.py` pela raiz do projeto. Os módulos dentro de `automati
 
 As planilhas usadas para validação ficam em `PROCESSOS AUTOMAÇÃO/`, organizadas por atividade.
 
+### Atividade 2 — Folha de pagamento
+
+Selecione simultaneamente os sete relatórios CSV: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Os nomes dos arquivos não são usados na identificação; o sistema reconhece cada relatório pelo conteúdo.
+
+A planilha `Projeto 2 - DP CARMEL PADRÃO...xlsm` contém os de/para e as regras adotadas pelo departamento. Ela é carregada automaticamente da pasta de exemplo. Se uma versão atualizada da planilha for selecionada junto aos CSVs, essa versão passa a ser usada na análise.
+
+O Excel exportado separa as saídas em `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, além das abas de resumo e detalhamento. Linhas de total do organograma, filial e empresa não são importadas.
+
 ## Estrutura
 
 ```text
@@ -73,6 +83,8 @@ projeto-hermes/
 │   ├── base.py                              # Contrato e constantes visuais
 │   ├── ui.py                                # Tabela compartilhada e cores de status
 │   ├── conciliacao_receita.py
+│   ├── conciliacao_receita_diarias.py
+│   ├── lancamento_folha_pagamento.py
 │   ├── relatorio_notas_debito.py
 │   ├── notas_entrada_atrasadas.py
 │   ├── conferencia_cupons.py
