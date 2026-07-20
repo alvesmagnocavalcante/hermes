@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
+from html.parser import HTMLParser
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import Any
@@ -85,6 +86,7 @@ class AnalysisResult:
     matched_count: int
     approved_count: int
     retained_count: int
+    cap_retained_count: int
     expected_hotel: str
 
 
@@ -117,7 +119,7 @@ def date_text(value: Any) -> str:
     if isinstance(value, (datetime, date)):
         return value.strftime("%d/%m/%Y")
     text = str(value).strip().split()[0]
-    for pattern in ("%d/%m/%Y", "%Y-%m-%d"):
+    for pattern in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(text, pattern).strftime("%d/%m/%Y")
         except ValueError:
@@ -148,6 +150,33 @@ def xlsx_rows(path: Path):
     rows = list(sheet.iter_rows(values_only=True))
     workbook.close()
     return rows[0], rows[1:]
+
+
+def xlsx_columns(path: Path) -> set[str]:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        workbook = load_workbook(path, data_only=True, read_only=True)
+    sheet = workbook.active
+    sheet.reset_dimensions()
+    header = next(sheet.iter_rows(values_only=True), ())
+    workbook.close()
+    return {normalize(value) for value in header if value not in (None, "")}
+
+
+def identify_file(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".csv", ".xls"}:
+        return "external"
+    if suffix != ".xlsx":
+        return "unknown"
+    columns = xlsx_columns(path)
+    if {"RAZAOSOCIALFORNECEDOR", "DOCUMENTOPRINCIPALFORNECEDOR", "NUMERO", "VALORBRUTO", "STATUSBPM"}.issubset(columns):
+        return "cap"
+    if {"DOCUMENTOPRINCIPALFORNECEDOR", "NUMERODOCUMENTO", "VALORBASECALCULO", "VALOR"}.issubset(columns):
+        return "tax"
+    if "NUMERONFSE" in columns or {"CNPJ", "PRESTADOR", "VALORSERVICOS"}.issubset(columns):
+        return "external"
+    return "unknown"
 
 
 def row_dict(header, row):
@@ -218,24 +247,112 @@ def external_csv(path: Path) -> list[dict[str, Any]]:
     return result
 
 
+class HtmlTableParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows: list[list[str]] = []
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag.lower() == "tr":
+            self._row = []
+        elif tag.lower() in {"th", "td"} and self._row is not None:
+            self._cell = []
+
+    def handle_data(self, data: str) -> None:
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() in {"th", "td"} and self._row is not None and self._cell is not None:
+            self._row.append(" ".join("".join(self._cell).split()))
+            self._cell = None
+        elif tag.lower() == "tr" and self._row is not None:
+            if self._row:
+                self.rows.append(self._row)
+            self._row = None
+
+
+def external_html_xls(path: Path) -> list[dict[str, Any]]:
+    raw = path.read_bytes()
+    if not raw.lstrip().lower().startswith((b"<html", b"<!doctype")):
+        raise ValueError(f"O arquivo {path.name} não é um relatório HTML compatível.")
+    parser = HtmlTableParser()
+    parser.feed(raw.decode("utf-8-sig", errors="replace"))
+    if len(parser.rows) < 2:
+        raise ValueError(f"Nenhuma nota foi encontrada em {path.name}.")
+
+    header = {normalize(value): index for index, value in enumerate(parser.rows[0])}
+
+    def value(row: list[str], *names: str) -> str:
+        index = next((header[name] for name in names if name in header), None)
+        return row[index] if index is not None and index < len(row) else ""
+
+    required_groups = (
+        ("NUMERO", "NUMERONFSE", "NUMERODANOTA", "NOTA"),
+        ("PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL"),
+        ("DATADEEMISSAO", "DATAEMISSAO", "DATA"),
+        ("VALORDOSERVICO", "VALORBRUTO", "VALOR"),
+    )
+    if any(not any(name in header for name in group) for group in required_groups):
+        raise ValueError(f"Colunas obrigatórias não encontradas em {path.name}.")
+
+    result = []
+    for row in parser.rows[1:]:
+        number = value(row, "NUMERO", "NUMERONFSE", "NUMERODANOTA", "NOTA")
+        provider_field = value(row, "PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL")
+        match = re.match(r"\s*([\d./-]{14,})\s+-\s+(.+)", provider_field)
+        document = match.group(1) if match else value(row, "CNPJ", "CPFCNPJ", "CNPJCPF")
+        provider = match.group(2) if match else provider_field
+        if not number or not cnpj(document) or not provider:
+            continue
+        provider = re.sub(r"^\s*[\d./-]{8,}\s+", "", provider).strip()
+        result.append({
+            "source": "Relatório externo",
+            "number": number,
+            "date": value(row, "DATADEEMISSAO", "DATAEMISSAO", "DATA"),
+            "cnpj": document,
+            "provider": provider,
+            "gross": value(row, "VALORDOSERVICO", "VALORBRUTO", "VALOR"),
+            "iss": value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS", "ISSRETIDO"),
+        })
+    if not result:
+        raise ValueError(f"Nenhuma nota com CNPJ e prestador foi encontrada em {path.name}.")
+    return result
+
+
 def expected_hotel(paths: list[Path]) -> str:
     tokens = [match.group(1) for path in paths if (match := re.search(r"\(([^)]+)\)", path.name))]
     return normalize(max(set(tokens), key=tokens.count)) if tokens else ""
 
 
 def analyze(paths: list[Path]) -> AnalysisResult:
-    if len(paths) != 5:
-        raise ValueError("Selecione os cinco arquivos da Atividade 7.")
-    cap_path = next((p for p in paths if "LANCAMENTODEDOCUMENTOCAP" in normalize(p.name)), None)
-    tax_path = next((p for p in paths if "ALTERADORISSRETIDO" in normalize(p.name)), None)
-    external_paths = [p for p in paths if p not in (cap_path, tax_path)]
-    if not cap_path or not tax_path or len(external_paths) != 3:
-        raise ValueError("Selecione CAP, Alterador ISS, Portal Nacional e as duas prefeituras.")
-    cap_notes, taxes, hotel = read_cap(cap_path), read_tax(tax_path), expected_hotel(paths)
+    if len(paths) < 3:
+        raise ValueError("Selecione o CAP, o Alterador ISS e pelo menos uma fonte externa.")
+    identified = [(path, identify_file(path)) for path in paths]
+    cap_paths = [path for path, kind in identified if kind == "cap"]
+    tax_paths = [path for path, kind in identified if kind == "tax"]
+    external_paths = [path for path, kind in identified if kind == "external"]
+    unknown = [path.name for path, kind in identified if kind == "unknown"]
+    if unknown:
+        raise ValueError(f"Formato não reconhecido: {', '.join(unknown)}.")
+    if len(cap_paths) != 1 or len(tax_paths) != 1 or not external_paths:
+        raise ValueError("Envie um arquivo CAP, um arquivo de ISS retido e pelo menos uma fonte externa.")
+    cap_notes, taxes = read_cap(cap_paths[0]), read_tax(tax_paths[0])
+    hotel = expected_hotel(paths)
+    if not hotel and cap_notes:
+        hotel = normalize(max({item.hotel for item in cap_notes}, key=lambda name: sum(row.hotel == name for row in cap_notes)))
     cap_map = {(item.cnpj, item.number): item for item in cap_notes}
     external = []
     for path in external_paths:
-        external.extend(external_csv(path) if path.suffix.lower() == ".csv" else external_xlsx(path))
+        suffix = path.suffix.lower()
+        if suffix == ".csv":
+            external.extend(external_csv(path))
+        elif suffix == ".xls":
+            external.extend(external_html_xls(path))
+        else:
+            external.extend(external_xlsx(path))
 
     grouped_external = defaultdict(list)
     for raw in external:
@@ -249,7 +366,10 @@ def analyze(paths: list[Path]) -> AnalysisResult:
         provider, issued, gross = str(raw["provider"] or "").strip(), date_text(raw["date"]), decimal_value(raw["gross"])
         gross_values = [decimal_value(item["gross"]) for item in occurrences]
         dates = [date_text(item["date"]) for item in occurrences]
-        iss, cap = max((decimal_value(item["iss"]) for item in occurrences), default=Decimal()), cap_map.get(key)
+        prefeitura = [item for item in occurrences if str(item["source"]) != "Portal Nacional"]
+        iss = max((decimal_value(item["iss"]) for item in prefeitura), default=Decimal()) if prefeitura else None
+        cap = cap_map.get(key)
+        tax = taxes.get(key)
         issues = []
         if max(gross_values) - min(gross_values) > TOLERANCE:
             issues.append("Valor divergente entre fontes externas")
@@ -272,14 +392,14 @@ def analyze(paths: list[Path]) -> AnalysisResult:
             similarity = SequenceMatcher(None, normalize(provider), normalize(cap.provider)).ratio()
             if similarity < .60:
                 issues.append("Razão social divergente")
-        if iss:
+        if iss is not None and iss > 0:
             retained_count += 1
-            tax = taxes.get(key)
             if not tax:
                 issues.append("ISS retido ausente no CAP")
             elif abs(iss - tax.iss) > TOLERANCE:
                 issues.append("ISS retido divergente")
-        tax = taxes.get(key)
+        elif tax and tax.iss > 0:
+            issues.append("ISS retido ausente na prefeitura")
         result.append(ResultRow(
             sources, provider, key[0], key[1], issued, gross, iss, bpm,
             cap.provider if cap else "—", cap.emission_date if cap else "—", cap.gross if cap else None,
@@ -290,6 +410,8 @@ def analyze(paths: list[Path]) -> AnalysisResult:
             continue
         tax = taxes.get(key)
         issues = ["Ausente nas fontes externas"]
+        if tax and tax.iss > 0:
+            issues.append("ISS retido ausente na prefeitura")
         if normalize(cap.bpm) != "BPMAPROVADO":
             issues.append("Não escriturada: BPM não aprovado")
         if hotel and hotel not in normalize(cap.hotel):
@@ -301,7 +423,8 @@ def analyze(paths: list[Path]) -> AnalysisResult:
     result.sort(key=lambda row: (row.reconciled, row.source, row.provider, row.number))
     return AnalysisResult(result, len(grouped_external), len(cap_notes),
                           sum(row.cap_gross is not None and row.source != "CAP" for row in result),
-                          sum(normalize(x.bpm) == "BPMAPROVADO" for x in cap_notes), retained_count, hotel)
+                          sum(normalize(x.bpm) == "BPMAPROVADO" for x in cap_notes), retained_count,
+                          sum(entry.iss > 0 for entry in taxes.values()), hotel)
 
 
 def save_excel(result: AnalysisResult, path: Path) -> None:
@@ -315,7 +438,9 @@ def save_excel(result: AnalysisResult, path: Path) -> None:
         ("Notas existentes no arquivo CAP", result.cap_count), ("Notas externas encontradas no CAP", result.matched_count),
         ("Notas externas ausentes no CAP", result.external_count - result.matched_count),
         ("Notas existentes somente no CAP", result.cap_count - result.matched_count),
-        ("BPM aprovadas no arquivo CAP", result.approved_count), ("Notas com ISS retido", result.retained_count),
+        ("BPM aprovadas no arquivo CAP", result.approved_count),
+        ("Notas com ISS retido na prefeitura", result.retained_count),
+        ("Notas com ISS retido no CAP", result.cap_retained_count),
         ("Totalmente conciliadas", reconciled), ("Com pendências", len(result.rows) - reconciled),
     ):
         summary.append([label, value])
@@ -344,8 +469,9 @@ def save_excel(result: AnalysisResult, path: Path) -> None:
 
 def save_pdf(result: AnalysisResult, path: Path) -> None:
     styles = getSampleStyleSheet(); total=len(result.rows); ok=sum(r.reconciled for r in result.rows)
-    data=[["Notas analisadas","Encontradas no CAP","BPM aprovadas","Conciliadas","Pendências","ISS retido"],
-          [str(total),str(result.matched_count),str(result.approved_count),str(ok),str(total-ok),str(result.retained_count)]]
+    data=[["Notas analisadas","Encontradas no CAP","BPM aprovadas","Conciliadas","Pendências","ISS Pref./CAP"],
+          [str(total),str(result.matched_count),str(result.approved_count),str(ok),str(total-ok),
+           f"{result.retained_count} / {result.cap_retained_count}"]]
     table=Table(data,colWidths=[38*mm]*6); table.setStyle(TableStyle([
         ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#24588A")),("TEXTCOLOR",(0,0),(-1,0),colors.white),
         ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("ALIGN",(0,0),(-1,-1),"CENTER"),("GRID",(0,0),(-1,-1),.5,colors.grey)]))
@@ -367,21 +493,21 @@ class ServiceNotesAutomation(Automation):
         ctk.CTkLabel(self.container,text=self.name,font=ctk.CTkFont(size=26,weight="bold")).grid(row=0,column=0,padx=30,pady=(22,3),sticky="w")
         ctk.CTkLabel(self.container,text="Compara notas das prefeituras com CAP, hotel, BPM e ISS retido.",text_color="gray70").grid(row=1,column=0,padx=30,pady=(0,10),sticky="w")
         controls=ctk.CTkFrame(self.container,fg_color="transparent");controls.grid(row=2,column=0,padx=30,sticky="ew")
-        self.select=ctk.CTkButton(controls,text="Selecionar os cinco arquivos",command=self._select);self.select.pack(side="left",padx=(0,10))
+        self.select=ctk.CTkButton(controls,text="Selecionar arquivos",command=self._select);self.select.pack(side="left",padx=(0,10))
         self.format=ctk.CTkSegmentedButton(controls,values=["Excel","PDF"],variable=self.output_format);self.format.pack(side="left",padx=10)
         self.export=ctk.CTkButton(controls,text="Exportar resultado",state="disabled",command=self._export);self.export.pack(side="left",padx=10)
         self.clear=ctk.CTkButton(controls,text="Limpar",fg_color="gray35",command=self._clear);self.clear.pack(side="left",padx=10)
-        self.info=ctk.CTkLabel(self.container,text="Selecione CAP, Alterador ISS, Portal Nacional e as duas prefeituras.",text_color="gray70",anchor="w");self.info.grid(row=3,column=0,padx=30,pady=(10,6),sticky="ew")
+        self.info=ctk.CTkLabel(self.container,text="Obrigatórios: CAP, Alterador ISS e uma ou mais fontes externas.",text_color="gray70",anchor="w");self.info.grid(row=3,column=0,padx=30,pady=(10,6),sticky="ew")
         dash=ctk.CTkFrame(self.container,fg_color="transparent");dash.grid(row=4,column=0,padx=30,pady=(0,8),sticky="ew");dash.grid_columnconfigure(0,weight=3);dash.grid_columnconfigure(1,weight=2)
         cards=ctk.CTkFrame(dash,fg_color="transparent");cards.grid(row=0,column=0,padx=(0,10),sticky="nsew");self.cards={}
-        for index,title in enumerate(("Notas externas","Encontradas no CAP","BPM aprovadas no CAP","ISS retido")):
+        for index,title in enumerate(("Notas externas","Encontradas no CAP","BPM aprovadas no CAP","ISS Prefeitura / CAP")):
             cards.grid_columnconfigure(index,weight=1);card=ctk.CTkFrame(cards);card.grid(row=0,column=index,padx=(0 if index==0 else 5,0),sticky="nsew")
             ctk.CTkLabel(card,text=title,text_color="gray70").pack(pady=(8,0));label=ctk.CTkLabel(card,text="—",font=ctk.CTkFont(size=16,weight="bold"));label.pack(pady=(0,8));self.cards[title]=label
         chart_frame=ctk.CTkFrame(dash);chart_frame.grid(row=0,column=1,sticky="nsew");ctk.CTkLabel(chart_frame,text="Distribuição da conferência",font=ctk.CTkFont(size=13,weight="bold")).pack(pady=(6,0))
         self.chart=tk.Canvas(chart_frame,height=125,bg="#2b2b2b",highlightthickness=0);self.chart.pack(fill="x",padx=8);self.chart.bind("<Configure>",lambda _:self._chart())
         filters=ctk.CTkFrame(self.container,fg_color="transparent");filters.grid(row=5,column=0,padx=30,pady=(0,8),sticky="ew");filters.grid_columnconfigure(3,weight=1)
         self.status=ctk.CTkSegmentedButton(filters,values=["Pendências","Conciliadas","Todas"],variable=self.filter_status,command=lambda _:self._reset());self.status.grid(row=0,column=0,padx=(0,12))
-        self.source=ctk.CTkOptionMenu(filters,values=["Todas as fontes","CAP","Portal Nacional","Prefeitura Caucaia","Prefeitura SP"],variable=self.filter_source,command=lambda _:self._reset(),width=180);self.source.grid(row=0,column=1,padx=(0,12))
+        self.source=ctk.CTkOptionMenu(filters,values=["Todas as fontes"],variable=self.filter_source,command=lambda _:self._reset(),width=180);self.source.grid(row=0,column=1,padx=(0,12))
         ctk.CTkLabel(filters,text="Buscar:").grid(row=0,column=2,padx=(0,8));entry=ctk.CTkEntry(filters,textvariable=self.search,placeholder_text="CNPJ, prestador ou nota");entry.grid(row=0,column=3,sticky="ew");entry.bind("<KeyRelease>",lambda _:self._reset())
         ctk.CTkLabel(filters,text="Verde: conciliada  •  Amarelo: informação ausente  •  Vermelho: divergência ou não escriturada  •  Célula vazia: dado não encontrado na fonte",text_color="gray70",anchor="w").grid(row=1,column=0,columnspan=4,pady=(6,0),sticky="ew")
         self.preview=create_result_table(self.container,(
@@ -397,14 +523,19 @@ class ServiceNotesAutomation(Automation):
         self.next=ctk.CTkButton(pagination,text="Próxima",width=100,command=self._next);self.next.grid(row=0,column=2);self._show()
 
     def _select(self):
-        names=filedialog.askopenfilenames(title="Arquivos da Atividade 7",filetypes=[("Planilhas e CSV","*.xlsx *.csv")])
+        names=filedialog.askopenfilenames(title="Arquivos da Atividade 7",filetypes=[("Planilhas e CSV","*.xlsx *.xls *.csv")])
         if not names:return
         self.paths=[Path(x) for x in names];self.select.configure(state="disabled");self.app.set_status("Conferindo notas tomadas...",.1);self.app.run_background(lambda:analyze(self.paths),self._done,self._failed)
 
     def _done(self,result):
-        self.result=result;self.page=0;self.select.configure(state="normal");self.export.configure(state="normal");self.info.configure(text=f"Arquivos carregados: 5 • Hotel esperado: {result.expected_hotel} • {result.external_count} notas externas • {result.cap_count} no CAP");self.app.set_status("Conferência concluída",1);self._show()
+        self.result=result;self.page=0;self.select.configure(state="normal");self.export.configure(state="normal");self._update_source_filter();self.info.configure(text=f"Arquivos carregados: {len(self.paths)} • Hotel esperado: {result.expected_hotel} • {result.external_count} notas externas • {result.cap_count} no CAP");self.app.set_status("Conferência concluída",1);self._show()
 
     def _failed(self):self.select.configure(state="normal")
+
+    def _update_source_filter(self):
+        sources = sorted({source for row in self.result.rows for source in row.source.split(" + ")}) if self.result else []
+        self.filter_source.set("Todas as fontes")
+        self.source.configure(values=["Todas as fontes", *sources])
 
     def _filtered(self):
         if not self.result:return []
@@ -417,8 +548,10 @@ class ServiceNotesAutomation(Automation):
             self.page_label.configure(text="Página 0 de 0");self.previous.configure(state="disabled");self.next.configure(state="disabled")
         else:
             filtered=self._filtered();total_pages=max(1,(len(filtered)+self.page_size-1)//self.page_size);self.page=min(self.page,total_pages-1);rows=filtered[self.page*self.page_size:(self.page+1)*self.page_size]
-            values=(self.result.external_count,self.result.matched_count,self.result.approved_count,self.result.retained_count)
-            for title,value in zip(self.cards,values):self.cards[title].configure(text=f"{value:,}".replace(",","."))
+            values=(self.result.external_count,self.result.matched_count,self.result.approved_count,
+                    f"{self.result.retained_count} / {self.result.cap_retained_count}")
+            for title,value in zip(self.cards,values):
+                self.cards[title].configure(text=value if isinstance(value,str) else f"{value:,}".replace(",","."))
             for r in rows:
                 tag="ok" if r.reconciled else "missing" if r.situation=="Informação ausente" else "error"
                 display_date=r.emission_date if r.emission_date!="—" else r.cap_date if r.cap_date!="—" else ""
@@ -452,7 +585,7 @@ class ServiceNotesAutomation(Automation):
         if not name:return
         task=lambda:save_pdf(self.result,Path(name)) if ext==".pdf" else save_excel(self.result,Path(name));self.app.run_background(task,lambda _:messagebox.showinfo("Exportação concluída",f"Arquivo salvo em:\n{name}"),self._failed)
 
-    def _clear(self):self.paths=[];self.result=None;self.search.set("");self.page=0;self.export.configure(state="disabled");self.info.configure(text="Selecione CAP, Alterador ISS, Portal Nacional e as duas prefeituras.");self._show();self.app.set_status("Seleção limpa",0)
+    def _clear(self):self.paths=[];self.result=None;self.search.set("");self.page=0;self.export.configure(state="disabled");self._update_source_filter();self.info.configure(text="Obrigatórios: CAP, Alterador ISS e uma ou mais fontes externas.");self._show();self.app.set_status("Seleção limpa",0)
 
 
 AUTOMATION_CLASS = ServiceNotesAutomation
