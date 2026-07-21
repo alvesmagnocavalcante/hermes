@@ -83,7 +83,7 @@ def add_cover(document: Document) -> None:
     title.alignment = WD_ALIGN_PARAGRAPH.LEFT
     title.add_run("HERMES")
     subtitle = document.add_paragraph(style="Subtitle")
-    subtitle.add_run("Guia do Usuário")
+    subtitle.add_run("Manual do Usuário")
     description = document.add_paragraph()
     description.paragraph_format.space_before = Pt(14)
     run = description.add_run("Painel de Automação de Planilhas")
@@ -98,7 +98,7 @@ def add_cover(document: Document) -> None:
 def add_header_footer(document: Document) -> None:
     section = document.sections[0]
     header = section.header.paragraphs[0]
-    header.text = "HERMES  |  Guia do Usuário"
+    header.text = "HERMES  |  Manual do Usuário"
     header.runs[0].font.size = Pt(8)
     header.runs[0].font.color.rgb = MUTED
     add_page_number(section.footer.paragraphs[0])

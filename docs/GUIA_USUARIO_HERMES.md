@@ -1,408 +1,340 @@
 # HERMES
 
-## Guia do Usuário
+## Manual do Usuário
 
 **Painel de Automação de Planilhas**  
-Versão do guia: julho de 2026
+Versão: julho de 2026
 
 ---
 
-## 1. Apresentação
+## 1. Para que serve o HERMES
 
-O HERMES reúne conferências financeiras, fiscais, contábeis e operacionais em um único painel. O sistema compara relatórios de diferentes fontes, destaca valores coincidentes e aponta registros que precisam de análise.
+O HERMES compara planilhas de diferentes sistemas e mostra, de forma simples, o que está correto e o que precisa ser conferido.
 
-O objetivo é reduzir o trabalho manual, facilitar a localização de diferenças e produzir arquivos organizados para conferência, registro ou importação.
+Com ele, você pode:
 
-O HERMES não altera os arquivos selecionados. As planilhas originais permanecem preservadas.
+- localizar valores ou documentos diferentes;
+- identificar informações ausentes;
+- consultar resultados na tela;
+- gerar relatórios em Excel ou PDF;
+- gerar o CSV da Folha de Pagamento para importação no CMFlex.
 
-## 2. Como acessar e navegar
+O HERMES não altera as planilhas selecionadas. Os arquivos originais continuam como estavam.
 
-1. Abra o HERMES pelo atalho disponibilizado ou execute o aplicativo conforme a orientação da equipe responsável.
-2. O menu de automações aparece na lateral esquerda.
-3. Use o botão de menu abaixo do nome **HERMES** para abrir ou recolher a lista.
-4. Quando o menu estiver recolhido, passe o mouse sobre um ícone para visualizar o nome da automação.
-5. Selecione a automação desejada antes de carregar os relatórios.
+## 2. Como fazer uma conferência
 
-O título exibido no alto da tela confirma qual conferência está ativa. Verifique esse título antes de selecionar os arquivos.
+1. Abra o HERMES pelo atalho.
+2. Escolha a automação no menu esquerdo.
+3. Confira o título da tela para ter certeza de que abriu a automação correta.
+4. Clique em **Selecionar arquivos**.
+5. Selecione todos os relatórios solicitados.
+6. Aguarde a mensagem de conclusão.
+7. Analise primeiro os resultados vermelhos e depois os amarelos.
+8. Escolha **Excel**, **PDF** ou **CSV**, quando disponível.
+9. Clique em **Exportar resultado** e escolha onde salvar.
 
-## 3. Fluxo padrão de utilização
+Os arquivos podem ser selecionados em qualquer ordem. O HERMES identifica cada relatório pelo conteúdo, e não apenas pelo nome do arquivo.
 
-O procedimento abaixo é utilizado na maioria das automações:
-
-1. Gere os relatórios necessários nos sistemas de origem.
-2. Evite alterar os nomes, colunas ou conteúdo dos arquivos antes da análise.
-3. Abra a automação correspondente no menu lateral.
-4. Leia a seção **Arquivos necessários**, exibida no alto da tela.
-5. Clique em **Selecionar arquivos**.
-6. Selecione todos os relatórios solicitados na mesma janela.
-7. Aguarde a conclusão. O andamento é informado no rodapé.
-8. Confira os indicadores, o resumo comparativo e a tabela.
-9. Use o filtro e a pesquisa para localizar registros específicos.
-10. Escolha o formato e clique em **Exportar resultado**.
-
-Os arquivos podem ser selecionados em qualquer ordem. Quando um relatório não pertence à automação aberta, o HERMES apresenta uma orientação sobre os arquivos esperados.
-
-## 4. Como interpretar a tela
+## 3. Como entender a tela
 
 ### Arquivos reconhecidos
 
-Após a leitura, o painel informa quantos arquivos foram reconhecidos. Se a quantidade for diferente da esperada, revise a seleção antes de continuar.
+Após a seleção, o HERMES informa quantos arquivos conseguiu identificar. Se faltar algum, confirme se todos os relatórios da automação foram selecionados.
 
-### Resumo comparativo
+### Resumo
 
-Nas conferências entre duas ou mais fontes, o resumo apresenta:
-
-- o nome da verificação;
-- o valor encontrado em cada fonte;
-- a diferença entre os valores;
-- o resultado da comparação.
+O resumo mostra os totais encontrados em cada sistema, a diferença e a situação da conferência.
 
 Exemplo:
 
-> Clientes: Balancete R$ 7.695.835,38 • Posição por cliente R$ 7.742.048,90 • Diferença -R$ 46.213,52 • Divergente
-
-### Indicadores
-
-Os cards mostram a quantidade total analisada e a distribuição dos resultados. Os nomes dos indicadores mudam conforme a finalidade da automação.
+> Clientes: Balancete R$ 100.000,00 • Posição por cliente R$ 99.500,00 • Diferença R$ 500,00 • Divergente
 
 ### Cores
 
-Consulte sempre a legenda exibida acima da tabela. De forma geral:
+- **Verde:** informação correta, conciliada ou pronta.
+- **Amarelo:** informação que merece atenção, mas pode não ser um erro.
+- **Vermelho:** diferença, ausência ou dado incompleto que precisa ser conferido.
 
-- **Verde:** registro conciliado, correto ou pronto para utilização.
-- **Amarelo:** informação complementar, cancelamento ou período incompleto.
-- **Vermelho:** diferença, ausência ou dado incompleto que exige análise.
+A legenda acima da tabela explica o significado das cores na automação selecionada.
 
-### Filtros, pesquisa e paginação
+### Tabela de resultados
 
-- Use **Exibir** para alternar entre todos os registros, conciliados e pendências.
-- Use **Buscar nos resultados** para localizar documento, chave, fornecedor, cliente, hóspede, conta ou situação.
-- Passe o mouse sobre um texto abreviado para visualizar o conteúdo completo.
-- Use as setas abaixo da tabela para navegar entre as páginas.
+A tabela mostra cada documento analisado e o motivo do resultado.
+
+- Use **Exibir** para mostrar todos os registros, somente conciliados ou somente pendências.
+- Use **Buscar nos resultados** para localizar nota, chave, fornecedor, cliente, hóspede, conta ou valor.
+- Use as setas abaixo da tabela para mudar de página.
 
 ### Limpar
 
-O botão **Limpar** remove os resultados da tela e permite iniciar uma nova conferência. Os arquivos originais e os arquivos já exportados não são apagados.
+O botão **Limpar** apaga somente os dados exibidos na tela. Ele não exclui as planilhas originais nem os relatórios já exportados.
 
-## 5. Automações disponíveis
+## 4. Automações disponíveis
 
-### 5.1 Conciliação de Receita
+### 4.1 Conciliação de Receita
 
-**Finalidade**  
-Verificar se a receita registrada na Contabilidade coincide com os lançamentos de receita do Opera.
+**O que faz:** compara a receita da Contabilidade com a receita do Opera.
 
-**Arquivos necessários**
+**Selecione:**
 
-- Razão Analítico da Contabilidade.
+- Razão Analítico da Contabilidade;
 - Journal de Receita do Opera.
 
-**Como interpretar**  
-O resumo compara o total da Contabilidade com o total do Opera. Na tabela, cada documento é classificado como conciliado ou divergente. Uma diferença pode indicar ausência em uma das fontes ou valores distintos para o mesmo documento.
+**Como ler:** cada documento aparece como conciliado ou divergente. Uma divergência significa que o documento está ausente em uma fonte ou possui valores diferentes.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-### 5.2 Conciliação da Receita de Diárias
+### 4.2 Conciliação da Receita de Diárias
 
-**Finalidade**  
-Totalizar a receita de diárias do Journal utilizando somente os códigos de transação definidos para o hotel.
+**O que faz:** calcula a receita de diárias do Journal usando os códigos de transação definidos para cada hotel.
 
-**Antes de selecionar os arquivos**  
-Escolha o hotel no campo exibido ao lado do botão de seleção.
+**Antes de começar:** escolha o hotel no campo exibido na tela.
 
-**Arquivos necessários**
+**Selecione:**
 
-- Planilha de Códigos de transação.
-- Journal Opera - Receita.
+- planilha de Códigos de Transação;
+- Journal de Receita do Opera.
 
-O arquivo **BI PDV** não pertence a esta automação.
+**Como ler:** a tabela mostra cada código, a quantidade de lançamentos e o valor encontrado. Um código sem movimento é uma informação, não necessariamente um erro.
 
-**Como interpretar**  
-A tabela apresenta os códigos considerados como diária ou diária média, a quantidade de lançamentos e o valor encontrado no Journal. Códigos sem movimento aparecem como informação, não necessariamente como erro.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+### 4.3 Lançamento da Folha de Pagamento
 
-### 5.3 Lançamento da Folha de Pagamento
+**O que faz:** prepara os lançamentos contábeis da folha por centro de custo e remove linhas de total para evitar valores duplicados.
 
-**Finalidade**  
-Transformar os relatórios do Departamento Pessoal em lançamentos contábeis por centro de custo, prontos para importação no CMFlex.
+**Selecione:**
 
-**Arquivos necessários**
+- resumo mensal da folha;
+- relação de INSS;
+- relação de FGTS;
+- recibo e líquido de férias;
+- provisão de férias;
+- provisão de 13º salário.
 
-- Resumo mensal da folha.
-- Relação de INSS.
-- Relação de FGTS.
-- Recibo de férias.
-- Líquido de férias.
-- Provisão de férias.
-- Provisão de 13º salário.
+**Como ler:**
 
-A planilha modelo do departamento pode ser selecionada junto com os relatórios quando for necessário atualizar o relacionamento de contas, eventos e centros de custo.
+- **Pronto para importar:** o lançamento possui os dados necessários;
+- **De/para incompleto:** alguma conta ou centro de custo precisa ser revisado;
+- **Totalizadores removidos:** linhas de soma foram descartadas para não duplicar valores;
+- **Líquido a pagar:** valor líquido identificado na folha.
 
-**Como interpretar**
+**Saídas:** Excel para conferência, PDF de resumo e CSV para importação no CMFlex.
 
-- **Pronto para importar:** lançamento com os dados necessários preenchidos.
-- **De/para incompleto:** lançamento que precisa de revisão antes da importação.
-- **Totalizadores removidos:** linhas de total descartadas para evitar valores duplicados.
-- **Líquido a pagar:** valor líquido identificado no resumo da folha.
+Antes de importar o CSV, confira empresa, competência, contas, centros de custo e totais.
 
-**Exportações**
+### 4.4 Cupons Emitidos x Conta do Hóspede
 
-- **Excel:** arquivo de conferência com resumo e saídas separadas.
-- **CSV:** arquivo no formato aceito pelo CMFlex.
-- **PDF:** resumo da folha processada.
+**O que faz:** verifica se os cupons emitidos foram lançados e cobrados na conta do hóspede.
 
-Antes de importar o CSV, confira a competência, as contas, os centros de custo e o total dos lançamentos.
+**Selecione:**
 
-### 5.4 Cupons Emitidos x Conta do Hóspede
+- BI PDV;
+- Journal do Opera;
+- planilha de de/para.
 
-**Finalidade**  
-Verificar se os cupons emitidos pelo ponto de venda constam no Journal e foram cobrados na conta do hóspede.
+**Como ler:** a tabela mostra cupom, data, hóspede, valor emitido, valor cobrado e o motivo de uma possível pendência.
 
-**Arquivos necessários**
+Se aparecer **período incompleto**, o Journal não possui todas as datas dos cupons. Gere o Journal novamente com o período correto.
 
-- BI PDV.
-- Journal do Opera.
-- Planilha de de/para.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-**Como interpretar**  
-O resumo compara o total do BI/PDV com o total localizado nas contas. A tabela informa cupom, data, quarto, hóspede, valor emitido, valor cobrado e motivo da pendência.
+### 4.5 RPS de Serviços Prestados
 
-Um registro marcado como período incompleto indica que o Journal selecionado não cobre a data do cupom. Nesse caso, gere o Journal para o período correto antes de confirmar uma divergência.
+**O que faz:** verifica se os RPS encerrados no Opera chegaram ao Fiscal do CMFlex e foram emitidos na Prefeitura.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**Selecione:**
 
-### 5.5 RPS de Serviços Prestados
+- XML de encerramentos do Opera;
+- relatório Fiscal do CMFlex;
+- relatório da Prefeitura.
 
-**Finalidade**  
-Verificar se os RPS encerrados no Opera integraram no Fiscal do CMFlex e foram emitidos na Prefeitura.
+**Como ler:** a tabela compara o RPS e o valor nas três fontes. A coluna **Explicação** informa claramente o motivo de cada pendência.
 
-**Arquivos necessários**
+Se aparecer **fora do período**, gere um relatório Fiscal que inclua a data indicada antes de considerar o registro como erro.
 
-- XML de encerramentos do Opera.
-- Planilha Fiscal do CMFlex.
-- Planilha da Prefeitura.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-**Como interpretar**  
-O painel compara Opera × Fiscal e Fiscal × Prefeitura. A tabela apresenta o RPS, a data, o tomador, os valores das três fontes, a NFS-e e a explicação do resultado.
+### 4.6 Relatório de Notas de Débito
 
-Registros posteriores à última data do relatório Fiscal aparecem como **fora do período**. Eles devem ser reavaliados com um relatório Fiscal atualizado antes de serem tratados como erro de integração.
+**O que faz:** reúne as notas de débito em um relatório único e organizado.
 
-**Exportações**  
-Excel detalhado e PDF com resumo e registros que exigem atenção.
+**Selecione:** uma ou mais planilhas de notas de débito.
 
-### 5.6 Relatório de Notas de Débito
+**Como ler:** confira hotel, comprador, número da nota, emissão, item e valor. Use a pesquisa para localizar uma nota específica.
 
-**Finalidade**  
-Consolidar informações de notas de débito em um único relatório.
+**Saídas:** Excel e PDF.
 
-**Arquivos necessários**  
-Uma ou mais planilhas de notas de débito.
+### 4.7 Notas Fiscais de Entrada em Atraso
 
-**Como interpretar**  
-O resultado reúne hotel, comprador, número da nota, emissão, item e valor. Utilize a pesquisa para localizar uma nota ou comprador específico.
+**O que faz:** calcula o tempo entre a emissão da nota de mercadoria e sua entrada no hotel.
 
-**Exportações**  
-Excel detalhado e PDF.
+**Selecione:**
 
-### 5.7 Notas Fiscais de Entrada em Atraso
-
-**Finalidade**  
-Conferir o tempo entre a emissão da nota fiscal de mercadoria e a entrada da nota no hotel.
-
-**Arquivos necessários**
-
-- Manifesto de notas.
+- Manifesto de notas;
 - Detalhe de notas recebidas.
 
-**Regras de prazo**
+**Prazos usados:**
 
-- Notas do Ceará: atraso a partir de 11 dias.
-- Notas de outros estados: atraso a partir de 30 dias.
+- Ceará: atraso a partir de 11 dias;
+- outros estados: atraso a partir de 30 dias.
 
-**Como interpretar**  
-A tabela informa chave, empresa, fornecedor, estado, emissão, entrada, dias transcorridos, limite e situação. Notas não localizadas ou sem datas completas devem ser verificadas nas fontes originais.
+**Como ler:** a tabela mostra emissão, entrada, quantidade de dias, prazo permitido e situação. Notas sem data ou não localizadas precisam ser verificadas nas planilhas originais.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-### 5.8 Conferência dos Cupons
+### 4.8 Conferência dos Cupons
 
-**Finalidade**  
-Verificar se os documentos do Simphony integraram no Fiscal do CMFlex e constam na SEFAZ.
+**O que faz:** verifica se cupons e notas do Simphony chegaram ao Fiscal do CMFlex e à SEFAZ.
 
-**Arquivos necessários**
+**Selecione:**
 
-- Simphony.
-- Fiscal do CMFlex.
-- SEFAZ.
+- relatório do Simphony;
+- relatório Fiscal do CMFlex;
+- relatório da SEFAZ.
 
-**Como interpretar**  
-O painel compara Simphony × Fiscal e Fiscal × SEFAZ. A análise utiliza a chave fiscal, a data e o valor e distingue cupons NFC-e de notas NF-e.
+**Como ler:** o HERMES compara chave, data e valor nas três fontes. A tabela diferencia **Cupom (NFC-e)** de **Nota (NF-e)** e informa onde o documento está ausente ou diferente.
 
-O Excel exportado possui abas específicas:
+**Saídas:** Excel detalhado e PDF de resumo. No Excel, cupons e notas também ficam em abas separadas.
 
-- **Conciliação:** todos os documentos.
-- **Cupons_NFCe:** somente cupons.
-- **Notas_NFe:** somente notas.
+### 4.9 Notas de Serviços Tomados
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**O que faz:** verifica se as notas recebidas estão no CAP, pertencem ao hotel correto, foram aprovadas no BPM e possuem o ISS correto.
 
-### 5.9 Notas de Serviços Tomados
+**Selecione:**
 
-**Finalidade**  
-Conferir notas de serviços recebidas, sua escrituração no CAP, o hotel correspondente, a aprovação no BPM e o ISS retido.
+- relatório do CAP;
+- relatório do Portal Nacional;
+- relatórios de Prefeitura ou ISS usados pelo hotel.
 
-**Arquivos necessários**
+A quantidade de arquivos pode mudar conforme o hotel e o município.
 
-- Relatório do CAP.
-- Portal Nacional.
-- Relatórios de Prefeitura e ISS aplicáveis ao hotel analisado.
+**Como ler:**
 
-A quantidade de arquivos pode variar conforme o município e o processo realizado.
+- **Conciliada:** nota localizada com as informações corretas;
+- **Ausente no CAP:** nota externa não encontrada no CAP;
+- **Não escriturada:** BPM ainda não aprovado;
+- **Hotel divergente:** hotel do CAP diferente do hotel analisado;
+- **ISS divergente:** ISS da Prefeitura diferente do ISS do CAP.
 
-**Como interpretar**
+O ISS é comparado somente entre Prefeitura e CAP.
 
-- **Conciliada:** documento localizado com as informações esperadas.
-- **Ausente no CAP:** nota encontrada em fonte externa, mas não localizada no CAP.
-- **Não escriturada:** BPM ainda não aprovado.
-- **Hotel divergente:** o hotel indicado no CAP não corresponde ao processo analisado.
-- **ISS divergente:** valor da Prefeitura diferente do valor registrado no CAP.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-O prestador pode aparecer com o CNPJ junto ao nome; o sistema trata essa informação durante a conferência.
+### 4.10 Conferência do Contas a Receber
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**O que faz:** confere clientes, notas a faturar e comissões entre Financeiro e Contabilidade.
 
-### 5.10 Conferência do Contas a Receber
+**Selecione:**
 
-**Finalidade**  
-Verificar clientes a receber, notas a faturar e comissões comparando os relatórios operacionais, financeiros e contábeis.
-
-**Arquivos necessários**
-
-- Balancete por subcontas.
-- Posição por cliente.
-- Borderô de lançamento.
-- Razão de notas a faturar.
-- Agregados lançados.
+- Balancete por subcontas;
+- Posição por cliente;
+- Borderô de lançamento;
+- Razão de notas a faturar;
+- Agregados lançados;
 - Razão de comissões.
 
-**Como interpretar**  
-O resumo apresenta três comparações:
+**Como ler:** o resumo apresenta três verificações separadas:
 
-- **Clientes:** Balancete × Posição por cliente.
-- **Notas a faturar:** Borderô × Razão a faturar.
-- **Comissões:** Agregados lançados × Razão.
+- **Clientes:** Balancete x Posição por cliente;
+- **Notas a faturar:** Borderô x Razão a faturar;
+- **Comissões:** Agregados x Razão.
 
-A tabela permite verificar individualmente os clientes e as contas que formam a diferença.
+A tabela mostra quais clientes ou contas formam cada diferença.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-### 5.11 Conferência do Contas a Pagar
+### 4.11 Conferência do Contas a Pagar
 
-**Finalidade**  
-Verificar se fornecedores, adiantamentos e impostos em aberto coincidem entre Financeiro e Contabilidade.
+**O que faz:** confere fornecedores, adiantamentos e impostos entre Financeiro e Contabilidade.
 
-**Arquivos necessários**
+**Selecione:**
 
-- Balancete com subcontas de fornecedores.
-- Posição por fornecedor.
-- Adiantamentos em aberto.
-- Balancete com subcontas de adiantamentos.
-- Agregados lançados de IRRF.
-- Agregados lançados de CSRF.
-- Agregados lançados de ISS.
+- Balancete de fornecedores;
+- Posição por fornecedor;
+- Adiantamentos em aberto;
+- Balancete de adiantamentos;
+- Agregados de IRRF, CSRF e ISS;
 - Razão Analítico de impostos.
 
-**Como interpretar**  
-O resumo apresenta separadamente Fornecedores, Adiantamentos, IRRF, CSRF e ISS. Para cada grupo são exibidos o total do Financeiro, o total da Contabilidade, a diferença e o resultado.
+**Como ler:** o resumo mostra separadamente Fornecedores, Adiantamentos, IRRF, CSRF e ISS. Em cada grupo são exibidos os totais das duas fontes, a diferença e a situação.
 
-A tabela detalha os fornecedores e subcontas que compõem cada conferência.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+### 4.12 Custos da Mercadoria Vendida
 
-### 5.12 Custos da Mercadoria Vendida
+**O que faz:** confere entradas de mercadorias e saldos de estoque entre CAP, Inventário e Contabilidade.
 
-**Finalidade**  
-Conferir as entradas de mercadorias e o saldo final dos estoques entre CAP, Inventário e Contabilidade.
+**Selecione:**
 
-**Arquivos necessários**
-
-- Documentos lançados por tipo de desembolso.
-- Razão Analítico das entradas de estoque.
-- Inventário físico e financeiro.
+- Documentos lançados por tipo de desembolso;
+- Razão Analítico das entradas de estoque;
+- Inventário físico e financeiro;
 - Razão Analítico dos estoques.
 
-**Como interpretar**  
-O resumo apresenta duas comparações:
+**Como ler:**
 
-- **Entradas:** CAP × Contabilidade.
-- **Saldo final:** Inventário × Contabilidade.
+- **Entradas:** compara CAP com Contabilidade;
+- **Saldo final:** compara Inventário com Contabilidade.
 
-A tabela detalha as contas ou grupos de estoque, os valores de cada fonte e a diferença encontrada.
+A tabela mostra as contas ou grupos de estoque responsáveis pelas diferenças.
 
-**Exportações**  
-Excel detalhado e PDF de resumo.
+**Saídas:** Excel detalhado e PDF de resumo.
 
-## 6. Formatos de exportação
+## 5. Qual arquivo exportar
 
 ### Excel
 
-Indicado para conferência detalhada, aplicação de filtros, pesquisa, ordenação e arquivamento dos resultados.
+Use quando precisar analisar todos os registros, aplicar filtros ou guardar o resultado detalhado.
 
 ### PDF
 
-Indicado para consulta e compartilhamento do resumo da análise. Os PDFs apresentam somente títulos, informações essenciais, indicadores e tabelas.
+Use quando precisar consultar ou compartilhar um resumo da conferência.
 
 ### CSV
 
-Disponível na Folha de Pagamento para importação no CMFlex. O arquivo deve ser utilizado sem alterações que modifiquem a ordem das colunas, os separadores ou os zeros dos códigos.
+Disponível na Folha de Pagamento. É o arquivo preparado para importação no CMFlex.
 
-## 7. Mensagens e situações comuns
+Não abra e salve novamente o CSV no Excel antes da importação. Isso pode alterar separadores e remover zeros dos códigos.
 
-### Arquivo incompatível
+## 6. Se aparecer uma mensagem de erro
 
-O relatório selecionado não pertence à automação aberta. Confira o título da tela e a seção **Arquivos necessários**.
+### Arquivo não reconhecido
 
-### Quantidade incorreta de arquivos
+Confirme se você abriu a automação correta e selecionou os relatórios pedidos naquela tela.
 
-Selecione todos os relatórios solicitados ao mesmo tempo. Remova arquivos de outras atividades da seleção.
+### Está faltando um arquivo
 
-### Coluna não encontrada ou formato não reconhecido
+Clique novamente em **Selecionar arquivos** e escolha todos os relatórios necessários na mesma seleção.
 
-Gere novamente o relatório no sistema de origem, sem excluir cabeçalhos, alterar colunas ou salvar em outro modelo.
+### Coluna ou formato não reconhecido
+
+Gere novamente o relatório no sistema de origem. Não apague cabeçalhos, não altere colunas e não converta o arquivo manualmente.
 
 ### Período incompleto
 
-Um dos relatórios não cobre todas as datas encontradas nas demais fontes. Gere novamente o arquivo com o período completo antes de confirmar a pendência.
+Uma das planilhas não cobre todo o período das demais. Gere novamente o relatório com as datas necessárias.
 
-### Nenhum registro exibido
+### A tabela está vazia
 
-Verifique o filtro **Exibir**, limpe o campo de pesquisa e confirme se a análise foi concluída.
+Selecione **Todos** no filtro **Exibir** e apague o texto do campo de busca.
 
 ### Não foi possível exportar
 
-Confirme se o arquivo de destino não está aberto em outro programa e se a pasta permite gravação. Tente exportar novamente com outro nome.
+Feche o arquivo de destino caso ele esteja aberto no Excel ou em outro programa. Depois exporte novamente.
 
-## 8. Boas práticas
+## 7. Cuidados antes de concluir
 
-- Confirme a empresa, o hotel e o período antes da análise.
-- Gere os relatórios na mesma data e para o mesmo intervalo.
-- Mantenha os arquivos originais sem edições manuais.
-- Analise primeiro as linhas vermelhas e depois as amarelas.
-- Não considere uma ausência definitiva quando o período de uma fonte estiver incompleto.
-- Antes de importar um CSV, confira os totais e os lançamentos indicados como prontos.
-- Salve os resultados com nome que identifique empresa, competência e tipo de conferência.
+- Confirme o hotel, a empresa e o período dos relatórios.
+- Use relatórios gerados para o mesmo período.
+- Não altere as planilhas antes de carregá-las no HERMES.
+- Verifique primeiro as linhas vermelhas.
+- Leia a explicação apresentada na última coluna da tabela.
+- Salve o resultado com o nome do hotel, período e tipo de conferência.
+- Na Folha de Pagamento, confira os totais antes de importar o CSV.
 
-## 9. Privacidade e segurança
+## 8. Segurança das informações
 
-O processamento é realizado localmente no computador em que o HERMES está sendo executado. O sistema lê os relatórios selecionados e cria um novo arquivo somente quando o usuário solicita uma exportação.
+O processamento acontece no computador onde o HERMES está aberto. Um novo arquivo só é criado quando você solicita uma exportação.
 
-Não compartilhe relatórios financeiros, fiscais, dados de hóspedes, fornecedores ou colaboradores fora dos canais autorizados pela empresa.
-
+Não compartilhe planilhas financeiras, fiscais ou dados de hóspedes, fornecedores e colaboradores fora dos canais autorizados pela empresa.
