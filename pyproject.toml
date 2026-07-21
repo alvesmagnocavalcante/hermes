@@ -6,6 +6,19 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "customtkinter>=5.2.2",
+    "flet[all,desktop]>=0.86.1,<0.87",
     "openpyxl>=3.1.5",
     "reportlab>=4.4.2",
+    "xlrd>=2.0.2",
+]
+
+[tool.flet.app]
+exclude = [
+    ".git",
+    ".venv",
+    "PROCESSOS AUTOMAÇÃO",
+    "docs",
+    "__pycache__",
+    "hermes.png",
+    "hermes.ico",
 ]

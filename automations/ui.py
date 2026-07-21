@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from tkinter import ttk
-
-import customtkinter as ctk
+from automations.legacy_ui import ctk, ttk
 
 
 @dataclass(frozen=True)

@@ -4,12 +4,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
-import tkinter as tk
 import warnings
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -79,8 +77,10 @@ def read_values(path: Path) -> tuple[str, dict[str, Decimal]]:
         workbook = load_workbook(path, data_only=True, read_only=True)
     try:
         sheet = workbook.active
-        if sheet.calculate_dimension() == "A1:A1":
-            sheet.reset_dimensions()
+        # Alguns relatórios exportados pelos sistemas não gravam a dimensão da
+        # planilha. No modo somente leitura, calculate_dimension() lança
+        # "Worksheet is unsized" antes que seja possível percorrer as linhas.
+        sheet.reset_dimensions()
         rows = sheet.iter_rows(values_only=True)
         headers = tuple(next(rows))
 

@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import tkinter as tk
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
+from openpyxl.worksheet.table import Table as ExcelTable, TableStyleInfo
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -235,26 +234,44 @@ def save_excel(result: CouponResult, path: Path) -> None:
     summary.column_dimensions["A"].width = 34
     summary.column_dimensions["B"].width = 20
 
-    details = workbook.create_sheet("Conciliação")
-    details.append(["Tipo", "Chave fiscal", "Data", "Simphony - Valor Total NF", "Fiscal - Valor Contábil",
-                    "SEFAZ - Valor", "Diferença", "Status"])
-    for row in result.rows:
-        details.append([
-            row.document_type, row.key, row.reference_date,
-            float(row.simphony) if row.simphony is not None else None,
-            float(row.fiscal) if row.fiscal is not None else None,
-            float(row.sefaz) if row.sefaz is not None else None,
-            float(row.difference) if row.comparable else None, row.status,
-        ])
-    for cell in details[1]:
-        cell.style = "Headline 4"
-    for column in ("D", "E", "F", "G"):
-        for cell in details[column][1:]:
-            cell.number_format = 'R$ #,##0.00'
-    for column, width in {"A": 18, "B": 48, "C": 14, "D": 25, "E": 25, "F": 22, "G": 18, "H": 24}.items():
-        details.column_dimensions[column].width = width
-    details.freeze_panes = "A2"
-    details.auto_filter.ref = details.dimensions
+    headers = ["Tipo", "Chave fiscal", "Data", "Simphony - Valor Total NF", "Fiscal - Valor Contábil",
+               "SEFAZ - Valor", "Diferença", "Status"]
+
+    def create_detail_sheet(title: str, rows: list[CouponRow], table_name: str) -> None:
+        sheet = workbook.create_sheet(title)
+        sheet.append(headers)
+        for row in rows:
+            sheet.append([
+                row.document_type, row.key, row.reference_date,
+                float(row.simphony) if row.simphony is not None else None,
+                float(row.fiscal) if row.fiscal is not None else None,
+                float(row.sefaz) if row.sefaz is not None else None,
+                float(row.difference) if row.comparable else None, row.status,
+            ])
+        for cell in sheet[1]:
+            cell.style = "Headline 4"
+        for column in ("D", "E", "F", "G"):
+            for cell in sheet[column][1:]:
+                cell.number_format = 'R$ #,##0.00'
+        for column, width in {"A": 18, "B": 48, "C": 14, "D": 25, "E": 25,
+                              "F": 22, "G": 18, "H": 24}.items():
+            sheet.column_dimensions[column].width = width
+        sheet.freeze_panes = "A2"
+        if rows:
+            table = ExcelTable(displayName=table_name, ref=sheet.dimensions)
+            table.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium2", showFirstColumn=False, showLastColumn=False,
+                showRowStripes=True, showColumnStripes=False,
+            )
+            sheet.add_table(table)
+        else:
+            sheet.auto_filter.ref = sheet.dimensions
+
+    create_detail_sheet("Conciliação", result.rows, "TabelaConferenciaCupons")
+    create_detail_sheet("Cupons_NFCe", [row for row in result.rows if row.document_type == "Cupom (NFC-e)"],
+                        "TabelaCuponsNFCe")
+    create_detail_sheet("Notas_NFe", [row for row in result.rows if row.document_type != "Cupom (NFC-e)"],
+                        "TabelaNotasNFe")
     workbook.save(path)
 
 
@@ -281,8 +298,7 @@ def save_pdf(result: CouponResult, path: Path) -> None:
     ]))
     document.build([
         Paragraph("Conferência dos cupons — Simphony x Fiscal x SEFAZ", styles["Title"]),
-        Spacer(1, 6 * mm), table, Spacer(1, 6 * mm),
-        Paragraph(f"Cupons cancelados ignorados: {integer(result.cancelled)}.", styles["BodyText"]),
+        Spacer(1, 6 * mm), table,
     ])
 
 

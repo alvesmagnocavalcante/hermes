@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import re
-import tkinter as tk
 import warnings
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -208,9 +206,7 @@ def save_pdf(result: AnalysisResult, path: Path) -> None:
     ]))
     document.build([
         Paragraph("Notas fiscais de entrada de mercadoria em atraso", styles["Title"]),
-        Spacer(1, 6 * mm), table, Spacer(1, 6 * mm),
-        Paragraph("Critério: Ceará, atraso a partir de 11 dias; outros estados, a partir de 30 dias.", styles["BodyText"]),
-        Paragraph("O detalhamento completo está disponível na exportação Excel.", styles["BodyText"]),
+        Spacer(1, 6 * mm), table,
     ])
 
 

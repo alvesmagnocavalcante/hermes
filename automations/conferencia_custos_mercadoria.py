@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import re
-import tkinter as tk
 import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape

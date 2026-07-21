@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk
 
 if TYPE_CHECKING:
     from main import App

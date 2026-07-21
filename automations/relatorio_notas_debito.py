@@ -5,10 +5,9 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils.datetime import from_excel
 from openpyxl.worksheet.worksheet import Worksheet

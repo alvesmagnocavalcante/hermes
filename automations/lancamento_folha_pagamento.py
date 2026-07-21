@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import csv
+import os
 import re
-import tkinter as tk
 import unicodedata
 import warnings
 from collections import defaultdict
@@ -10,10 +10,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -35,7 +34,10 @@ SOURCE_LABELS = {
     "thirteenth_provision": "Provisão de 13º",
 }
 REQUIRED_SOURCES = set(SOURCE_LABELS)
-DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "PROCESSOS AUTOMAÇÃO" / "ATIVIDADE 2 - FOLHA DE PAGAMENTO"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", PROJECT_ROOT / "assets")).resolve()
+DEFAULT_TEMPLATE = ASSETS_DIR / "folha" / "modelo_folha.xlsm"
+LEGACY_TEMPLATE_DIR = PROJECT_ROOT / "PROCESSOS AUTOMAÇÃO" / "ATIVIDADE 2 - FOLHA DE PAGAMENTO"
 
 
 @dataclass(frozen=True)
@@ -50,8 +52,8 @@ class PostingRow:
     debit: str
     credit: str
     value: Decimal
-    month_reference: int | None = None
     credit_cost_center_only: bool = False
+    accounting_origin: int = 6
 
     @property
     def ready(self) -> bool:
@@ -66,6 +68,9 @@ class PostingRow:
 class PayrollResult:
     company: str
     period_end: datetime
+    earnings: Decimal
+    deductions: Decimal
+    net_payable: Decimal
     rows: list[PostingRow]
     ignored_rows: int
     files: dict[str, str]
@@ -159,6 +164,11 @@ def _account(value: Any) -> str:
     return str(int(value)) if isinstance(value, float) and value.is_integer() else str(value).strip()
 
 
+def _cost_center(value: Any) -> str:
+    text = _account(value)
+    return text.zfill(4) if text.isdigit() else text
+
+
 def _organogram_code(value: str) -> str:
     match = re.search(r"(?:ORGRANOGRAMA|ORGANOGRAMA)(\d+(?:\d|\.)*)", normalize(value))
     return (match.group(1).strip(".") if match else "")
@@ -186,7 +196,7 @@ def read_mappings(path: Path) -> Mappings:
             source = sheet.cell(row, 12).value
             if not source:
                 continue
-            mapped = (_account(sheet.cell(row, 13).value), str(sheet.cell(row, 14).value or "").strip())
+            mapped = (_cost_center(sheet.cell(row, 13).value), str(sheet.cell(row, 14).value or "").strip())
             organograms[normalize(source)] = mapped
             code = _organogram_code(str(source))
             if code:
@@ -240,6 +250,24 @@ def extract_period(rows: list[list[str]]) -> datetime:
             next_month = datetime(year + (month_number == 12), month_number % 12 + 1, 1)
             return datetime.fromtimestamp(next_month.timestamp() - 86400)
     raise ValueError("Não foi possível identificar a competência dos relatórios.")
+
+
+def extract_payroll_totals(rows: list[list[str]]) -> tuple[Decimal, Decimal, Decimal]:
+    totals: dict[str, Decimal] = {}
+    for row in rows:
+        for index, value in enumerate(row[:-1]):
+            marker = normalize(value)
+            key = {"PROVVANT": "earnings", "DESCONTOS": "deductions"}.get(marker)
+            if marker == "LIQUIDO" and row and normalize(row[0]) == "FGTS":
+                key = "net"
+            if key is not None:
+                amount = decimal_value(row[index + 1])
+                if amount:
+                    totals[key] = amount
+    earnings = totals.get("earnings", Decimal())
+    deductions = totals.get("deductions", Decimal())
+    net = totals.get("net", earnings - deductions)
+    return earnings, deductions, net
 
 
 def parse_monthly(rows: list[list[str]], mappings: Mappings) -> tuple[list[PostingRow], int]:
@@ -317,9 +345,12 @@ def parse_provision(rows: list[list[str]], mappings: Mappings, thirteenth: bool)
     return result, ignored
 
 
-def parse_vacation_employees(rows: list[list[str]], mappings: Mappings) -> tuple[dict[str, tuple[str, str, str]], int]:
+def parse_vacation_employees(
+    rows: list[list[str]], mappings: Mappings
+) -> tuple[dict[str, tuple[str, str, str]], dict[tuple[str, str, str], Decimal], int]:
     current_organogram = ""
     employees: dict[str, tuple[str, str, str]] = {}
+    liquid_totals: dict[tuple[str, str, str], Decimal] = defaultdict(Decimal)
     ignored = 0
     for row in rows:
         first = row[0].strip() if row else ""
@@ -331,11 +362,12 @@ def parse_vacation_employees(rows: list[list[str]], mappings: Mappings) -> tuple
         elif re.fullmatch(r"\d+", first) and len(row) > 1:
             cost_center, cost_center_name = lookup_organogram(mappings, current_organogram)
             employees[normalize(row[1])] = (cost_center, cost_center_name, current_organogram)
-    return employees, ignored
+            liquid_totals[(cost_center, cost_center_name, current_organogram)] += decimal_value(row[8] if len(row) > 8 else None)
+    return employees, liquid_totals, ignored
 
 
 def parse_vacation_receipts(rows: list[list[str]], employees: dict[str, tuple[str, str, str]],
-                            mappings: Mappings, month: int) -> list[PostingRow]:
+                            mappings: Mappings) -> list[PostingRow]:
     employee = ""
     result: list[PostingRow] = []
     for line_number, row in enumerate(rows, 1):
@@ -353,8 +385,12 @@ def parse_vacation_receipts(rows: list[list[str]], employees: dict[str, tuple[st
         if not value:
             continue
         cost_center, cost_center_name, organogram = employees.get(normalize(employee), ("", "", ""))
+        clean_description = re.sub(r"\s+", " ", description).strip()
+        if normalize(clean_description) == "MENSALIDADESINDICALFERIAS":
+            clean_description = "Mensalidade Sindical Férias"
         result.append(PostingRow("Férias", line_number, organogram, cost_center, cost_center_name,
-                                 event, f"{employee} - {description}", debit, credit, value, month, True))
+                                 event, f"{employee} {clean_description}", debit, credit, value,
+                                 credit_cost_center_only=True))
     return result
 
 
@@ -411,7 +447,9 @@ def build_rates(monthly: list[PostingRow], mappings: Mappings, inss_total: Decim
 
 
 def _default_template() -> Path | None:
-    return next(DEFAULT_TEMPLATE_DIR.glob("*.xlsm"), None) if DEFAULT_TEMPLATE_DIR.exists() else None
+    if DEFAULT_TEMPLATE.exists():
+        return DEFAULT_TEMPLATE
+    return next(LEGACY_TEMPLATE_DIR.glob("*.xlsm"), None) if LEGACY_TEMPLATE_DIR.exists() else None
 
 
 def analyze(paths: list[Path]) -> PayrollResult:
@@ -438,43 +476,75 @@ def analyze(paths: list[Path]) -> PayrollResult:
     sources = {kind: read_csv(grouped[kind][0]) for kind in REQUIRED_SOURCES}
     mappings = read_mappings(template)
     period_end = extract_period(sources["summary"])
+    earnings, deductions, net_payable = extract_payroll_totals(sources["summary"])
     company = next((row[0].strip() for row in sources["summary"] if row and "HOTEL" in normalize(row[0])), "Empresa não identificada")
 
     monthly, monthly_ignored = parse_monthly(sources["summary"], mappings)
     vacation_provision, vacation_ignored = parse_provision(sources["vacation_provision"], mappings, False)
     thirteenth, thirteenth_ignored = parse_provision(sources["thirteenth_provision"], mappings, True)
-    employees, liquid_ignored = parse_vacation_employees(sources["vacation_liquid"], mappings)
-    vacations = parse_vacation_receipts(sources["vacation_receipt"], employees, mappings, period_end.month)
+    employees, liquid_totals, liquid_ignored = parse_vacation_employees(sources["vacation_liquid"], mappings)
+    vacations = parse_vacation_receipts(sources["vacation_receipt"], employees, mappings)
+    for (cost_center, cost_center_name, organogram), value in liquid_totals.items():
+        if value:
+            vacations.append(PostingRow("Férias", 10**9, organogram, cost_center, cost_center_name, "",
+                                        "REF BAIXA FÉRIAS", "201010103", "101020103",
+                                        value.quantize(Decimal("0.01")), credit_cost_center_only=True))
     rates, validation = build_rates(monthly, mappings, extract_inss_total(sources["inss"]),
                                     extract_fgts_total(sources["fgts"]), period_end)
     rows = monthly + vacations + vacation_provision + thirteenth + rates
     if not rows:
         raise ValueError("Nenhum lançamento foi encontrado nos relatórios selecionados.")
-    rows.sort(key=lambda item: (item.source, not item.ready, item.cost_center, item.description, item.source_line))
+    rows.sort(key=lambda item: (
+        item.source, not item.ready, item.source_line if item.source == "Férias" else 0,
+        item.cost_center, item.description, item.source_line,
+    ))
     files = {SOURCE_LABELS[kind]: grouped[kind][0].name for kind in REQUIRED_SOURCES}
-    return PayrollResult(company, period_end, rows,
+    return PayrollResult(company, period_end, earnings, deductions, net_payable, rows,
                          monthly_ignored + vacation_ignored + thirteenth_ignored + liquid_ignored,
                          files, validation)
 
 
-def _write_import_sheet(workbook: Workbook, title: str, rows: list[PostingRow], period_end: datetime) -> None:
+def _write_import_sheet(workbook: Workbook, title: str, rows: list[PostingRow], posting_date: datetime) -> None:
     sheet = workbook.create_sheet(title)
     for row in rows:
         if not row.ready:
             continue
-        sheet.append([1, "A", period_end, None, int(row.debit), None,
-                      "" if row.credit_cost_center_only else row.cost_center,
-                      int(row.credit), None, row.cost_center, row.description,
-                      row.month_reference, float(row.value)])
-    sheet.column_dimensions["C"].width = 13
-    sheet.column_dimensions["K"].width = 58
-    for cell in sheet["C"]:
+        sheet.append(_posting_values(row, posting_date, excel=True))
+    sheet.column_dimensions["B"].width = 13
+    sheet.column_dimensions["J"].width = 58
+    for cell in sheet["B"]:
         cell.number_format = "dd/mm/yyyy"
     for cell in sheet["M"]:
         cell.number_format = "#,##0.00"
 
 
-def save_excel(result: PayrollResult, path: Path) -> None:
+def _csv_money(value: Decimal) -> str:
+    if value == value.to_integral_value():
+        return str(int(value))
+    return f"{value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _posting_values(row: PostingRow, posting_date: datetime, excel: bool = False) -> list[Any]:
+    cost_center = _cost_center(row.cost_center)
+    return ["A", posting_date if excel else posting_date.strftime("%d/%m/%Y"), "", int(row.debit), "",
+            cost_center, int(row.credit), "", cost_center, row.description, "", row.accounting_origin,
+            float(row.value) if excel else _csv_money(row.value)]
+
+
+def save_csv(result: PayrollResult, path: Path, posting_date: datetime | None = None,
+             source: str | None = None) -> None:
+    posting_date = posting_date or result.period_end
+    with path.open("w", encoding="cp1252", newline="") as file:
+        # O Excel/CMFlex em ambiente pt-BR usa ponto e vírgula como separador
+        # de campos e vírgula como separador decimal.
+        writer = csv.writer(file, delimiter=";", quoting=csv.QUOTE_MINIMAL, lineterminator="\r\n")
+        for row in result.rows:
+            if row.ready and (source is None or row.source == source):
+                writer.writerow(_posting_values(row, posting_date))
+
+
+def save_excel(result: PayrollResult, path: Path, posting_date: datetime | None = None) -> None:
+    posting_date = posting_date or result.period_end
     workbook = Workbook()
     workbook.remove(workbook.active)
     names = {
@@ -485,7 +555,7 @@ def save_excel(result: PayrollResult, path: Path) -> None:
         "Rateios mensais": "Rateios_Mensais",
     }
     for source, title in names.items():
-        _write_import_sheet(workbook, title, result.by_source.get(source, []), result.period_end)
+        _write_import_sheet(workbook, title, result.by_source.get(source, []), posting_date)
 
     summary = workbook.create_sheet("Resumo", 0)
     summary.append(["Indicador", "Resultado"])
@@ -493,6 +563,8 @@ def save_excel(result: PayrollResult, path: Path) -> None:
         ("Empresa", result.company), ("Competência", result.period_end.strftime("%m/%Y")),
         ("Relatórios reconhecidos", len(result.files)), ("Lançamentos gerados", len(result.rows)),
         ("Lançamentos com dados completos", result.ready), ("De/para incompleto", len(result.rows) - result.ready),
+        ("Proventos da folha", float(result.earnings)), ("Descontos da folha", float(result.deductions)),
+        ("Líquido a pagar", float(result.net_payable)),
         ("Totalizadores/duplicadores excluídos", result.ignored_rows), ("Valor total dos lançamentos", float(result.total)),
     ]
     for label, value in indicators:
@@ -557,10 +629,8 @@ def save_pdf(result: PayrollResult, path: Path) -> None:
     ]))
     story = [Paragraph("Lançamento da Folha de Pagamento", styles["Title"]), Spacer(1, 3 * mm),
              Paragraph(f"{result.company} — competência {result.period_end:%m/%Y}", styles["BodyText"]),
-             Spacer(1, 5 * mm), table, Spacer(1, 5 * mm),
-             Paragraph(f"Foram excluídos {result.ignored_rows} totalizadores ou registros duplicadores.", styles["BodyText"])]
-    for warning in result.warnings:
-        story.append(Paragraph(f"Validação: {warning}", styles["BodyText"]))
+             Paragraph(f"Líquido a pagar: {money(result.net_payable)}", styles["Heading2"]),
+             Spacer(1, 5 * mm), table]
     document = SimpleDocTemplate(str(path), pagesize=landscape(A4), title="Lançamento da Folha de Pagamento")
     document.build(story)
 
@@ -588,7 +658,7 @@ class PayrollPostingAutomation(Automation):
         controls.grid(row=2, column=0, padx=30, sticky="ew")
         self.select = ctk.CTkButton(controls, text="Selecionar os 7 relatórios", command=self._select)
         self.select.pack(side="left", padx=(0, 10))
-        ctk.CTkSegmentedButton(controls, values=["Excel", "PDF"], variable=self.output_format).pack(side="left", padx=10)
+        ctk.CTkSegmentedButton(controls, values=["Excel", "CSV", "PDF"], variable=self.output_format).pack(side="left", padx=10)
         self.export = ctk.CTkButton(controls, text="Exportar resultado", state="disabled", command=self._export)
         self.export.pack(side="left", padx=10)
         ctk.CTkButton(controls, text="Limpar", fg_color="gray35", command=self._clear).pack(side="left", padx=10)
@@ -602,7 +672,7 @@ class PayrollPostingAutomation(Automation):
         cards = ctk.CTkFrame(dashboard, fg_color="transparent")
         cards.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
         self.cards = {}
-        for index, title in enumerate(("Arquivos reconhecidos", "Dados completos", "Valor processado", "Totalizadores excluídos")):
+        for index, title in enumerate(("Arquivos reconhecidos", "Dados completos", "Líquido a pagar", "Totalizadores excluídos")):
             cards.grid_columnconfigure(index, weight=1)
             card = ctk.CTkFrame(cards)
             card.grid(row=0, column=index, padx=(0 if index == 0 else 5, 0), sticky="nsew")
@@ -627,7 +697,7 @@ class PayrollPostingAutomation(Automation):
         entry = ctk.CTkEntry(filters, textvariable=self.search, placeholder_text="Fonte, evento, descrição, organograma ou centro de custo")
         entry.grid(row=0, column=4, sticky="ew")
         entry.bind("<KeyRelease>", lambda _: self._reset())
-        ctk.CTkLabel(filters, text="Dados completos: valor, débito, crédito e centro de custo preenchidos  •  Pendência: de/para incompleto", text_color="gray70", anchor="w").grid(row=1, column=0, columnspan=5, pady=(6, 0), sticky="ew")
+        ctk.CTkLabel(filters, text="Dados completos: valor, débito, crédito e CC preenchidos  •  Para gerar um CSV separado, escolha a saída no filtro", text_color="gray70", anchor="w").grid(row=1, column=0, columnspan=5, pady=(6, 0), sticky="ew")
 
         self.preview = create_result_table(self.container, (
             TableColumn("source", "Fonte", 155), TableColumn("cc", "Centro de custo", 115),
@@ -687,7 +757,7 @@ class PayrollPostingAutomation(Automation):
             self.previous.configure(state="disabled")
             self.next.configure(state="disabled")
         else:
-            values = ("7 de 7", str(self.result.ready), money(self.result.total), str(self.result.ignored_rows))
+            values = ("7 de 7", str(self.result.ready), money(self.result.net_payable), str(self.result.ignored_rows))
             for title, value in zip(self.cards, values):
                 self.cards[title].configure(text=value)
             filtered = self._filtered()
@@ -734,16 +804,25 @@ class PayrollPostingAutomation(Automation):
     def _export(self):
         if not self.result:
             return
-        extension = ".xlsx" if self.output_format.get() == "Excel" else ".pdf"
+        posting_date = self.result.period_end
+        formats = {"Excel": (".xlsx", save_excel), "CSV": (".csv", save_csv), "PDF": (".pdf", save_pdf)}
+        extension, task = formats[self.output_format.get()]
+        selected_source = None if self.source_filter.get() == "Todas as saídas" else self.source_filter.get()
+        source_name = normalize(selected_source).lower() if selected_source else "folha"
         name = filedialog.asksaveasfilename(title="Exportar folha", defaultextension=extension,
-                                            initialfile=f"lancamento_folha_{self.result.period_end:%Y_%m}{extension}",
+                                            initialfile=f"{source_name}_{self.result.period_end:%Y_%m}{extension}",
                                             filetypes=[(self.output_format.get(), f"*{extension}")])
         if not name:
             return
         result = self.result
-        task = save_excel if extension == ".xlsx" else save_pdf
         self.app.set_status("Exportando lançamento da folha...", .5)
-        self.app.run_background(lambda: task(result, Path(name)),
+        if extension == ".pdf":
+            export_task = lambda: task(result, Path(name))
+        elif extension == ".csv":
+            export_task = lambda: task(result, Path(name), posting_date, selected_source)
+        else:
+            export_task = lambda: task(result, Path(name), posting_date)
+        self.app.run_background(export_task,
                                 lambda _: (self.app.set_status("Resultado exportado", 1), messagebox.showinfo("Concluído", "Resultado exportado com sucesso.")))
 
     def _clear(self):

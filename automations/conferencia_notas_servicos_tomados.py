@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import re
-import tkinter as tk
 import unicodedata
 import warnings
 from collections import defaultdict
@@ -12,10 +11,9 @@ from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
 from html.parser import HTMLParser
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -476,8 +474,7 @@ def save_pdf(result: AnalysisResult, path: Path) -> None:
         ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#24588A")),("TEXTCOLOR",(0,0),(-1,0),colors.white),
         ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("ALIGN",(0,0),(-1,-1),"CENTER"),("GRID",(0,0),(-1,-1),.5,colors.grey)]))
     doc=SimpleDocTemplate(str(path),pagesize=landscape(A4),title="Conferência de Notas de Serviços Tomados")
-    doc.build([Paragraph("Conferência de Notas de Serviços Tomados",styles["Title"]),Spacer(1,5*mm),table,
-               Spacer(1,5*mm),Paragraph(f"Hotel esperado: {result.expected_hotel or 'não identificado'}. Detalhes completos no Excel.",styles["BodyText"])])
+    doc.build([Paragraph("Conferência de Notas de Serviços Tomados",styles["Title"]),Spacer(1,5*mm),table])
 
 
 class ServiceNotesAutomation(Automation):

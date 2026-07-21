@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import re
-import tkinter as tk
 import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -170,7 +168,14 @@ def analyze(paths: list[Path], hotel: str) -> DailyRevenueResult:
     journals = [path for path, kind in identified if kind == "journal"]
     unknown = [path.name for path, kind in identified if kind == "unknown"]
     if unknown:
-        raise ValueError(f"Formato não reconhecido: {', '.join(unknown)}.")
+        selected = ", ".join(unknown)
+        guidance = (
+            "Esta conferência aceita somente a planilha 'Códigos de transação' "
+            "e o 'Journal Opera - Receita'."
+        )
+        if any("BIPDV" in normalize(name) for name in unknown):
+            guidance += " O arquivo BI PDV pertence à automação 'Cupons Emitidos x Conta do Hóspede'."
+        raise ValueError(f"Arquivo incompatível com Receita de Diárias: {selected}. {guidance}")
     if len(codes) != 1 or len(journals) != 1:
         raise ValueError("Envie uma planilha de códigos de transação e um Journal.")
     rules = read_rules(codes[0], hotel)
@@ -239,8 +244,7 @@ def save_pdf(result: DailyRevenueResult, path: Path) -> None:
     document = SimpleDocTemplate(str(path), pagesize=landscape(A4), title="Receita de Diárias")
     document.build([
         Paragraph("Conciliação da Receita de Diárias", styles["Title"]),
-        Spacer(1, 5 * mm), table, Spacer(1, 5 * mm),
-        Paragraph("Os valores consideram somente os TRX_CODE marcados como SIM na planilha de códigos de transação.", styles["BodyText"]),
+        Spacer(1, 5 * mm), table,
     ])
 
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import tkinter as tk
 import unicodedata
 import warnings
 from collections import defaultdict
@@ -9,10 +8,9 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
+from automations.legacy_ui import ctk, filedialog, messagebox, tk
 from openpyxl import Workbook, load_workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -277,8 +275,7 @@ def save_pdf(result: PayablesResult, path: Path) -> None:
         ("GRID", (0, 0), (-1, -1), .5, colors.HexColor("#CBD5E1")),
         ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
-    document.build([Paragraph("Conferência do Contas a Pagar", styles["Title"]), Spacer(1, 6 * mm), table,
-                    Spacer(1, 5 * mm), Paragraph("O detalhamento completo está disponível no Excel.", styles["BodyText"])])
+    document.build([Paragraph("Conferência do Contas a Pagar", styles["Title"]), Spacer(1, 6 * mm), table])
 
 
 class PayablesAutomation(Automation):
