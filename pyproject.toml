@@ -14,7 +14,12 @@ dependencies = [
 
 [tool.flet.app]
 exclude = [
+    ".agents",
+    ".audit_folha",
+    ".codex",
+    ".flet",
     ".git",
+    ".uv-cache",
     ".venv",
     "build",
     "PROCESSOS AUTOMAÇÃO",

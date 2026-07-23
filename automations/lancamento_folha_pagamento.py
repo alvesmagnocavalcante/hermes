@@ -54,6 +54,7 @@ class PostingRow:
     value: Decimal
     credit_cost_center_only: bool = False
     accounting_origin: int = 6
+    employee: str = ""
 
     @property
     def ready(self) -> bool:
@@ -84,6 +85,14 @@ class PayrollResult:
     @property
     def ready(self) -> int:
         return sum(row.ready for row in self.rows)
+
+    @property
+    def vacation_employees(self) -> int:
+        return len({row.employee for row in self.rows if row.employee})
+
+    @property
+    def vacation_entries(self) -> int:
+        return sum(bool(row.employee) for row in self.rows)
 
     @property
     def by_source(self) -> dict[str, list[PostingRow]]:
@@ -401,8 +410,19 @@ def parse_vacation_receipts(rows: list[list[str]], employees: dict[str, tuple[st
             clean_description = "Mensalidade Sindical Férias"
         result.append(PostingRow("Férias", line_number, organogram, cost_center, cost_center_name,
                                  event, f"{employee} {clean_description}", debit, credit, value,
-                                 credit_cost_center_only=True))
+                                 credit_cost_center_only=True, employee=employee))
     return result
+
+
+def vacation_receipt_employees(rows: list[list[str]]) -> dict[str, str]:
+    employees: dict[str, str] = {}
+    for row in rows:
+        if not row or not normalize(row[0]).startswith("FUNCIONARIO"):
+            continue
+        employee = next((str(value).strip() for value in row[3:] if str(value).strip()), "")
+        if employee:
+            employees[normalize(employee)] = employee
+    return employees
 
 
 def extract_fgts_total(rows: list[list[str]]) -> Decimal:
@@ -495,6 +515,27 @@ def analyze(paths: list[Path]) -> PayrollResult:
     thirteenth, thirteenth_ignored = parse_provision(sources["thirteenth_provision"], mappings, True)
     employees, liquid_totals, liquid_ignored = parse_vacation_employees(sources["vacation_liquid"], mappings)
     vacations = parse_vacation_receipts(sources["vacation_receipt"], employees, mappings)
+    receipt_employees = vacation_receipt_employees(sources["vacation_receipt"])
+    generated_employees = {normalize(row.employee) for row in vacations if row.employee}
+    missing_employees = [
+        name for key, name in receipt_employees.items()
+        if key not in generated_employees
+    ]
+    if missing_employees:
+        raise ValueError(
+            "Não foi possível gerar os lançamentos de férias de: "
+            f"{', '.join(missing_employees)}. Verifique o de/para dos eventos."
+        )
+    incomplete_vacations = sorted({
+        row.employee for row in vacations
+        if row.employee and not row.ready
+    })
+    if incomplete_vacations:
+        raise ValueError(
+            "Funcionário(s) de férias sem conta ou centro de custo mapeado: "
+            f"{', '.join(incomplete_vacations)}."
+        )
+    individual_vacations = {row for row in vacations if row.employee}
     for (cost_center, cost_center_name, organogram), value in liquid_totals.items():
         if value:
             vacations.append(PostingRow("Férias", 10**9, organogram, cost_center, cost_center_name, "",
@@ -503,8 +544,22 @@ def analyze(paths: list[Path]) -> PayrollResult:
     rates, validation = build_rates(monthly, mappings, extract_inss_total(sources["inss"]),
                                     extract_fgts_total(sources["fgts"]), period_end)
     rows = monthly + vacations + vacation_provision + thirteenth + rates
-    excluded_rows = sum(row.event in mappings.excluded_events for row in rows)
-    rows = [row for row in rows if row.event not in mappings.excluded_events]
+    # A lista "Desconsiderar" elimina do resumo mensal os eventos que já são
+    # detalhados pelos relatórios específicos. Aplicá-la novamente ao recibo
+    # removeria todos os funcionários em férias da exportação.
+    excluded_rows = sum(
+        row.source == "Folha mensal" and row.event in mappings.excluded_events
+        for row in rows
+    )
+    rows = [
+        row for row in rows
+        if not (row.source == "Folha mensal" and row.event in mappings.excluded_events)
+    ]
+    exported_individual_vacations = {row for row in rows if row.employee}
+    if individual_vacations != exported_individual_vacations:
+        raise ValueError(
+            "A validação interna detectou lançamento individual de férias ausente no resultado."
+        )
     if not rows:
         raise ValueError("Nenhum lançamento foi encontrado nos relatórios selecionados.")
     rows.sort(key=lambda item: (
@@ -596,6 +651,8 @@ def save_excel(result: PayrollResult, path: Path, posting_date: datetime | None 
         ("Líquido a pagar", float(result.net_payable)),
         ("Totalizadores/duplicadores excluídos", result.ignored_rows),
         ("Eventos da lista Desconsiderar excluídos", result.excluded_rows),
+        ("Funcionários em férias incluídos", result.vacation_employees),
+        ("Lançamentos individuais de férias", result.vacation_entries),
         ("Valor total dos lançamentos", float(result.total)),
     ]
     for label, value in indicators:
@@ -658,15 +715,48 @@ def save_pdf(result: PayrollResult, path: Path) -> None:
         ("GRID", (0, 0), (-1, -1), .5, colors.grey),
         ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.HexColor("#EEF3F8")]),
     ]))
+    vacation_groups: dict[str, list[PostingRow]] = defaultdict(list)
+    for row in result.rows:
+        if row.employee:
+            vacation_groups[row.employee].append(row)
+    vacation_data = [["Funcionário em férias", "Centro de custo", "Lançamentos", "Valor"]]
+    for employee, rows in sorted(vacation_groups.items()):
+        vacation_data.append([
+            employee,
+            rows[0].cost_center,
+            str(len(rows)),
+            money(sum((row.value for row in rows), Decimal())),
+        ])
+    vacation_table = Table(vacation_data, colWidths=[100 * mm, 35 * mm, 30 * mm, 35 * mm])
+    vacation_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#24588A")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), .5, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EEF3F8")]),
+    ]))
     story = [Paragraph("Lançamento da Folha de Pagamento", styles["Title"]), Spacer(1, 3 * mm),
              Paragraph(f"{result.company} — competência {result.period_end:%m/%Y}", styles["BodyText"]),
              Paragraph(f"Líquido a pagar: {money(result.net_payable)}", styles["Heading2"]),
              Paragraph(
                  f"Exclusões aplicadas: {result.ignored_rows} totalizadores e "
-                 f"{result.excluded_rows} eventos da lista Desconsiderar.",
+                 f"{result.excluded_rows} eventos duplicados do resumo mensal.",
+                 styles["BodyText"],
+             ),
+             Paragraph(
+                 f"Férias: {result.vacation_employees} funcionário(s) e "
+                 f"{result.vacation_entries} lançamento(s) individualizado(s) incluídos.",
                  styles["BodyText"],
              ),
              Spacer(1, 5 * mm), table]
+    if vacation_groups:
+        story.extend([
+            Spacer(1, 7 * mm),
+            Paragraph("Funcionários em férias incluídos", styles["Heading2"]),
+            Spacer(1, 2 * mm),
+            vacation_table,
+        ])
     document = SimpleDocTemplate(str(path), pagesize=landscape(A4), title="Lançamento da Folha de Pagamento")
     document.build(story)
 
@@ -770,7 +860,14 @@ class PayrollPostingAutomation(Automation):
         self.source_menu.configure(values=sources)
         self.source_filter.set("Todas as saídas")
         warning = f" • {len(result.warnings)} validação(ões) no resumo" if result.warnings else ""
-        self.info.configure(text=f"{result.company} • Competência {result.period_end:%m/%Y} • 7 relatórios reconhecidos • {len(result.rows)} lançamentos{warning}")
+        self.info.configure(
+            text=(
+                f"{result.company} • Competência {result.period_end:%m/%Y} • "
+                f"Férias: {result.vacation_employees} funcionário(s) e "
+                f"{result.vacation_entries} lançamento(s) • "
+                f"{len(result.rows)} lançamentos totais{warning}"
+            )
+        )
         self.app.set_status("Lançamentos da folha preparados", 1)
         self._show()
 

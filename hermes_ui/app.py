@@ -338,8 +338,10 @@ class AutomationView:
                 f"{result.company}  •  Competência {result.period_end:%m/%Y}  •  "
                 f"Proventos {format_value(result.earnings)}  •  Descontos {format_value(result.deductions)}  •  "
                 f"Líquido a pagar {format_value(result.net_payable)}  •  "
+                f"Férias: {result.vacation_employees} funcionário(s), "
+                f"{result.vacation_entries} lançamento(s) individualizado(s)  •  "
                 f"Excluídos: {result.ignored_rows} totalizadores e "
-                f"{result.excluded_rows} eventos da lista Desconsiderar",
+                f"{result.excluded_rows} eventos duplicados do resumo mensal",
                 color=MUTED, size=12,
             )]
             return
