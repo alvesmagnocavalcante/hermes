@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox, tk
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -19,6 +19,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table
 
 
@@ -146,7 +147,7 @@ def _header_map(values: tuple[Any, ...]) -> dict[str, int]:
 
 
 def identify_file(path: Path) -> str:
-    if path.suffix.lower() not in {".xlsx", ".xlsm"}:
+    if path.suffix.lower() not in {".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
         return "unknown"
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -490,7 +491,7 @@ class GuestCouponAutomation(Automation):
         self._show()
 
     def _select(self):
-        names = filedialog.askopenfilenames(title="Arquivos da conferência de cupons", filetypes=[("Planilhas Excel", "*.xlsx *.xlsm")])
+        names = filedialog.askopenfilenames(title="Arquivos da conferência de cupons", filetypes=[("Planilhas Excel", "*.xlsx *.xlsm *.xls *.xltx *.xltm")])
         if not names:
             return
         self.select.configure(state="disabled")

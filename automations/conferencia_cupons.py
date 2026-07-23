@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox, tk
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.worksheet.table import Table as ExcelTable, TableStyleInfo
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -18,6 +18,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table, result_tag
 
 
@@ -403,7 +404,7 @@ class CouponReconciliationAutomation(Automation):
         self._render_preview()
 
     def _select(self) -> None:
-        names = filedialog.askopenfilenames(title="Selecionar Simphony, Fiscal e SEFAZ", filetypes=[("Planilhas Excel", "*.xlsx")])
+        names = filedialog.askopenfilenames(title="Selecionar Simphony, Fiscal e SEFAZ", filetypes=[("Planilhas Excel", "*.xlsx *.xlsm *.xls *.xltx *.xltm")])
         if not names:
             return
         self.paths = [Path(name) for name in names]

@@ -1,6 +1,6 @@
 # HERMES — Painel de Automação de Planilhas
 
-Aplicação desktop modular em Flet para conferência, conciliação e geração de relatórios a partir de planilhas Excel, CSV e XML.
+Aplicação desktop modular em Flet para conferência, conciliação e geração de relatórios a partir de planilhas Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` e `.xltm`), CSV e XML.
 
 O painel utiliza tema escuro, menu lateral recolhível, componentes responsivos, tabelas com filtros e paginação, indicadores visuais, processamento assíncrono e exportação para Excel, PDF ou CSV conforme a automação.
 
@@ -22,6 +22,10 @@ Em cada automação, o sistema:
 O processamento ocorre em segundo plano, mantendo a interface disponível enquanto as planilhas são analisadas. Erros de arquivo, colunas ausentes ou formatos incompatíveis são apresentados ao usuário por mensagens visuais.
 
 O objetivo é reduzir o tempo de conferência, identificar integrações ausentes e tornar as divergências rastreáveis até o documento de origem.
+
+### Formatos de entrada
+
+Todas as automações que utilizam planilhas Excel aceitam `.xlsx`, `.xlsm`, `.xls`, `.xltx` e `.xltm`. O leitor também reconhece relatórios antigos `.xls` em formato binário, relatórios HTML entregues com extensão `.xls` e arquivos modernos que tenham sido fornecidos com essa extensão.
 
 ## Guia do usuário
 
@@ -75,7 +79,7 @@ As planilhas usadas para validação ficam em `PROCESSOS AUTOMAÇÃO/`, organiza
 
 ### Atividade 2 — Folha de pagamento
 
-Selecione simultaneamente os sete relatórios CSV: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Os nomes dos arquivos não são usados na identificação; o sistema reconhece cada relatório pelo conteúdo.
+Selecione simultaneamente os sete relatórios: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Eles podem estar em CSV ou Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` ou `.xltm`). Os nomes dos arquivos não são usados na identificação; o sistema reconhece cada relatório pelo conteúdo.
 
 A planilha `Projeto 2 - DP CARMEL PADRÃO...xlsm` contém os de/para e as regras adotadas pelo departamento. Ela é carregada automaticamente da pasta de exemplo. Se uma versão atualizada da planilha for selecionada junto aos CSVs, essa versão passa a ser usada na análise.
 

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox, tk
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -18,6 +18,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table, result_tag
 
 TOLERANCE = Decimal("0.01")
@@ -215,7 +216,7 @@ class CostAutomation(Automation):
         self._show()
 
     def _select(self):
-        names=filedialog.askopenfilenames(title="Arquivos da Atividade 10",filetypes=[("Planilhas Excel","*.xlsx")])
+        names=filedialog.askopenfilenames(title="Arquivos da Atividade 10",filetypes=[("Planilhas Excel","*.xlsx *.xlsm *.xls *.xltx *.xltm")])
         if not names:return
         self.paths=[Path(x) for x in names]; self.select.configure(state="disabled"); self.app.set_status("Conferindo custos...",.1)
         self.app.run_background(lambda:analyze(self.paths),self._done,self._failed)

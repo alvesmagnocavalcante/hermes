@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox, tk
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -20,6 +20,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table
 
 
@@ -257,26 +258,6 @@ def _sheet_rows(path: Path) -> tuple[list[Any], list[dict[str, Any]]]:
         if b"<html" in header or b"<!doctype html" in header:
             return _html_sheet_rows(path)
 
-        import xlrd
-
-        workbook = xlrd.open_workbook(path, on_demand=True)
-        try:
-            sheet = workbook.sheet_by_index(0)
-
-            def cell_value(cell):
-                if cell.ctype == xlrd.XL_CELL_DATE:
-                    return xlrd.xldate_as_datetime(cell.value, workbook.datemode)
-                return cell.value
-
-            headers = [cell_value(sheet.cell(0, column)) for column in range(sheet.ncols)]
-            rows = []
-            for row_index in range(1, sheet.nrows):
-                values = [cell_value(sheet.cell(row_index, column)) for column in range(sheet.ncols)]
-                rows.append(dict(zip(headers, values)))
-            return headers, rows
-        finally:
-            workbook.release_resources()
-
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         workbook = load_workbook(path, data_only=True, read_only=True)
@@ -296,7 +277,7 @@ def identify_file(path: Path) -> str:
             return "opera" if ET.parse(path).getroot().tag == "FOLIO_DETAILS" else "unknown"
         except ET.ParseError:
             return "unknown"
-    if path.suffix.lower() not in {".xlsx", ".xlsm", ".xls"}:
+    if path.suffix.lower() not in {".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
         return "unknown"
     headers, _ = _sheet_rows(path)
     keys = {normalize(header) for header in headers}
@@ -588,7 +569,7 @@ class ProvidedServicesRPSAutomation(Automation):
         self._show()
 
     def _select(self):
-        names = filedialog.askopenfilenames(title="Arquivos de serviços prestados", filetypes=[("XML e Excel", "*.xml *.xlsx *.xlsm *.xls")])
+        names = filedialog.askopenfilenames(title="Arquivos de serviços prestados", filetypes=[("XML e Excel", "*.xml *.xlsx *.xlsm *.xls *.xltx *.xltm")])
         if not names:
             return
         self.select.configure(state="disabled")

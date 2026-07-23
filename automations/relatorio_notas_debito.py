@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.utils.datetime import from_excel
 from openpyxl.worksheet.worksheet import Worksheet
 from reportlab.lib import colors
@@ -18,6 +18,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table
 
 
@@ -262,7 +263,7 @@ class DebitReportAutomation(Automation):
         self._show_preview()
 
     def _select_files(self) -> None:
-        names = filedialog.askopenfilenames(title="Selecionar planilhas", filetypes=[("Planilhas Excel", "*.xlsx")])
+        names = filedialog.askopenfilenames(title="Selecionar planilhas", filetypes=[("Planilhas Excel", "*.xlsx *.xlsm *.xls *.xltx *.xltm")])
         if not names:
             return
         self.files = list(dict.fromkeys([*self.files, *(Path(name) for name in names)]))

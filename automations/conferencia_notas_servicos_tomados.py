@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox, tk
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -22,6 +22,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table
 
 TOLERANCE = Decimal("0.01")
@@ -163,18 +164,22 @@ def xlsx_columns(path: Path) -> set[str]:
 
 def identify_file(path: Path) -> str:
     suffix = path.suffix.lower()
-    if suffix in {".csv", ".xls"}:
+    if suffix == ".csv":
         return "external"
-    if suffix != ".xlsx":
+    if suffix not in {".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
         return "unknown"
     columns = xlsx_columns(path)
     if {"RAZAOSOCIALFORNECEDOR", "DOCUMENTOPRINCIPALFORNECEDOR", "NUMERO", "VALORBRUTO", "STATUSBPM"}.issubset(columns):
         return "cap"
     if {"DOCUMENTOPRINCIPALFORNECEDOR", "NUMERODOCUMENTO", "VALORBASECALCULO", "VALOR"}.issubset(columns):
         return "tax"
-    if "NUMERONFSE" in columns or {"CNPJ", "PRESTADOR", "VALORSERVICOS"}.issubset(columns):
+    if (
+        "NUMERONFSE" in columns
+        or {"CNPJ", "PRESTADOR", "VALORSERVICOS"}.issubset(columns)
+        or {"NUMERO", "PRESTADORDOSERVICO", "DATADEEMISSAO", "VALORDOSERVICO"}.issubset(columns)
+    ):
         return "external"
-    return "unknown"
+    return "external" if suffix == ".xls" else "unknown"
 
 
 def row_dict(header, row):
@@ -273,17 +278,10 @@ class HtmlTableParser(HTMLParser):
 
 
 def external_html_xls(path: Path) -> list[dict[str, Any]]:
-    raw = path.read_bytes()
-    if not raw.lstrip().lower().startswith((b"<html", b"<!doctype")):
-        raise ValueError(f"O arquivo {path.name} não é um relatório HTML compatível.")
-    parser = HtmlTableParser()
-    parser.feed(raw.decode("utf-8-sig", errors="replace"))
-    if len(parser.rows) < 2:
-        raise ValueError(f"Nenhuma nota foi encontrada em {path.name}.")
+    source_header, source_rows = xlsx_rows(path)
+    header = {normalize(value): index for index, value in enumerate(source_header)}
 
-    header = {normalize(value): index for index, value in enumerate(parser.rows[0])}
-
-    def value(row: list[str], *names: str) -> str:
+    def value(row, *names: str):
         index = next((header[name] for name in names if name in header), None)
         return row[index] if index is not None and index < len(row) else ""
 
@@ -297,15 +295,15 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         raise ValueError(f"Colunas obrigatórias não encontradas em {path.name}.")
 
     result = []
-    for row in parser.rows[1:]:
+    for row in source_rows:
         number = value(row, "NUMERO", "NUMERONFSE", "NUMERODANOTA", "NOTA")
-        provider_field = value(row, "PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL")
+        provider_field = str(value(row, "PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL") or "")
         match = re.match(r"\s*([\d./-]{14,})\s+-\s+(.+)", provider_field)
         document = match.group(1) if match else value(row, "CNPJ", "CPFCNPJ", "CNPJCPF")
         provider = match.group(2) if match else provider_field
         if not number or not cnpj(document) or not provider:
             continue
-        provider = re.sub(r"^\s*[\d./-]{8,}\s+", "", provider).strip()
+        provider = re.sub(r"^\s*[\d./-]{8,}\s+", "", str(provider)).strip()
         result.append({
             "source": "Relatório externo",
             "number": number,
@@ -321,8 +319,12 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
 
 
 def expected_hotel(paths: list[Path]) -> str:
-    tokens = [match.group(1) for path in paths if (match := re.search(r"\(([^)]+)\)", path.name))]
-    return normalize(max(set(tokens), key=tokens.count)) if tokens else ""
+    aliases = ("TAIBA", "CUMBUCO", "WIND", "MAGNA", "CHARME", "JERI")
+    matches = [
+        alias for path in paths for alias in aliases
+        if alias in normalize(path.stem)
+    ]
+    return max(set(matches), key=matches.count) if matches else ""
 
 
 def analyze(paths: list[Path]) -> AnalysisResult:
@@ -347,10 +349,9 @@ def analyze(paths: list[Path]) -> AnalysisResult:
         suffix = path.suffix.lower()
         if suffix == ".csv":
             external.extend(external_csv(path))
-        elif suffix == ".xls":
-            external.extend(external_html_xls(path))
         else:
-            external.extend(external_xlsx(path))
+            parsed = external_xlsx(path)
+            external.extend(parsed or external_html_xls(path))
 
     grouped_external = defaultdict(list)
     for raw in external:
@@ -381,7 +382,7 @@ def analyze(paths: list[Path]) -> AnalysisResult:
             bpm = cap.bpm
             if normalize(cap.bpm) != "BMAPROVADO" and normalize(cap.bpm) != "BPMAPROVADO":
                 issues.append("Não escriturada: BPM não aprovado")
-            if hotel and hotel not in normalize(cap.hotel):
+            if hotel and cap.hotel and hotel not in normalize(cap.hotel):
                 issues.append(f"Hotel divergente ({cap.hotel})")
             if abs(gross - cap.gross) > TOLERANCE:
                 issues.append("Valor bruto divergente")
@@ -412,7 +413,7 @@ def analyze(paths: list[Path]) -> AnalysisResult:
             issues.append("ISS retido ausente na prefeitura")
         if normalize(cap.bpm) != "BPMAPROVADO":
             issues.append("Não escriturada: BPM não aprovado")
-        if hotel and hotel not in normalize(cap.hotel):
+        if hotel and cap.hotel and hotel not in normalize(cap.hotel):
             issues.append(f"Hotel divergente ({cap.hotel})")
         result.append(ResultRow(
             "CAP", "—", cap.cnpj, cap.number, "—", None, None, cap.bpm, cap.provider,
@@ -520,7 +521,7 @@ class ServiceNotesAutomation(Automation):
         self.next=ctk.CTkButton(pagination,text="Próxima",width=100,command=self._next);self.next.grid(row=0,column=2);self._show()
 
     def _select(self):
-        names=filedialog.askopenfilenames(title="Arquivos da Atividade 7",filetypes=[("Planilhas e CSV","*.xlsx *.xls *.csv")])
+        names=filedialog.askopenfilenames(title="Arquivos da Atividade 7",filetypes=[("Planilhas e CSV","*.xlsx *.xlsm *.xls *.xltx *.xltm *.csv")])
         if not names:return
         self.paths=[Path(x) for x in names];self.select.configure(state="disabled");self.app.set_status("Conferindo notas tomadas...",.1);self.app.run_background(lambda:analyze(self.paths),self._done,self._failed)
 

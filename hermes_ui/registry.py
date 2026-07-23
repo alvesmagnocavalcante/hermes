@@ -24,7 +24,7 @@ class AutomationSpec:
     analyzer: str
     rows_attribute: str | None
     columns: tuple[Column, ...]
-    extensions: tuple[str, ...] = ("xlsx", "xlsm", "xls", "csv", "xml")
+    extensions: tuple[str, ...] = ("xlsx", "xlsm", "xls", "xltx", "xltm", "csv", "xml")
     formats: tuple[str, ...] = ("Excel", "PDF")
     hotel_option: bool = False
 
@@ -155,10 +155,10 @@ SPECS = (
                    (C("company", "Hotel"), C("document", "Cupom"), C("issue_date", "Emissão"), C("posting_date", "Lançamento"), C("room", "Quarto"), C("guest", "Hóspede"), C("pdv_value", "PDV", True), C("journal_value", "Conta", True), C("difference", "Diferença", True), C("status", "Resultado"), C("detail", "Explicação"))),
     AutomationSpec("rps", "RPS de Serviços Prestados", "Confere os RPS encerrados no Opera, integrados no Fiscal e emitidos na Prefeitura.",
                    "automations.conferencia_rps_servicos_prestados", "analyze", "rows",
-                   (C("rps", "RPS"), C("opera_date", "Data Opera"), C("customer", "Hóspede/Tomador"), C("opera_value", "Opera", True), C("fiscal_value", "Fiscal", True), C("city_value", "Prefeitura", True), C("difference", "Diferença", True), C("city_nfse", "NFS-e"), C("status", "Resultado"), C("detail", "Explicação")), extensions=("xml", "xlsx", "xlsm", "xls")),
+                   (C("rps", "RPS"), C("opera_date", "Data Opera"), C("customer", "Hóspede/Tomador"), C("opera_value", "Opera", True), C("fiscal_value", "Fiscal", True), C("city_value", "Prefeitura", True), C("difference", "Diferença", True), C("city_nfse", "NFS-e"), C("status", "Resultado"), C("detail", "Explicação")), extensions=("xml", "xlsx", "xlsm", "xls", "xltx", "xltm")),
     AutomationSpec("debito", "Relatório de Notas de Débito", "Consolida as notas de débito por hotel, comprador, emissão, item e valor.",
                    "automations.relatorio_notas_debito", "extract", None,
-                   (C("hotel", "Hotel"), C("comprador", "Comprador"), C("nota", "Nota"), C("emissao", "Emissão"), C("item", "Item"), C("valor", "Valor", True)), extensions=("xlsx", "xlsm")),
+                   (C("hotel", "Hotel"), C("comprador", "Comprador"), C("nota", "Nota"), C("emissao", "Emissão"), C("item", "Item"), C("valor", "Valor", True)), extensions=("xlsx", "xlsm", "xls", "xltx", "xltm")),
     AutomationSpec("entrada", "Notas Fiscais de Entrada em Atraso", "Classifica as notas do Manifesto como em dia, em alerta ou em atraso, mesmo quando ainda não foram lançadas.",
                    "automations.notas_entrada_atrasadas", "analyze", "rows",
                    (C("key", "Chave"), C("company", "Empresa"), C("supplier", "Fornecedor"), C("state", "UF"), C("emission_date", "Emissão"), C("entry_date", "Entrada"), C("days", "Dias", True), C("limit", "Limite", True), C("launch_status", "Lançamento"), C("status", "Situação"))),

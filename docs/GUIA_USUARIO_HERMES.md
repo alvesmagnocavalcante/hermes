@@ -311,6 +311,8 @@ Clique novamente em **Selecionar arquivos** e escolha todos os relatórios neces
 
 Gere novamente o relatório no sistema de origem. Não apague cabeçalhos, não altere colunas e não converta o arquivo manualmente.
 
+O HERMES aceita planilhas Excel nos formatos `.xlsx`, `.xlsm`, `.xls`, `.xltx` e `.xltm`, inclusive relatórios antigos ou relatórios HTML fornecidos pelo sistema com extensão `.xls`.
+
 ### Período incompleto
 
 Uma das planilhas não cobre todo o período das demais. Gere novamente o relatório com as datas necessárias.

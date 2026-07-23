@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from automations.legacy_ui import ctk, filedialog, messagebox, tk
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -21,6 +21,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from automations.base import Automation
+from automations.excel_reader import load_workbook_compatible as load_workbook
 from automations.ui import TableColumn, clear_table, create_result_table
 
 
@@ -146,27 +147,46 @@ def read_csv(path: Path) -> list[list[str]]:
     return list(csv.reader(text.splitlines(), delimiter=";"))
 
 
-def identify_file(path: Path) -> str:
+def read_tabular(path: Path) -> list[list[str]]:
     if path.suffix.lower() == ".csv":
-        sample = normalize("\n".join(";".join(row) for row in read_csv(path)[:80]))
-        markers = (
-            ("DEMONSTRATIVODEINSS", "inss"),
-            ("LIQUIDOSDEFERIAS", "vacation_liquid"),
-            ("RECIBODEFERIAS", "vacation_receipt"),
-            ("PROVISAODEFERIAS", "vacation_provision"),
-            ("PROVISAO13", "thirteenth_provision"),
-            ("RELACAODEEVENTOS", "fgts"),
-            ("RELACAODECALCULO", "summary"),
-        )
-        return next((kind for marker, kind in markers if marker in sample), "unknown")
-    if path.suffix.lower() not in {".xlsx", ".xlsm"}:
-        return "unknown"
+        return read_csv(path)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        workbook = load_workbook(path, data_only=False, read_only=True)
-    sheets = {normalize(name) for name in workbook.sheetnames}
-    workbook.close()
-    return "template" if {"DEPARA", "RESULTADO"}.issubset(sheets) else "unknown"
+        workbook = load_workbook(path, data_only=True, read_only=True)
+    try:
+        sheet = workbook.active
+        if hasattr(sheet, "reset_dimensions"):
+            sheet.reset_dimensions()
+        return [
+            ["" if value is None else str(value) for value in row]
+            for row in sheet.iter_rows(values_only=True)
+        ]
+    finally:
+        workbook.close()
+
+
+def identify_file(path: Path) -> str:
+    if path.suffix.lower() not in {".csv", ".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
+        return "unknown"
+    if path.suffix.lower() != ".csv":
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            workbook = load_workbook(path, data_only=False, read_only=True)
+        sheets = {normalize(name) for name in workbook.sheetnames}
+        workbook.close()
+        if {"DEPARA", "RESULTADO"}.issubset(sheets):
+            return "template"
+    sample = normalize("\n".join(";".join(row) for row in read_tabular(path)[:80]))
+    markers = (
+        ("DEMONSTRATIVODEINSS", "inss"),
+        ("LIQUIDOSDEFERIAS", "vacation_liquid"),
+        ("RECIBODEFERIAS", "vacation_receipt"),
+        ("PROVISAODEFERIAS", "vacation_provision"),
+        ("PROVISAO13", "thirteenth_provision"),
+        ("RELACAODEEVENTOS", "fgts"),
+        ("RELACAODECALCULO", "summary"),
+    )
+    return next((kind for marker, kind in markers if marker in sample), "unknown")
 
 
 def _account(value: Any) -> str:
@@ -188,8 +208,9 @@ def _organogram_code(value: str) -> str:
 def read_mappings(path: Path) -> Mappings:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        formulas = load_workbook(path, data_only=False, read_only=False, keep_vba=path.suffix.lower() == ".xlsm")
-        values = load_workbook(path, data_only=True, read_only=False, keep_vba=path.suffix.lower() == ".xlsm")
+        keep_vba = path.suffix.lower() in {".xlsm", ".xltm"}
+        formulas = load_workbook(path, data_only=False, read_only=False, keep_vba=keep_vba)
+        values = load_workbook(path, data_only=True, read_only=False, keep_vba=keep_vba)
     try:
         sheet = values["DEPARA"]
         descriptions = {normalize(sheet.cell(row, 2).value) for row in range(3, sheet.max_row + 1) if sheet.cell(row, 2).value}
@@ -500,11 +521,11 @@ def analyze(paths: list[Path]) -> PayrollResult:
     templates = grouped.get("template", [])
     template = templates[0] if len(templates) == 1 else _default_template()
     if len(templates) > 1:
-        raise ValueError("Selecione no máximo uma planilha modelo .xlsm.")
+        raise ValueError("Selecione no máximo uma planilha modelo Excel.")
     if not template:
         raise ValueError("A planilha modelo da atividade 2 não foi encontrada.")
 
-    sources = {kind: read_csv(grouped[kind][0]) for kind in REQUIRED_SOURCES}
+    sources = {kind: read_tabular(grouped[kind][0]) for kind in REQUIRED_SOURCES}
     mappings = read_mappings(template)
     period_end = extract_period(sources["summary"])
     earnings, deductions, net_payable = extract_payroll_totals(sources["summary"])
@@ -843,7 +864,7 @@ class PayrollPostingAutomation(Automation):
         self._show()
 
     def _select(self):
-        names = filedialog.askopenfilenames(title="Sete relatórios da folha de pagamento", filetypes=[("CSV e modelo Excel", "*.csv *.xlsx *.xlsm")])
+        names = filedialog.askopenfilenames(title="Sete relatórios da folha de pagamento", filetypes=[("CSV e modelo Excel", "*.csv *.xlsx *.xlsm *.xls *.xltx *.xltm")])
         if not names:
             return
         self.paths = [Path(name) for name in names]
