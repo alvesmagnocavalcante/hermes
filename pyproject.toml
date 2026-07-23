@@ -16,9 +16,11 @@ dependencies = [
 exclude = [
     ".git",
     ".venv",
+    "build",
     "PROCESSOS AUTOMAÇÃO",
     "docs",
     "__pycache__",
     "hermes.png",
     "hermes.ico",
+    "deus.png",
 ]

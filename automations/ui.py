@@ -59,8 +59,8 @@ def clear_table(table: ttk.Treeview) -> None:
 
 def result_tag(status: str) -> str:
     text = status.casefold()
-    if any(value in text for value in ("conciliado", "conciliada", "no prazo")):
+    if any(value in text for value in ("conciliado", "conciliada", "no prazo", "em dia")):
         return "ok"
-    if any(value in text for value in ("ausente", "não encontrada", "nao encontrada")):
+    if any(value in text for value in ("ausente", "não encontrada", "nao encontrada", "alerta")):
         return "missing"
     return "error"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import warnings
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -38,6 +39,7 @@ class NoteResult:
     entry_date: date | None
     days: int | None
     limit: int | None
+    launch_status: str
     status: str
 
 
@@ -61,7 +63,38 @@ def as_date(value: Any) -> date | None:
         return value.date()
     if isinstance(value, date):
         return value
+    text = str(value or "").strip()
+    for pattern in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(text[:10], pattern).date()
+        except ValueError:
+            continue
     return None
+
+
+def normalized_header(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    return re.sub(r"[^a-z0-9]", "", "".join(
+        character for character in text.lower() if not unicodedata.combining(character)
+    ))
+
+
+def header_index(headers: tuple[Any, ...], *names: str) -> int:
+    available = {normalized_header(header): index for index, header in enumerate(headers)}
+    for name in names:
+        index = available.get(normalized_header(name))
+        if index is not None:
+            return index
+    raise ValueError(f"Coluna não encontrada: {' ou '.join(names)}.")
+
+
+def note_status(days: int, state: str) -> tuple[int, str]:
+    alert, limit = (6, 11) if state == "CE" else (20, 30)
+    if days >= limit:
+        return limit, "Em atraso"
+    if days >= alert:
+        return limit, "Alerta"
+    return limit, "Em dia"
 
 
 def open_rows(path: Path):
@@ -75,7 +108,7 @@ def open_rows(path: Path):
     return workbook, headers, rows
 
 
-def analyze(paths: list[Path]) -> AnalysisResult:
+def analyze(paths: list[Path], reference_date: date | None = None) -> AnalysisResult:
     if len(paths) != 2:
         raise ValueError("Selecione exatamente as planilhas Manifesto e Detalhe das notas recebidas.")
 
@@ -84,19 +117,20 @@ def analyze(paths: list[Path]) -> AnalysisResult:
     for path in paths:
         workbook, headers, _ = open_rows(path)
         workbook.close()
-        if "Chave Manifesto" in headers:
+        normalized = {normalized_header(header) for header in headers}
+        if normalized_header("Chave Manifesto") in normalized:
             manifesto_path = path
-        elif "Chave" in headers and "Data de Entrada" in headers:
+        elif {normalized_header("Chave"), normalized_header("Data de Entrada")} <= normalized:
             detalhe_path = path
     if not manifesto_path or not detalhe_path:
         raise ValueError("Não foi possível identificar uma planilha Manifesto e uma planilha Detalhe.")
 
     workbook, headers, rows = open_rows(manifesto_path)
-    key_i = headers.index("Chave Manifesto")
-    emission_i = headers.index("Data Emissão")
-    state_i = headers.index("Estado")
-    company_i = headers.index("Empresa")
-    supplier_i = headers.index("Fornecedor")
+    key_i = header_index(headers, "Chave Manifesto")
+    emission_i = header_index(headers, "Data Emissão", "Data da Emissão")
+    state_i = header_index(headers, "Estado")
+    company_i = header_index(headers, "Empresa")
+    supplier_i = header_index(headers, "Fornecedor", "Razão Social")
     max_i = max(key_i, emission_i, state_i, company_i, supplier_i)
     manifest: dict[str, tuple[date | None, str, str, str]] = {}
     try:
@@ -113,36 +147,41 @@ def analyze(paths: list[Path]) -> AnalysisResult:
         workbook.close()
 
     workbook, headers, rows = open_rows(detalhe_path)
-    key_i = headers.index("Chave")
-    entry_i = headers.index("Data de Entrada")
-    company_i = headers.index("Empresa")
-    supplier_i = headers.index("Razão Social")
-    max_i = max(key_i, entry_i, company_i, supplier_i)
-    results: list[NoteResult] = []
+    key_i = header_index(headers, "Chave")
+    entry_i = header_index(headers, "Data de Entrada")
+    max_i = max(key_i, entry_i)
+    entries: dict[str, date | None] = {}
     try:
         for row in rows:
             if len(row) <= max_i or not row[key_i]:
                 continue
             key = str(row[key_i]).strip()
             entry = as_date(row[entry_i])
-            matched = manifest.get(key)
-            if not matched:
-                results.append(NoteResult(
-                    key, str(row[company_i] or ""), str(row[supplier_i] or ""), "—",
-                    None, entry, None, None, "Não encontrada",
-                ))
-                continue
-            emission, state, company, supplier = matched
-            if not emission or not entry:
-                results.append(NoteResult(key, company, supplier, state, emission, entry, None, None, "Data inválida"))
-                continue
-            days = (entry - emission).days
-            limit = 11 if state == "CE" else 30
-            status = "Atrasada" if days >= limit else "No prazo"
-            results.append(NoteResult(key, company, supplier, state, emission, entry, days, limit, status))
+            previous = entries.get(key)
+            if previous is None or (entry is not None and entry < previous):
+                entries[key] = entry
     finally:
         workbook.close()
-    results.sort(key=lambda item: (item.status != "Atrasada", -(item.days or 0), item.key))
+
+    today = reference_date or date.today()
+    results: list[NoteResult] = []
+    for key, (emission, state, company, supplier) in manifest.items():
+        entry = entries.get(key)
+        launch_status = "Lançada" if entry else "Não lançada"
+        if not emission:
+            results.append(NoteResult(
+                key, company, supplier, state, None, entry, None, None,
+                f"{launch_status} • emissão ausente", "Alerta",
+            ))
+            continue
+        reference = entry or today
+        days = max(0, (reference - emission).days)
+        limit, status = note_status(days, state)
+        results.append(NoteResult(
+            key, company, supplier, state, emission, entry, days, limit, launch_status, status,
+        ))
+    order = {"Em atraso": 0, "Alerta": 1, "Em dia": 2}
+    results.sort(key=lambda item: (order[item.status], -(item.days or 0), item.key))
     return AnalysisResult(results)
 
 
@@ -156,28 +195,34 @@ def save_excel(result: AnalysisResult, path: Path) -> None:
     summary.title = "Resumo"
     summary.append(["Indicador", "Quantidade"])
     summary.append(["Notas analisadas", len(result.rows)])
-    summary.append(["No prazo", result.count("No prazo")])
-    summary.append(["Atrasadas", result.count("Atrasada")])
-    summary.append(["Não encontradas no Manifesto", result.count("Não encontrada")])
-    summary.append(["Data inválida", result.count("Data inválida")])
+    summary.append(["Em dia", result.count("Em dia")])
+    summary.append(["Em alerta", result.count("Alerta")])
+    summary.append(["Em atraso", result.count("Em atraso")])
+    summary.append(["Não lançadas", sum(row.entry_date is None for row in result.rows)])
     summary.column_dimensions["A"].width = 34
     summary.column_dimensions["B"].width = 16
     for cell in summary[1]:
         cell.style = "Headline 4"
 
     details = workbook.create_sheet("Análise")
-    details.append(["Chave", "Empresa", "Fornecedor", "UF", "Emissão", "Entrada", "Dias", "Limite", "Status"])
+    details.append([
+        "Chave", "Empresa", "Fornecedor", "UF", "Emissão", "Entrada", "Dias",
+        "Limite para atraso", "Lançamento", "Situação",
+    ])
     for row in result.rows:
         details.append([
             row.key, row.company, row.supplier, row.state, row.emission_date, row.entry_date,
-            row.days, row.limit, row.status,
+            row.days, row.limit, row.launch_status, row.status,
         ])
     for cell in details[1]:
         cell.style = "Headline 4"
     for column in ("E", "F"):
         for cell in details[column][1:]:
             cell.number_format = "DD/MM/YYYY"
-    for column, width in {"A": 48, "B": 22, "C": 45, "D": 8, "E": 14, "F": 14, "G": 10, "H": 10, "I": 20}.items():
+    for column, width in {
+        "A": 48, "B": 22, "C": 45, "D": 8, "E": 14, "F": 14, "G": 10,
+        "H": 18, "I": 24, "J": 16,
+    }.items():
         details.column_dimensions[column].width = width
     details.freeze_panes = "A2"
     details.auto_filter.ref = details.dimensions
@@ -190,10 +235,12 @@ def save_pdf(result: AnalysisResult, path: Path) -> None:
         str(path), pagesize=landscape(A4), leftMargin=12 * mm, rightMargin=12 * mm,
         topMargin=12 * mm, bottomMargin=12 * mm, title="Resumo de notas fiscais em atraso",
     )
-    matched = len(result.rows) - result.count("Não encontrada")
     data = [
-        ["Analisadas", "Localizadas", "No prazo", "Atrasadas", "Não encontradas"],
-        [len(result.rows), matched, result.count("No prazo"), result.count("Atrasada"), result.count("Não encontrada")],
+        ["Analisadas", "Em dia", "Em alerta", "Em atraso", "Não lançadas"],
+        [
+            len(result.rows), result.count("Em dia"), result.count("Alerta"),
+            result.count("Em atraso"), sum(row.entry_date is None for row in result.rows),
+        ],
     ]
     table = Table(data, colWidths=[45 * mm] * 5)
     table.setStyle(TableStyle([
@@ -218,7 +265,7 @@ class OverdueNotesAutomation(Automation):
         self.paths: list[Path] = []
         self.result: AnalysisResult | None = None
         self.output_format = ctk.StringVar(value="Excel")
-        self.filter_status = ctk.StringVar(value="Atrasadas")
+        self.filter_status = ctk.StringVar(value="Em atraso")
         self.search_text = ctk.StringVar()
         self.page = 0
         self.page_size = 100
@@ -231,7 +278,8 @@ class OverdueNotesAutomation(Automation):
         )
         ctk.CTkLabel(
             self.container,
-            text="Compara Chave com Chave Manifesto e calcula o prazo entre emissão e entrada.",
+            text=("Usa o Manifesto como base e classifica notas lançadas ou não lançadas "
+                  "como em dia, em alerta ou em atraso."),
             text_color="gray70",
         ).grid(row=1, column=0, padx=30, pady=(0, 10), sticky="w")
 
@@ -258,8 +306,8 @@ class OverdueNotesAutomation(Automation):
         summary.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
         self.summary_labels: dict[str, ctk.CTkLabel] = {}
         for column, (title, key) in enumerate((
-            ("Analisadas", "total"), ("Localizadas", "matched"), ("No prazo", "on_time"),
-            ("Atrasadas", "late"), ("Não encontradas", "missing"),
+            ("Analisadas", "total"), ("Em dia", "on_time"), ("Em alerta", "alert"),
+            ("Em atraso", "late"), ("Não lançadas", "not_posted"),
         )):
             grid_column = column % 3
             grid_row = column // 3
@@ -292,7 +340,7 @@ class OverdueNotesAutomation(Automation):
         filters.grid(row=5, column=0, padx=30, pady=(0, 8), sticky="ew")
         filters.grid_columnconfigure(2, weight=1)
         self.status_selector = ctk.CTkSegmentedButton(
-            filters, values=["Atrasadas", "Não encontradas", "Todas"], variable=self.filter_status,
+            filters, values=["Em atraso", "Alerta", "Em dia", "Todas"], variable=self.filter_status,
             command=lambda _: self._reset_filter(),
         )
         self.status_selector.grid(row=0, column=0, padx=(0, 14))
@@ -306,7 +354,7 @@ class OverdueNotesAutomation(Automation):
             TableColumn("supplier", "Fornecedor", 260), TableColumn("state", "UF", 55),
             TableColumn("emission", "Emissão", 90), TableColumn("entry", "Entrada", 90),
             TableColumn("days", "Dias", 65, "e"), TableColumn("limit", "Limite", 65, "e"),
-            TableColumn("status", "Situação", 145),
+            TableColumn("launch", "Lançamento", 150), TableColumn("status", "Situação", 110),
         ), row=6)
         pagination = ctk.CTkFrame(self.container, fg_color="transparent")
         pagination.grid(row=7, column=0, padx=30, pady=(7, 14), sticky="ew")
@@ -345,8 +393,7 @@ class OverdueNotesAutomation(Automation):
         search = self.search_text.get().strip()
         return [
             row for row in self.result.rows
-            if (selected == "Todas" or (selected == "Atrasadas" and row.status == "Atrasada")
-                or (selected == "Não encontradas" and row.status == "Não encontrada"))
+            if (selected == "Todas" or row.status == selected)
             and (not search or search in row.key)
         ]
 
@@ -359,10 +406,10 @@ class OverdueNotesAutomation(Automation):
             filtered: list[NoteResult] = []
         else:
             result = self.result
-            missing = result.count("Não encontrada")
             values = {
-                "total": len(result.rows), "matched": len(result.rows) - missing,
-                "on_time": result.count("No prazo"), "late": result.count("Atrasada"), "missing": missing,
+                "total": len(result.rows), "on_time": result.count("Em dia"),
+                "alert": result.count("Alerta"), "late": result.count("Em atraso"),
+                "not_posted": sum(row.entry_date is None for row in result.rows),
             }
             for key, value in values.items():
                 self.summary_labels[key].configure(text=f"{value:,}".replace(",", "."))
@@ -374,7 +421,8 @@ class OverdueNotesAutomation(Automation):
             for row in page_rows:
                 self.preview.insert("", "end", values=(row.key, row.company, row.supplier, row.state,
                     date_text(row.emission_date), date_text(row.entry_date), row.days if row.days is not None else "",
-                    row.limit if row.limit is not None else "", row.status), tags=(result_tag(row.status),))
+                    row.limit if row.limit is not None else "", row.launch_status, row.status),
+                    tags=(result_tag(row.status),))
             self.page_label.configure(text=f"Página {self.page + 1} de {total_pages} • {len(filtered):,} registros".replace(",", "."))
             self.previous_button.configure(state="normal" if self.page > 0 else "disabled")
             self.next_button.configure(state="normal" if self.page + 1 < total_pages else "disabled")
@@ -398,10 +446,9 @@ class OverdueNotesAutomation(Automation):
 
         total = len(self.result.rows)
         segments = (
-            (self.result.count("No prazo"), "#21a67a", "No prazo"),
-            (self.result.count("Atrasada"), "#dc5a5a", "Atrasadas"),
-            (self.result.count("Não encontrada"), "#e0a83e", "Não encontradas"),
-            (self.result.count("Data inválida"), "#6b7280", "Data inválida"),
+            (self.result.count("Em dia"), "#21a67a", "Em dia"),
+            (self.result.count("Alerta"), "#e0a83e", "Em alerta"),
+            (self.result.count("Em atraso"), "#dc5a5a", "Em atraso"),
         )
         start = 90.0
         legend_x = width * 0.58
@@ -417,7 +464,7 @@ class OverdueNotesAutomation(Automation):
             )
             start += extent
             legend_y += 23
-        on_time_rate = self.result.count("No prazo") / total
+        on_time_rate = self.result.count("Em dia") / total
         self.chart.create_text(
             center_x, center_y, text=f"{on_time_rate:.1%}", fill="#e5e7eb", font=("Segoe UI", 11, "bold")
         )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import math
 import os
 import unicodedata
@@ -32,7 +33,8 @@ YELLOW = "#E0A83E"
 RED = "#DC5A5A"
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", ROOT_DIR / "assets")).resolve()
-LOGO_PATH = ASSETS_DIR / "hermes.png"
+LOGO_PATH = ASSETS_DIR / "deus.png"
+LOGO_SOURCE = "data:image/png;base64," + base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
 WINDOW_ICON_PATH = ASSETS_DIR / "icon_windows.ico"
 
 
@@ -43,9 +45,9 @@ def normalized(value: str) -> str:
 
 def status_kind(status: str) -> str:
     value = normalized(status)
-    if any(word in value for word in ("conciliad", "no prazo", "com movimento", "pronto", "processado", "cobrado", "dados completos")):
+    if any(word in value for word in ("conciliad", "no prazo", "em dia", "com movimento", "pronto", "processado", "cobrado", "dados completos")):
         return "ok"
-    if any(word in value for word in ("cancelad", "fora do periodo", "sem movimento", "informativ")):
+    if any(word in value for word in ("cancelad", "fora do periodo", "sem movimento", "informativ", "alerta")):
         return "info"
     return "error"
 
@@ -77,7 +79,10 @@ class AutomationView:
                  ft.DropdownOption(key="Conciliados", text="Prontos para importar"),
                  ft.DropdownOption(key="Todos", text="Todos")]
                 if spec.key == "folha"
-                else [ft.DropdownOption(key=value, text=value) for value in ("Pendências", "Conciliados", "Todos")]
+                else [ft.DropdownOption(key=value, text=value)
+                      for value in (("Em atraso", "Alerta", "Em dia", "Todos")
+                                    if spec.key == "entrada"
+                                    else ("Pendências", "Conciliados", "Todos"))]
             ),
             on_select=self._filter_changed,
         )
@@ -116,6 +121,21 @@ class AutomationView:
         self.ring = ft.ProgressRing(value=0, stroke_width=9, color=GREEN, bgcolor="#39414D", width=68, height=68)
         self.ring_text = ft.Text("0%", size=15, weight=ft.FontWeight.BOLD)
         self.chart_title = ft.Text("Qualidade", weight=ft.FontWeight.BOLD, size=12)
+        self.entry_segments = [
+            ft.Container(width=0, height=14, bgcolor=color)
+            for color in (GREEN, YELLOW, RED)
+        ]
+        self.entry_chart_legend = ft.Text("Aguardando análise", color=MUTED, size=10, text_align=ft.TextAlign.CENTER)
+        self.entry_chart = ft.Column([
+            ft.Stack([
+                ft.Container(width=150, height=14, bgcolor="#39414D", border_radius=7),
+                ft.Row(self.entry_segments, spacing=0, width=150),
+            ], width=150, height=14),
+            self.entry_chart_legend,
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=7)
+        self.quality_chart = ft.Stack(
+            [self.ring, ft.Container(self.ring_text, alignment=ft.Alignment.CENTER)], width=68, height=68,
+        )
         self.table_host = ft.Container(expand=True)
         self.page_text = ft.Text("Página 0 de 0", color=MUTED)
         self.previous = ft.IconButton(ft.Icons.CHEVRON_LEFT, tooltip="Página anterior", disabled=True, on_click=self._previous)
@@ -131,7 +151,7 @@ class AutomationView:
                 ft.Container(
                     content=ft.Column([
                         self.chart_title,
-                        ft.Stack([self.ring, ft.Container(self.ring_text, alignment=ft.Alignment.CENTER)], width=68, height=68),
+                        self.entry_chart if self.spec.key == "entrada" else self.quality_chart,
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, spacing=5),
                     bgcolor=CARD, border=ft.Border.all(1, BORDER), border_radius=14,
                     padding=10, width=190, height=112,
@@ -197,7 +217,7 @@ class AutomationView:
             "rps": ((GREEN, "Integrado nas três fontes"), (YELLOW, "Cancelado ou fora do período"),
                     (RED, "Ausente, irregular ou divergente")),
             "debito": ((GREEN, "Nota processada"),),
-            "entrada": ((GREEN, "No prazo"), (YELLOW, "Informação incompleta"), (RED, "Nota em atraso")),
+            "entrada": ((GREEN, "Em dia"), (YELLOW, "Em alerta"), (RED, "Em atraso")),
             "cupons": ((GREEN, "Conciliado nas três fontes"), (RED, "Ausência, data ou valor divergente")),
             "servicos": ((GREEN, "Nota conciliada"), (YELLOW, "Informação complementar"),
                          (RED, "Pendência no CAP, hotel ou ISS")),
@@ -214,7 +234,7 @@ class AutomationView:
             "cupons_hospede": "BI PDV + Journal do Opera + planilha de de/para.",
             "rps": "XML de encerramentos do Opera + Fiscal do CMFlex + Prefeitura.",
             "debito": "Uma ou mais planilhas de notas de débito.",
-            "entrada": "Manifesto de notas + Detalhe de notas recebidas.",
+            "entrada": "Manifesto de notas (base completa) + Detalhe de notas recebidas (notas já lançadas).",
             "cupons": "Simphony + Fiscal do CMFlex + SEFAZ.",
             "servicos": "CAP + Portal Nacional + arquivos de Prefeitura/ISS aplicáveis ao hotel.",
             "receber": "Seis relatórios: balancete, posição por cliente, borderô, razão a faturar, agregados e razão.",
@@ -296,11 +316,16 @@ class AutomationView:
         selected = self.status_filter.value
         records = []
         for record in self.records:
-            kind = status_kind(record_status(record))
-            if selected == "Conciliados" and kind != "ok":
-                continue
-            if selected == "Pendências" and kind == "ok":
-                continue
+            status = record_status(record)
+            kind = status_kind(status)
+            if self.spec.key == "entrada":
+                if selected != "Todos" and status != selected:
+                    continue
+            else:
+                if selected == "Conciliados" and kind != "ok":
+                    continue
+                if selected == "Pendências" and kind == "ok":
+                    continue
             if query and query not in searchable(record, self.spec.columns):
                 continue
             records.append(record)
@@ -312,7 +337,18 @@ class AutomationView:
             self.details.controls = [ft.Text(
                 f"{result.company}  •  Competência {result.period_end:%m/%Y}  •  "
                 f"Proventos {format_value(result.earnings)}  •  Descontos {format_value(result.deductions)}  •  "
-                f"Líquido a pagar {format_value(result.net_payable)}",
+                f"Líquido a pagar {format_value(result.net_payable)}  •  "
+                f"Excluídos: {result.ignored_rows} totalizadores e "
+                f"{result.excluded_rows} eventos da lista Desconsiderar",
+                color=MUTED, size=12,
+            )]
+            return
+        if self.spec.key == "entrada":
+            not_posted = sum(row.entry_date is None for row in result.rows)
+            self.details.controls = [ft.Text(
+                f"{not_posted} nota(s) ainda não lançada(s)  •  "
+                "CE: alerta de 6 a 10 dias e atraso a partir de 11 dias  •  "
+                "Demais estados: alerta de 20 a 29 dias e atraso a partir de 30 dias",
                 color=MUTED, size=12,
             )]
             return
@@ -534,10 +570,20 @@ class AutomationView:
         labels = ("Registros", "Conciliados", "Pendências", "Informativos")
         values = (total, ok, error, info)
         if self.spec.key == "folha":
-            labels = ("Lançamentos", "Prontos para importar", "De/para incompleto", "Totalizadores removidos")
-            values = (total, self.result.ready, total - self.result.ready, self.result.ignored_rows)
+            labels = ("Lançamentos", "Prontos para importar", "De/para incompleto", "Exclusões aplicadas")
+            values = (
+                total, self.result.ready, total - self.result.ready,
+                self.result.ignored_rows + self.result.excluded_rows,
+            )
             ok, error, info = self.result.ready, total - self.result.ready, 0
             self.chart_title.value = "Qualidade dos lançamentos"
+        elif self.spec.key == "entrada":
+            labels = ("Notas", "Em dia", "Em atraso", "Em alerta")
+            values = (total, ok, error, info)
+            self.chart_title.value = "Distribuição das notas"
+            for segment, amount in zip(self.entry_segments, (ok, info, error)):
+                segment.width = 150 * amount / total if total else 0
+            self.entry_chart_legend.value = f"Em dia {ok}  •  Alerta {info}  •  Atraso {error}"
         else:
             self.chart_title.value = "Qualidade da conferência"
         for title, value_control, label, amount in zip(self.card_titles, self.card_values, labels, values):
@@ -580,6 +626,11 @@ class AutomationView:
             value.value = "—"
         self.ring.value = 0
         self.ring_text.value = "0%"
+        if self.spec.key == "entrada":
+            self.chart_title.value = "Distribuição das notas"
+            for segment in self.entry_segments:
+                segment.width = 0
+            self.entry_chart_legend.value = "Aguardando análise"
         self._render_table()
         self.set_status("Seleção limpa", 0)
         self.page.update()
@@ -657,7 +708,7 @@ class HermesApp:
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Row([
-                ft.Image(src=str(LOGO_PATH), width=34, height=34, fit=ft.BoxFit.CONTAIN),
+                ft.Image(src=LOGO_SOURCE, width=34, height=34, fit=ft.BoxFit.CONTAIN),
                 ft.Text("Sobre o HERMES", weight=ft.FontWeight.BOLD),
             ], spacing=10, tight=True),
             content=ft.Column([
@@ -674,7 +725,7 @@ class HermesApp:
         logo_size = 38 if self.sidebar_expanded else 28
         brand = ft.Row([
             ft.Image(
-                src=str(LOGO_PATH),
+                src=LOGO_SOURCE,
                 width=logo_size,
                 height=logo_size,
                 fit=ft.BoxFit.CONTAIN,

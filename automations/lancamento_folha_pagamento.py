@@ -73,6 +73,7 @@ class PayrollResult:
     net_payable: Decimal
     rows: list[PostingRow]
     ignored_rows: int
+    excluded_rows: int
     files: dict[str, str]
     warnings: list[str]
 
@@ -101,6 +102,7 @@ class Mappings:
     provisions: dict[str, tuple[str, str]]
     vacations: dict[str, tuple[str, str, str]]
     rate_totals: dict[str, Decimal]
+    excluded_events: frozenset[str]
 
 
 def normalize(value: Any) -> str:
@@ -165,7 +167,7 @@ def _account(value: Any) -> str:
 
 
 def _cost_center(value: Any) -> str:
-    text = _account(value)
+    text = _account(value).lstrip("'").strip()
     return text.zfill(4) if text.isdigit() else text
 
 
@@ -218,12 +220,21 @@ def read_mappings(path: Path) -> Mappings:
                     _account(sheet.cell(row, 29).value),
                 )
 
+        excluded_events = frozenset(
+            _account(sheet.cell(row, 16).value)
+            for row in range(3, sheet.max_row + 1)
+            if sheet.cell(row, 16).value is not None
+        )
+
         rate_events = ("REF PLANO ODONTOLOGICO", "REF PLANO DE SAUDE", "REF INSS MENSAL", "REF FGTS MENSAL")
         rate_totals = {
             event: decimal_value(values["C"].cell(2, column).value)
             for event, column in zip(rate_events, range(14, 18))
         }
-        return Mappings(descriptions, events, organograms, organogram_codes, provisions, vacations, rate_totals)
+        return Mappings(
+            descriptions, events, organograms, organogram_codes, provisions, vacations,
+            rate_totals, excluded_events,
+        )
     finally:
         formulas.close()
         values.close()
@@ -492,6 +503,8 @@ def analyze(paths: list[Path]) -> PayrollResult:
     rates, validation = build_rates(monthly, mappings, extract_inss_total(sources["inss"]),
                                     extract_fgts_total(sources["fgts"]), period_end)
     rows = monthly + vacations + vacation_provision + thirteenth + rates
+    excluded_rows = sum(row.event in mappings.excluded_events for row in rows)
+    rows = [row for row in rows if row.event not in mappings.excluded_events]
     if not rows:
         raise ValueError("Nenhum lançamento foi encontrado nos relatórios selecionados.")
     rows.sort(key=lambda item: (
@@ -501,7 +514,7 @@ def analyze(paths: list[Path]) -> PayrollResult:
     files = {SOURCE_LABELS[kind]: grouped[kind][0].name for kind in REQUIRED_SOURCES}
     return PayrollResult(company, period_end, earnings, deductions, net_payable, rows,
                          monthly_ignored + vacation_ignored + thirteenth_ignored + liquid_ignored,
-                         files, validation)
+                         excluded_rows, files, validation)
 
 
 def _write_import_sheet(workbook: Workbook, title: str, rows: list[PostingRow], posting_date: datetime) -> None:
@@ -514,6 +527,9 @@ def _write_import_sheet(workbook: Workbook, title: str, rows: list[PostingRow], 
     sheet.column_dimensions["J"].width = 58
     for cell in sheet["B"]:
         cell.number_format = "dd/mm/yyyy"
+    for column in ("F", "I"):
+        for cell in sheet[column]:
+            cell.number_format = "@"
     for cell in sheet["M"]:
         cell.number_format = "#,##0.00"
 
@@ -527,20 +543,33 @@ def _csv_money(value: Decimal) -> str:
 def _posting_values(row: PostingRow, posting_date: datetime, excel: bool = False) -> list[Any]:
     cost_center = _cost_center(row.cost_center)
     return ["A", posting_date if excel else posting_date.strftime("%d/%m/%Y"), "", int(row.debit), "",
-            cost_center, int(row.credit), "", cost_center, row.description, "", row.accounting_origin,
+            cost_center, int(row.credit), "", cost_center,
+            row.description, "", row.accounting_origin,
             float(row.value) if excel else _csv_money(row.value)]
 
 
 def save_csv(result: PayrollResult, path: Path, posting_date: datetime | None = None,
              source: str | None = None) -> None:
     posting_date = posting_date or result.period_end
+    exported_rows = [
+        row for row in result.rows
+        if row.ready and (source is None or row.source == source)
+    ]
     with path.open("w", encoding="cp1252", newline="") as file:
         # O Excel/CMFlex em ambiente pt-BR usa ponto e vírgula como separador
         # de campos e vírgula como separador decimal.
         writer = csv.writer(file, delimiter=";", quoting=csv.QUOTE_MINIMAL, lineterminator="\r\n")
-        for row in result.rows:
-            if row.ready and (source is None or row.source == source):
-                writer.writerow(_posting_values(row, posting_date))
+        writer.writerows(_posting_values(row, posting_date) for row in exported_rows)
+
+    saved_rows = read_csv(path)
+    if len(saved_rows) != len(exported_rows):
+        raise ValueError("O CSV gerado não preservou todos os lançamentos.")
+    for line, (saved, source_row) in enumerate(zip(saved_rows, exported_rows), 1):
+        expected = _cost_center(source_row.cost_center)
+        if len(saved) < 9 or saved[5] != expected or saved[8] != expected:
+            raise ValueError(
+                f"O centro de custo não foi preservado nas colunas F e I do CSV, linha {line}."
+            )
 
 
 def save_excel(result: PayrollResult, path: Path, posting_date: datetime | None = None) -> None:
@@ -565,7 +594,9 @@ def save_excel(result: PayrollResult, path: Path, posting_date: datetime | None 
         ("Lançamentos com dados completos", result.ready), ("De/para incompleto", len(result.rows) - result.ready),
         ("Proventos da folha", float(result.earnings)), ("Descontos da folha", float(result.deductions)),
         ("Líquido a pagar", float(result.net_payable)),
-        ("Totalizadores/duplicadores excluídos", result.ignored_rows), ("Valor total dos lançamentos", float(result.total)),
+        ("Totalizadores/duplicadores excluídos", result.ignored_rows),
+        ("Eventos da lista Desconsiderar excluídos", result.excluded_rows),
+        ("Valor total dos lançamentos", float(result.total)),
     ]
     for label, value in indicators:
         summary.append([label, value])
@@ -630,6 +661,11 @@ def save_pdf(result: PayrollResult, path: Path) -> None:
     story = [Paragraph("Lançamento da Folha de Pagamento", styles["Title"]), Spacer(1, 3 * mm),
              Paragraph(f"{result.company} — competência {result.period_end:%m/%Y}", styles["BodyText"]),
              Paragraph(f"Líquido a pagar: {money(result.net_payable)}", styles["Heading2"]),
+             Paragraph(
+                 f"Exclusões aplicadas: {result.ignored_rows} totalizadores e "
+                 f"{result.excluded_rows} eventos da lista Desconsiderar.",
+                 styles["BodyText"],
+             ),
              Spacer(1, 5 * mm), table]
     document = SimpleDocTemplate(str(path), pagesize=landscape(A4), title="Lançamento da Folha de Pagamento")
     document.build(story)
@@ -672,7 +708,7 @@ class PayrollPostingAutomation(Automation):
         cards = ctk.CTkFrame(dashboard, fg_color="transparent")
         cards.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
         self.cards = {}
-        for index, title in enumerate(("Arquivos reconhecidos", "Dados completos", "Líquido a pagar", "Totalizadores excluídos")):
+        for index, title in enumerate(("Arquivos reconhecidos", "Dados completos", "Líquido a pagar", "Exclusões aplicadas")):
             cards.grid_columnconfigure(index, weight=1)
             card = ctk.CTkFrame(cards)
             card.grid(row=0, column=index, padx=(0 if index == 0 else 5, 0), sticky="nsew")
@@ -757,7 +793,10 @@ class PayrollPostingAutomation(Automation):
             self.previous.configure(state="disabled")
             self.next.configure(state="disabled")
         else:
-            values = ("7 de 7", str(self.result.ready), money(self.result.net_payable), str(self.result.ignored_rows))
+            values = (
+                "7 de 7", str(self.result.ready), money(self.result.net_payable),
+                str(self.result.ignored_rows + self.result.excluded_rows),
+            )
             for title, value in zip(self.cards, values):
                 self.cards[title].configure(text=value)
             filtered = self._filtered()

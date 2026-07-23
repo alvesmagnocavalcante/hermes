@@ -127,6 +127,7 @@ def result_details(result: Any) -> dict[str, str]:
         "fiscal_end": "Fim do Fiscal", "service_profile": "Hotel identificado", "earnings": "Proventos",
         "deductions": "Descontos", "net_payable": "Líquido a pagar",
         "ignored_rows": "Totalizadores removidos",
+        "excluded_rows": "Eventos desconsiderados",
     }
     details = {}
     for field in fields(result):
@@ -158,9 +159,9 @@ SPECS = (
     AutomationSpec("debito", "Relatório de Notas de Débito", "Consolida as notas de débito por hotel, comprador, emissão, item e valor.",
                    "automations.relatorio_notas_debito", "extract", None,
                    (C("hotel", "Hotel"), C("comprador", "Comprador"), C("nota", "Nota"), C("emissao", "Emissão"), C("item", "Item"), C("valor", "Valor", True)), extensions=("xlsx", "xlsm")),
-    AutomationSpec("entrada", "Notas Fiscais de Entrada em Atraso", "Confere o prazo entre a emissão e a entrada das notas de mercadoria.",
+    AutomationSpec("entrada", "Notas Fiscais de Entrada em Atraso", "Classifica as notas do Manifesto como em dia, em alerta ou em atraso, mesmo quando ainda não foram lançadas.",
                    "automations.notas_entrada_atrasadas", "analyze", "rows",
-                   (C("key", "Chave"), C("company", "Empresa"), C("supplier", "Fornecedor"), C("state", "UF"), C("emission_date", "Emissão"), C("entry_date", "Entrada"), C("days", "Dias", True), C("limit", "Limite", True), C("status", "Resultado"))),
+                   (C("key", "Chave"), C("company", "Empresa"), C("supplier", "Fornecedor"), C("state", "UF"), C("emission_date", "Emissão"), C("entry_date", "Entrada"), C("days", "Dias", True), C("limit", "Limite", True), C("launch_status", "Lançamento"), C("status", "Situação"))),
     AutomationSpec("cupons", "Conferência dos Cupons", "Compara Simphony, Fiscal e SEFAZ por chave, data e valor.",
                    "automations.conferencia_cupons", "reconcile", "rows",
                    (C("document_type", "Tipo"), C("key", "Chave fiscal"), C("simphony_date", "Data Simphony"), C("fiscal_date", "Data Fiscal"), C("sefaz_date", "Data SEFAZ"), C("simphony", "Simphony", True), C("fiscal", "Fiscal", True), C("sefaz", "SEFAZ", True), C("difference", "Diferença", True), C("status", "Resultado"))),
