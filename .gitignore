@@ -7,7 +7,7 @@ wheels/
 *.egg-info
 PROCESSOS AUTOMAÇÃO/
 .flet/
-.env
+#.env
 .uv-cache/
 .uv-tools/
 .uv-tools-bin/
