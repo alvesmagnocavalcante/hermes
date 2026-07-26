@@ -1,0 +1,161 @@
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:18";"Pág:0001"
+"Relação de Eventos"
+"Período: 01/06/2026 à 30/06/2026  Tp: 1"
+"Func";"Nome";"Cargo";"Situação";"Base";"Referência";"Valor "
+"______________________________________________________________________________________________________________________________________________________"
+"Filial: 1 MAGNA PRAIA HOTEL LTDA"
+
+"Organograma: 005.003 BAR E RESTAURANTE"
+
+"Evento: 1900 FGTS"
+1044;"EMILLY DA SILVA PESSOA";60;"CUMIM";"Trabalhando";1.664,000000000;"8,00 %";133,12
+873;"ERICKSON NOGUEIRA DE LIMA";70;"GARCOM";"Trabalhando";2.000,600000000;"8,00 %";160,04
+794;"EVANDRO CARLOS BANDEIRA";70;"GARCOM";"Trabalhando";2.000,600000000;"8,00 %";160,04
+478;"FRANCISCO REGINALDO DA SILVA BERNARDO";503;"CHEFE DE FILA";"Trabalhando";2.484,080000000;"8,00 %";198,72
+497;"FRANCISCO RIBEIRO DE ALMEIDA";81;"MAITRE";"Trabalhando";3.344,800000000;"8,00 %";267,57
+1048;"MATHEUS MARTINS DE SOUZA";60;"CUMIM";"Trabalhando";1.798,000000000;"8,00 %";143,84
+1038;"ROSALINE LIMA DOS SANTOS";60;"CUMIM";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1040;"SAMUEL SOLON DE FRANCA";60;"CUMIM";"Trabalhando";1.664,000000000;"8,00 %";133,12
+"Total do Evento: 1900 FGTS"
+"Quantidade Func: 8";16.620,080000000;64,00;1.329,57
+"______________________________________________________________________________________________________________________________________________________"
+"Evento: 1902 FGTS S/Férias"
+497;"FRANCISCO RIBEIRO DE ALMEIDA";81;"MAITRE";"Trabalhando";318,550000000;"8,00 %";25,49
+"Total do Evento: 1902 FGTS S/Férias"
+"Quantidade Func: 1";318,550000000;8,00;25,49
+"______________________________________________________________________________________________________________________________________________________"
+"Total do Organograma: 005.003 BAR E RESTAURANTE"
+"Quantidade Func: 9";;;1.355,06
+"______________________________________________________________________________________________________________________________________________________"
+"Organograma: 007 COZINHA"
+
+"Evento: 1900 FGTS"
+1037;"ANDRE LUIZ AZEVEDO";47;"CHEFE DE COZINHA";"Trabalhando";4.000,000000000;"8,00 %";320,00
+895;"ANTONIO JOAO BOSCO";253;"COZINHEIRO JR";"Trabalhando";2.044,370000000;"8,00 %";163,54
+989;"CARLA BRAGA CAMPELO DE OLIVEIRA";410;"NUTRICIONISTA";"Trabalhando";1.699,230000000;"8,00 %";135,93
+833;"ELIZANGELA CHAGAS";3;"AJUDANTE DE COZINHA";"Trabalhando";1.750,520000000;"8,00 %";140,04
+993;"FERNANDO SALES CARIOCA";144;"ASSISTENTE ADMINSTRATIVO";"Trabalhando";1.836,820000000;"8,00 %";146,94
+1041;"FRANCISCA PESSOA ARAUJO";197;"AUXILIAR DE COZINHA";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1042;"ISELINE ADRIANO BATISTA";253;"COZINHEIRO JR";"Trabalhando";2.044,370000000;"8,00 %";163,54
+1036;"JOSE RAIMUNDO DOMINGOS JUNIOR";197;"AUXILIAR DE COZINHA";"Trabalhando";1.664,000000000;"8,00 %";133,12
+962;"LEILIANE DA SILVA PINTO";197;"AUXILIAR DE COZINHA";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1050;"LUCIVANDA MENEZES BERNARDO";131;"STEWARD";"Trabalhando";1.664,000000000;"8,00 %";133,12
+997;"MARCUS EDUARDO AVILA BOTELHO";197;"AUXILIAR DE COZINHA";"Trabalhando";1.664,000000000;"8,00 %";133,12
+850;"SOCORRO DORIANA COELHO";197;"AUXILIAR DE COZINHA";"Trabalhando";1.553,070000000;"8,00 %";124,24
+1052;"VALDENIR MANOEL DE BARROS";253;"COZINHEIRO JR";"Trabalhando";1.224,000000000;"8,00 %";97,92
+"Total do Evento: 1900 FGTS"
+"Quantidade Func: 13";24.472,380000000;104,00;1.957,75
+"______________________________________________________________________________________________________________________________________________________"
+"Evento: 1902 FGTS S/Férias"
+850;"SOCORRO DORIANA COELHO";197;"AUXILIAR DE COZINHA";"Trabalhando";147,910000000;"8,00 %";11,83
+"Total do Evento: 1902 FGTS S/Férias"
+"Quantidade Func: 1";147,910000000;8,00;11,83
+"______________________________________________________________________________________________________________________________________________________"
+"Evento: 1904 FGTS S/13o Sal.Proporc.Resc."
+1023;"RAISSA GOMES MENDES";459;" APRENDIZ";"Demitido";488,900000000;"2,00 %";9,77
+"Total do Evento: 1904 FGTS S/13o Sal.Proporc.Resc."
+"Quantidade Func: 1";488,900000000;2,00;9,77
+"______________________________________________________________________________________________________________________________________________________"
+"Total do Organograma: 007 COZINHA"
+"Quantidade Func: 15";;;1.979,35
+"______________________________________________________________________________________________________________________________________________________"
+"Organograma: 008 GOVERNANÇA"
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:18";"Pág:0002"
+"Relação de Eventos"
+"Período: 01/06/2026 à 30/06/2026  Tp: 1"
+"Func";"Nome";"Cargo";"Situação";"Base";"Referência";"Valor "
+"______________________________________________________________________________________________________________________________________________________"
+
+"Evento: 1900 FGTS"
+1051;"ANA CRISTINA PEREIRA DO NASCIMENTO";79;"GOVERNANTA";"Trabalhando";2.464,000000000;"8,00 %";197,12
+911;"ANA LUCIA FEITOSA DA SILVA LIMA";173;"SUPERVISOR DE ANDARES";"Trabalhando";2.110,000000000;"8,00 %";168,80
+1047;"CREUSIMAR DOS SANTOS OLIVEIRA";44;"CAMAREIRO JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1032;"CRISTIANE ANDRE DA SILVA";44;"CAMAREIRO JR";"Trabalhando";998,660000000;"8,00 %";79,89
+1020;"DAVI DOS SANTOS OLIVEIRA";236;"SERVICOS GERAIS JR";"Demitido";1.161,550000000;"8,00 %";92,92
+1011;"ELIZETE DA SILVA ASSUNCAO";44;"CAMAREIRO JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1005;"FRANCISCA ROSIMEIRE DOS SANTOS MACIEL";44;"CAMAREIRO JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1035;"GUSTAVO LEVI LIMA DE OLIVEIRA";461;"APRENDIZ";"Trabalhando";1.173,350000000;"2,00 %";23,46
+1019;"JULIO CESAR PEREIRA AMORIM";236;"SERVICOS GERAIS JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1028;"LUANA KESIA DA SILVA CAVALCANTE";44;"CAMAREIRO JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+886;"MARIA ELZA HONORATO RODRIGUES";44;"CAMAREIRO JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1022;"MARIA HILDENIR BATISTA SOARES";44;"CAMAREIRO JR";"Auxílio Doença";55,470000000;"8,00 %";4,43
+961;"MARIA LUCIANA DE SOUSA ALMEIDA";44;"CAMAREIRO JR";"Demitido";491,130000000;"8,00 %";39,29
+1049;"MARIA MICHERLANE PEREIRA";44;"CAMAREIRO JR";"Trabalhando";1.798,000000000;"8,00 %";143,84
+1024;"MILENA OLIVEIRA LIMA";184;"ASSISTENTE DE GOVERNANTA";"Demitido";1.678,180000000;"8,00 %";134,25
+1009;"PRISCILA PINTO DE SOUSA";44;"CAMAREIRO JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+1034;"SOLANGE DOS SANTOS AZEVEDO";236;"SERVICOS GERAIS JR";"Trabalhando";1.664,000000000;"8,00 %";133,12
+998;"YOHANNA MARA COELHO ALVES";454;"REPOSITOR DE GOVERNANCA";"Trabalhando";1.664,000000000;"8,00 %";133,12
+"Total do Evento: 1900 FGTS"
+"Quantidade Func: 18";26.906,340000000;138,00;2.082,08
+"______________________________________________________________________________________________________________________________________________________"
+"Evento: 1904 FGTS S/13o Sal.Proporc.Resc."
+1020;"DAVI DOS SANTOS OLIVEIRA";236;"SERVICOS GERAIS JR";"Demitido";832,000000000;"8,00 %";66,56
+961;"MARIA LUCIANA DE SOUSA ALMEIDA";44;"CAMAREIRO JR";"Demitido";693,330000000;"8,00 %";55,46
+1024;"MILENA OLIVEIRA LIMA";184;"ASSISTENTE DE GOVERNANTA";"Demitido";850,000000000;"8,00 %";68,00
+"Total do Evento: 1904 FGTS S/13o Sal.Proporc.Resc."
+"Quantidade Func: 3";2.375,330000000;24,00;190,02
+"______________________________________________________________________________________________________________________________________________________"
+"Total do Organograma: 008 GOVERNANÇA"
+"Quantidade Func: 21";;;2.272,10
+"______________________________________________________________________________________________________________________________________________________"
+"Organograma: 009 MANUTENÇÃO"
+
+"Evento: 1900 FGTS"
+1033;"CHRISTIANE TELES SOUSA DA CRUZ";329;"COORDENADOR DE MANUTENCAO";"Trabalhando";6.845,800000000;"8,00 %";547,66
+1031;"EDILSON SOARES MENDES NETO";50;"CHEFE DE MANUTENCAO";"Trabalhando";3.941,440000000;"8,00 %";315,31
+1007;"ELIZEU PIRES DA SILVA FILHO";89;"OFICIAL DE MANUTENCAO";"Trabalhando";2.883,600000000;"8,00 %";230,68
+438;"FRANCISCO EDVALDO SILVA DO PRADO";111;"SUPERVISOR DE MANUTENCAO";"Trabalhando";4.226,260000000;"8,00 %";338,10
+1039;"HENRIQUE DOS SANTOS ALVES";89;"OFICIAL DE MANUTENCAO";"Trabalhando";2.883,600000000;"8,00 %";230,68
+1046;"SAMUEL CUTRIM NUNES";89;"OFICIAL DE MANUTENCAO";"Trabalhando";2.843,600000000;"8,00 %";227,48
+"Total do Evento: 1900 FGTS"
+"Quantidade Func: 6";23.624,300000000;48,00;1.889,91
+"______________________________________________________________________________________________________________________________________________________"
+"Total do Organograma: 009 MANUTENÇÃO"
+"Quantidade Func: 6";;;1.889,91
+"______________________________________________________________________________________________________________________________________________________"
+"Organograma: 010 RECEPÇÃO"
+
+975;"ANA LUIZA DAMASCENO DE ALENCAR";245;"RECEPCIONISTA JR";"Férias";104,250000000;"8,00 %";8,34
+104;"ANTONIO DANILO GONÇALVES DE FREITAS";51;"CHEFE DE RECEPCAO";"Trabalhando";3.981,780000000;"8,00 %";318,54
+1045;"FRANCISCO EDUARDO RODRIGUES DOS SANTOS";32;"AUXILIAR DE RECEPCAO";"Trabalhando";1.775,200000000;"8,00 %";142,01
+964;"FRANCISCO WANDERSON TEIXEIRA FILHO";195;"AUXILIAR DE RECEPÇÃO";"Trabalhando";1.824,580000000;"8,00 %";145,96
+59;"JOSE ARIOSVALDO BRITO";160;"MENSAGEIRO II";"Trabalhando";1.953,230000000;"8,00 %";156,25
+14;"JOSE ELIALDO DA ROCHA BARBOSA";279;"RECEPCIONISTA SR";"Trabalhando";3.454,670000000;"8,00 %";276,37
+1027;"LIZANDRA SAMPAIO DA SILVA MACIEL";309;"APRENDIZ";"Trabalhando";1.173,350000000;"2,00 %";23,46
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:18";"Pág:0003"
+"Relação de Eventos"
+"Período: 01/06/2026 à 30/06/2026  Tp: 1"
+"Func";"Nome";"Cargo";"Situação";"Base";"Referência";"Valor "
+"______________________________________________________________________________________________________________________________________________________"
+986;"LUCAS MAIA MENDONÇA";245;"RECEPCIONISTA JR";"Trabalhando";2.432,170000000;"8,00 %";194,57
+1004;"LUCILEYA FARIAS DINIZ";11;"RECEPCIONISTA PL";"Trabalhando";2.476,340000000;"8,00 %";198,10
+852;"MAIRLA DE ARAUJO DO NASCIMENTO";104;"SUB CHEFE RECEPCAO";"Trabalhando";3.105,140000000;"8,00 %";248,41
+846;"MATEUS VITOR MOREIRA DE SOUSA";11;"RECEPCIONISTA PL";"Trabalhando";2.476,340000000;"8,00 %";198,10
+994;"PEDRO FELIPE DE SOUSA ALENCAR";32;"AUXILIAR DE RECEPCAO";"Trabalhando";2.048,950000000;"8,00 %";163,91
+972;"ROSEMBRINK DIAS CALADO";11;"RECEPCIONISTA PL";"Férias";1.565,460000000;"8,00 %";125,23
+963;"SAULO WANDERLEY LIMA";32;"AUXILIAR DE RECEPCAO";"Trabalhando";1.765,290000000;"8,00 %";141,22
+"Total do Evento: 1900 FGTS"
+"Quantidade Func: 14";30.136,750000000;106,00;2.340,47
+"______________________________________________________________________________________________________________________________________________________"
+"Evento: 1902 FGTS S/Férias"
+975;"ANA LUIZA DAMASCENO DE ALENCAR";245;"RECEPCIONISTA JR";"Férias";2.865,750000000;"8,00 %";229,26
+972;"ROSEMBRINK DIAS CALADO";11;"RECEPCIONISTA PL";"Férias";2.028,910000000;"8,00 %";162,31
+963;"SAULO WANDERLEY LIMA";32;"AUXILIAR DE RECEPCAO";"Trabalhando";175,410000000;"8,00 %";14,03
+"Total do Evento: 1902 FGTS S/Férias"
+"Quantidade Func: 3";5.070,070000000;24,00;405,60
+"______________________________________________________________________________________________________________________________________________________"
+"Total do Organograma: 010 RECEPÇÃO"
+"Quantidade Func: 17";;;2.746,07
+"______________________________________________________________________________________________________________________________________________________"
+"Total da Filial: 1 MAGNA PRAIA HOTEL LTDA"
+"Quantidade Func: 68";;;10.242,49
+"______________________________________________________________________________________________________________________________________________________"
+"Total da Empresa: MAGNA PRAIA HOTEL LTDA"
+"Quantidade Func: 68";;;10.242,49
+"______________________________________________________________________________________________________________________________________________________"

@@ -1,0 +1,1554 @@
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0001"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+
+" Filial: 1 MAGNA PRAIA HOTEL LTDA - CNPJ/CPF: 02.333.096/0001-35"
+
+" Orgranograma: 001.001 ADMINISTRAÇÃO"
+
+" Situação: 3 Auxílio Doença"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+200;"Horas Auxílio Doença Diurnas";"000220:00";3.693,66;;5
+1445;"Mensalidade  Plano de Saúde";;;127,57;3
+4006;"Planos de Saúde - Total da Fatura";;127,57;;4
+
+"";"Por situação:";;3;"Auxílio Doença";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";0,00;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";0,00
+"INSS";0,00;0,00;"INSS";0,00;0,00;"Descontos";127,57
+"FGTS";0,00;0,00;"FGTS";0,00;0,00;"Líquido";-127,57
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";127,57
+
+"Salários";3.693,66;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";1;"Total Geral";0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";0,00;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";0,00;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";0,00;"Sal. Contr Empregados: ";0,00
+"Parte RAT + Acrés. FAP: ";0,00;"(0,00 + 0,00)";"Líquido: ";0,00;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";0,00;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";0,00;0,00
+
+" Situação: 7 Demitido"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+33;"Saldo de Salário Diurno";"000007:33";289,55;;1
+301;"Auxilio moradia";;1.000,00;;1
+448;"Aviso Prévio Indenizado Diurno";"000264:00";10.423,74;;1
+510;"13o Salário Proporcional";;3.619,35;;1
+540;"13o Salário Indenizado";;723,87;;1
+658;"Horas Férias Proporc.Diurnas";"000220:00";8.686,45;;1
+678;"1/3 S/Férias Proporcionais";;2.895,48;;1
+970;"Horas Férias Proporcionais Diurnas API";"000018:33";723,87;;1
+996;"1/3 S/Férias Proporcionais API";;241,29;;1
+1202;"Gratificação (Variável)";;5.790,97;;1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0002"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1242;"Premio de Assiduidade";;100,00;;1
+1862;"Mensalidade Sindical";;;23,30;3
+1895;"Desconto Líquido Rescisão";;;32.963,24;3
+1903;"FGTS S/Aviso Prévio Indenizado";;833,89;;4
+1908;"FGTS Multa - Depósito Saldo";;7.819,02;;4
+1914;"FGTS Normal Mês Anterior";;911,11;;4
+1916;"FGTS GRFC";;486,45;;4
+1917;"FGTS 13o Salário GRFC";;289,54;;4
+1918;"FGTS s/Férias GRFC";;61,77;;4
+1920;"IRRF";;;403,26;3
+1950;"INSS";;;695,00;3
+1951;"INSS S/13o Salário";;;409,77;3
+1953;"FGTS s/13o Salário Indenizado GRFC";;57,90;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;197,43;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";579,10;;4
+386;"1/3 Férias";;193,03;;4
+890;"Desconto Adiantamento Férias";;;704,60;4
+1952;"INSS S/Férias";;;65,87;4
+
+"";"Por situação:";;7;"Demitido";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";5.385,52;3.933,45;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";35.266,70
+"INSS";6.852,65;4.343,22;"INSS";0,00;0,00;"Descontos";35.266,70
+"FGTS";11.388,90;0,00;"FGTS";0,00;0,00;"Líquido";0,00
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";10.657,11
+
+"Salários";8.686,45;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";1;"Total Geral";39.178,30
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.170,64;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";2.239,17;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";649,36;"Sal. Contr Empregados: ";11.195,87
+"Parte RAT + Acrés. FAP: ";111,96;"(111,96 + 0,00)";"Líquido: ";4.171,13;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";11.388,90;911,11
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";21.619,61;1.729,55
+"  - ";" Multa ";19.547,55;7.819,02
+"Total FGTS";52.556,06;10.459,68
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";5.385,52;403,26
+" - ";"Férias";0,00;0,00
+" - ";"13º";3.933,45;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";9.318,97;403,26
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+33;"Saldo de Salário Diurno";"000007:33";289,55;;1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0003"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+200;"Horas Auxílio Doença Diurnas";"000220:00";3.693,66;;5
+301;"Auxilio moradia";;1.000,00;;1
+448;"Aviso Prévio Indenizado Diurno";"000264:00";10.423,74;;1
+510;"13o Salário Proporcional";;3.619,35;;1
+540;"13o Salário Indenizado";;723,87;;1
+658;"Horas Férias Proporc.Diurnas";"000220:00";8.686,45;;1
+678;"1/3 S/Férias Proporcionais";;2.895,48;;1
+970;"Horas Férias Proporcionais Diurnas API";"000018:33";723,87;;1
+996;"1/3 S/Férias Proporcionais API";;241,29;;1
+1202;"Gratificação (Variável)";;5.790,97;;1
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1242;"Premio de Assiduidade";;100,00;;1
+1445;"Mensalidade  Plano de Saúde";;;127,57;3
+1862;"Mensalidade Sindical";;;23,30;3
+1895;"Desconto Líquido Rescisão";;;32.963,24;3
+1903;"FGTS S/Aviso Prévio Indenizado";;833,89;;4
+1908;"FGTS Multa - Depósito Saldo";;7.819,02;;4
+1914;"FGTS Normal Mês Anterior";;911,11;;4
+1916;"FGTS GRFC";;486,45;;4
+1917;"FGTS 13o Salário GRFC";;289,54;;4
+1918;"FGTS s/Férias GRFC";;61,77;;4
+1920;"IRRF";;;403,26;3
+1950;"INSS";;;695,00;3
+1951;"INSS S/13o Salário";;;409,77;3
+1953;"FGTS s/13o Salário Indenizado GRFC";;57,90;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;197,43;;4
+4006;"Planos de Saúde - Total da Fatura";;127,57;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";579,10;;4
+386;"1/3 Férias";;193,03;;4
+890;"Desconto Adiantamento Férias";;;704,60;4
+1952;"INSS S/Férias";;;65,87;4
+
+"";"Por situação:";;3;"Auxílio Doença";1;7;"Demitido";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";5.385,52;3.933,45;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";35.266,70
+"INSS";6.852,65;4.343,22;"INSS";0,00;0,00;"Descontos";35.394,27
+"FGTS";11.388,90;0,00;"FGTS";0,00;0,00;"Líquido";-127,57
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";10.784,68
+
+"Salários";12.380,11;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";2;"Total Geral";39.178,30
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.170,64;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";2.239,17;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";649,36;"Sal. Contr Empregados: ";11.195,87
+"Parte RAT + Acrés. FAP: ";111,96;"(111,96 + 0,00)";"Líquido: ";4.171,13;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";11.388,90;911,11
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";21.619,61;1.729,55
+"  - ";" Multa ";19.547,55;7.819,02
+"Total FGTS";52.556,06;10.459,68
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0004"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";5.385,52;403,26
+" - ";"Férias";0,00;0,00
+" - ";"13º";3.933,45;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";9.318,97;403,26
+
+" Orgranograma: 005.003 BAR E RESTAURANTE"
+
+" Situação: 1 Trabalhando"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"001745:33";16.486,08;;1
+98;"Prêmios";;105,00;;1
+815;"Vale Transporte";;;761,64;3
+820;"Desconto Adiantamento Salarial";;;4.945,82;3
+1020;"Devolução de Desconto Indevido*";;24,00;;1
+1200;"Vale Combustível (6%)*";;;149,04;3
+1201;"Alimentação *";;;8,00;3
+1202;"Gratificação (Variável)";;134,00;;1
+1203;"Outros Descontos- Diversos*";;;800,00;3
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1445;"Mensalidade  Plano de Saúde";;;704,87;3
+1447;"Outras Despesas - Plano de Saúde";;;16,65;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;11,00;3
+1862;"Mensalidade Sindical";;;198,02;3
+1900;"FGTS";;1.329,57;;4
+1902;"FGTS S/Férias";;25,49;;4
+1950;"INSS";;;1.321,35;3
+4000;"Dedução Simplificada - IRRF Normal";;3.157,07;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;9,12;;4
+4004;"Empréstimo Crédito do Trabalhador";;;99,05;3
+4006;"Planos de Saúde - Total da Fatura";;721,52;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";238,91;;4
+386;"1/3 Férias";;79,64;;4
+890;"Desconto Adiantamento Férias";;;274,53;4
+1952;"INSS S/Férias";;;31,36;4
+
+"";"Por situação:";;1;"Trabalhando";8
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";14.919,55;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";17.067,63
+"INSS";16.938,63;0,00;"INSS";0,00;0,00;"Descontos";9.322,99
+"FGTS";16.938,63;0,00;"FGTS";0,00;0,00;"Líquido";7.744,64
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";5.242,77
+
+"Salários";16.724,99;"Dependentes IR";2;"Dedução do IRRF";379,18;"Total Funcionários";8;"Total Geral";22.962,26
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.352,71;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";3.387,73;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";982,45;"Sal. Contr Empregados: ";16.938,63
+"Parte RAT + Acrés. FAP: ";169,39;"(169,39 + 0,00)";"Líquido: ";5.892,28;"Sal. Contr. Diretores: ";0,00
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0005"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";16.938,63;1.355,06
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";16.938,63;1.355,06
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";14.919,55;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";14.919,55;0,00
+
+" Situação: 12 Transferência P/Outra Empresa"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+
+"";"Por situação:";;12;"Transferência P/Outra Empresa";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";0,00;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";0,00
+"INSS";0,00;0,00;"INSS";0,00;0,00;"Descontos";0,00
+"FGTS";0,00;0,00;"FGTS";0,00;0,00;"Líquido";0,00
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";0,00
+
+"Salários";1.664,00;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";1;"Total Geral";0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";0,00;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";0,00;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";0,00;"Sal. Contr Empregados: ";0,00
+"Parte RAT + Acrés. FAP: ";0,00;"(0,00 + 0,00)";"Líquido: ";0,00;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";0,00;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";0,00;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"001745:33";16.486,08;;1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0006"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+98;"Prêmios";;105,00;;1
+815;"Vale Transporte";;;761,64;3
+820;"Desconto Adiantamento Salarial";;;4.945,82;3
+1020;"Devolução de Desconto Indevido*";;24,00;;1
+1200;"Vale Combustível (6%)*";;;149,04;3
+1201;"Alimentação *";;;8,00;3
+1202;"Gratificação (Variável)";;134,00;;1
+1203;"Outros Descontos- Diversos*";;;800,00;3
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1445;"Mensalidade  Plano de Saúde";;;704,87;3
+1447;"Outras Despesas - Plano de Saúde";;;16,65;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;11,00;3
+1862;"Mensalidade Sindical";;;198,02;3
+1900;"FGTS";;1.329,57;;4
+1902;"FGTS S/Férias";;25,49;;4
+1950;"INSS";;;1.321,35;3
+4000;"Dedução Simplificada - IRRF Normal";;3.157,07;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;9,12;;4
+4004;"Empréstimo Crédito do Trabalhador";;;99,05;3
+4006;"Planos de Saúde - Total da Fatura";;721,52;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";238,91;;4
+386;"1/3 Férias";;79,64;;4
+890;"Desconto Adiantamento Férias";;;274,53;4
+1952;"INSS S/Férias";;;31,36;4
+
+"";"Por situação:";;1;"Trabalhando";8;12;"Transferência P/Outra Empresa";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";14.919,55;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";17.067,63
+"INSS";16.938,63;0,00;"INSS";0,00;0,00;"Descontos";9.322,99
+"FGTS";16.938,63;0,00;"FGTS";0,00;0,00;"Líquido";7.744,64
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";5.242,77
+
+"Salários";18.388,99;"Dependentes IR";2;"Dedução do IRRF";379,18;"Total Funcionários";9;"Total Geral";22.962,26
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.352,71;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";3.387,73;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";982,45;"Sal. Contr Empregados: ";16.938,63
+"Parte RAT + Acrés. FAP: ";169,39;"(169,39 + 0,00)";"Líquido: ";5.892,28;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";16.938,63;1.355,06
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";16.938,63;1.355,06
+"______________________________________________________________________________________________________________________________________________________________________"
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0007"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";14.919,55;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";14.919,55;0,00
+
+" Orgranograma: 007 COZINHA"
+
+" Situação: 1 Trabalhando"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"002620:67";24.131,65;;1
+19;"Horas Lic.Médica Diurnas";"000036:67";340,73;;1
+98;"Prêmios";;210,00;;1
+150;"Salário Família";;67,54;;2
+815;"Vale Transporte";;;790,63;3
+820;"Desconto Adiantamento Salarial";;;6.974,52;3
+1020;"Devolução de Desconto Indevido*";;4,09;;1
+1200;"Vale Combustível (6%)*";;;413,28;3
+1201;"Alimentação *";;;13,00;3
+1203;"Outros Descontos- Diversos*";;;591,68;3
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1445;"Mensalidade  Plano de Saúde";;;174,07;3
+1862;"Mensalidade Sindical";;;297,86;3
+1900;"FGTS";;1.957,75;;4
+1902;"FGTS S/Férias";;11,83;;4
+1950;"INSS";;;1.926,81;3
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;21,60;3
+4000;"Dedução Simplificada - IRRF Normal";;5.208,43;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;3,51;;4
+4004;"Empréstimo Crédito do Trabalhador";;;840,90;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;21,60;;1
+4006;"Planos de Saúde - Total da Fatura";;174,07;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";110,93;;4
+386;"1/3 Férias";;36,98;;4
+890;"Desconto Adiantamento Férias";;;112,96;4
+1952;"INSS S/Férias";;;11,69;4
+
+"";"Por situação:";;1;"Trabalhando";13
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";21.787,21;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";24.923,52
+"INSS";24.620,29;0,00;"INSS";0,00;0,00;"Descontos";12.170,66
+"FGTS";24.620,29;0,00;"FGTS";0,00;0,00;"Líquido";12.752,86
+"Dependentes SF";1;"PIS";0,00;0,00;"Outras";7.355,59
+
+"Salários";25.399,31;"Dependentes IR";4;"Dedução do IRRF";758,36;"Total Funcionários";13;"Total Geral";33.423,78
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.938,50;"Diretor: ";0,00;"Dedução: ";67,54
+"Parte Empresa: ";4.924,05;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.427,97;"Sal. Contr Empregados: ";24.620,29
+"Parte RAT + Acrés. FAP: ";246,20;"(246,20 + 0,00)";"Líquido: ";8.469,18;"Sal. Contr. Diretores: ";0,00
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0008"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";24.620,29;1.969,58
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";24.620,29;1.969,58
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";21.787,21;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";21.787,21;0,00
+
+" Situação: 7 Demitido"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+510;"13o Salário Proporcional";;488,90;;1
+658;"Horas Férias Proporc.Diurnas";"000077:50";586,67;;1
+678;"1/3 S/Férias Proporcionais";;195,56;;1
+815;"Vale Transporte";;;205,20;3
+1242;"Premio de Assiduidade";;100,00;;1
+1862;"Mensalidade Sindical";;;24,96;3
+1895;"Desconto Líquido Rescisão";;;1.104,31;3
+1904;"FGTS S/13o Sal.Proporc.Resc.";;9,77;;4
+1951;"INSS S/13o Salário";;;36,66;3
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;570,54;;4
+
+"";"Por situação:";;7;"Demitido";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";0,00;452,24;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";1.371,13
+"INSS";0,00;488,90;"INSS";0,00;0,00;"Descontos";1.371,13
+"FGTS";0,00;488,90;"FGTS";0,00;0,00;"Líquido";0,00
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";580,31
+
+"Salários";7,57;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";1;"Total Geral";1.511,92
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";36,66;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";97,78;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";28,35;"Sal. Contr Empregados: ";488,90
+"Parte RAT + Acrés. FAP: ";4,89;"(4,89 + 0,00)";"Líquido: ";167,68;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";488,90;9,77
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";488,90;9,77
+"______________________________________________________________________________________________________________________________________________________________________"
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0009"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";452,24;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";452,24;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"002620:67";24.131,65;;1
+19;"Horas Lic.Médica Diurnas";"000036:67";340,73;;1
+98;"Prêmios";;210,00;;1
+150;"Salário Família";;67,54;;2
+510;"13o Salário Proporcional";;488,90;;1
+658;"Horas Férias Proporc.Diurnas";"000077:50";586,67;;1
+678;"1/3 S/Férias Proporcionais";;195,56;;1
+815;"Vale Transporte";;;995,83;3
+820;"Desconto Adiantamento Salarial";;;6.974,52;3
+1020;"Devolução de Desconto Indevido*";;4,09;;1
+1200;"Vale Combustível (6%)*";;;413,28;3
+1201;"Alimentação *";;;13,00;3
+1203;"Outros Descontos- Diversos*";;;591,68;3
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1242;"Premio de Assiduidade";;100,00;;1
+1445;"Mensalidade  Plano de Saúde";;;174,07;3
+1862;"Mensalidade Sindical";;;322,82;3
+1895;"Desconto Líquido Rescisão";;;1.104,31;3
+1900;"FGTS";;1.957,75;;4
+1902;"FGTS S/Férias";;11,83;;4
+1904;"FGTS S/13o Sal.Proporc.Resc.";;9,77;;4
+1950;"INSS";;;1.926,81;3
+1951;"INSS S/13o Salário";;;36,66;3
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;21,60;3
+4000;"Dedução Simplificada - IRRF Normal";;5.208,43;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;570,54;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;3,51;;4
+4004;"Empréstimo Crédito do Trabalhador";;;840,90;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;21,60;;1
+4006;"Planos de Saúde - Total da Fatura";;174,07;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";110,93;;4
+386;"1/3 Férias";;36,98;;4
+890;"Desconto Adiantamento Férias";;;112,96;4
+1952;"INSS S/Férias";;;11,69;4
+
+"";"Por situação:";;1;"Trabalhando";13;7;"Demitido";1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0010"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";21.787,21;452,24;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";26.294,65
+"INSS";24.620,29;488,90;"INSS";0,00;0,00;"Descontos";13.541,79
+"FGTS";24.620,29;488,90;"FGTS";0,00;0,00;"Líquido";12.752,86
+"Dependentes SF";1;"PIS";0,00;0,00;"Outras";7.935,90
+
+"Salários";25.406,88;"Dependentes IR";4;"Dedução do IRRF";758,36;"Total Funcionários";14;"Total Geral";34.935,70
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.975,16;"Diretor: ";0,00;"Dedução: ";67,54
+"Parte Empresa: ";5.021,83;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.456,32;"Sal. Contr Empregados: ";25.109,19
+"Parte RAT + Acrés. FAP: ";251,09;"(251,09 + 0,00)";"Líquido: ";8.636,86;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";24.620,29;1.969,58
+" - ";"Férias";0,00;0,00
+" - ";"13º";488,90;9,77
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";25.109,19;1.979,35
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";21.787,21;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";452,24;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";22.239,45;0,00
+
+" Orgranograma: 008 GOVERNANÇA"
+
+" Situação: 1 Trabalhando"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"002616:00";21.477,04;;1
+3;"Horas DSR Diurnas";"000025:00";189,25;;1
+19;"Horas Lic.Médica Diurnas";"000124:67";942,93;;1
+23;"Horas Faltas Diurnas";"000043:98";;332,67;3
+25;"Horas Faltas DSR Diurnas";"000043:98";;332,67;3
+53;"Horas Aviso Prévio Trabalhado Diurno";"000190:67";1.442,13;;1
+98;"Prêmios";;105,00;;1
+150;"Salário Família";;607,86;;2
+815;"Vale Transporte";;;812,28;3
+820;"Desconto Adiantamento Salarial";;;7.215,41;3
+1200;"Vale Combustível (6%)*";;;544,52;3
+1201;"Alimentação *";;;14,00;3
+1202;"Gratificação (Variável)";;134,00;;1
+1203;"Outros Descontos- Diversos*";;;250,00;3
+1445;"Mensalidade  Plano de Saúde";;;236,07;3
+1447;"Outras Despesas - Plano de Saúde";;;16,65;3
+1862;"Mensalidade Sindical";;;349,44;3
+1900;"FGTS";;1.811,19;;4
+1950;"INSS";;;1.792,37;3
+4000;"Dedução Simplificada - IRRF Normal";;4.607,37;;4
+4004;"Empréstimo Crédito do Trabalhador";;;985,38;3
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0011"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+4006;"Planos de Saúde - Total da Fatura";;252,72;;4
+
+"";"Por situação:";;1;"Trabalhando";14
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";19.452,56;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";24.898,21
+"INSS";23.520,01;0,00;"INSS";0,00;0,00;"Descontos";12.881,46
+"FGTS";23.520,01;0,00;"FGTS";0,00;0,00;"Líquido";12.016,75
+"Dependentes SF";9;"PIS";0,00;0,00;"Outras";6.671,28
+
+"Salários";23.781,57;"Dependentes IR";12;"Dedução do IRRF";2.275,08;"Total Funcionários";14;"Total Geral";31.739,55
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";1.792,37;"Diretor: ";0,00;"Dedução: ";607,86
+"Parte Empresa: ";4.704,00;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.364,15;"Sal. Contr Empregados: ";23.520,01
+"Parte RAT + Acrés. FAP: ";235,20;"(235,20 + 0,00)";"Líquido: ";7.487,86;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";23.520,01;1.811,19
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";23.520,01;1.811,19
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";19.452,56;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";19.452,56;0,00
+
+" Situação: 3 Auxílio Doença"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+161;"Estouro do Mês Anterior";;;1.636,25;3
+163;"Estouro do Mês";;1.713,75;;2
+200;"Horas Auxílio Doença Diurnas";"000652:67";5.225,76;;5
+1445;"Mensalidade  Plano de Saúde";;;205,07;3
+1900;"FGTS";;4,43;;4
+1950;"INSS";;;4,16;3
+2913;"Horas Lic. Méd. Diurna C/ Concessão Benef. Previd";"000007:33";55,47;;1
+4000;"Dedução Simplificada - IRRF Normal";;603,04;;4
+4006;"Planos de Saúde - Total da Fatura";;205,07;;4
+
+"";"Por situação:";;3;"Auxílio Doença";3
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0012"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";51,31;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";1.769,22
+"INSS";55,47;0,00;"INSS";0,00;0,00;"Descontos";1.845,48
+"FGTS";55,47;0,00;"FGTS";0,00;0,00;"Líquido";-76,26
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";812,54
+
+"Salários";5.281,23;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";3;"Total Geral";152,25
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";4,16;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";11,09;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";3,21;"Sal. Contr Empregados: ";55,47
+"Parte RAT + Acrés. FAP: ";0,55;"(0,55 + 0,00)";"Líquido: ";19,01;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";55,47;4,43
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";55,47;4,43
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";51,31;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";51,31;0,00
+
+" Situação: 7 Demitido"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+33;"Saldo de Salário Diurno";"000403:33";3.389,03;;1
+35;"Horas Extras 50% Diurnas";"000022:68";261,57;;1
+59;"DSR S/Horas Extras Diurnas";"000011:45";87,93;;1
+448;"Aviso Prévio Indenizado Diurno";"000242:00";3.539,65;;1
+478;"Aviso Prévio Reavido Diurno";"000220:00";;1.664,00;3
+510;"13o Salário Proporcional";;3.716,11;;1
+540;"13o Salário Indenizado";;268,16;;1
+658;"Horas Férias Proporc.Diurnas";"000586:67";5.623,73;;1
+672;"Med.Eve.Var.S/Férias Proporc.";;0,13;;1
+678;"1/3 S/Férias Proporcionais";;1.874,63;;1
+815;"Vale Transporte";;;414,26;3
+820;"Desconto Adiantamento Salarial";;;1.009,20;3
+970;"Horas Férias Proporcionais Diurnas API";"000018:33";268,16;;1
+996;"1/3 S/Férias Proporcionais API";;89,39;;1
+1200;"Vale Combustível (6%)*";;;167,02;3
+1201;"Alimentação *";;;4,00;3
+1234;"Feriado Trabalhado";"000015:42";235,90;;1
+1445;"Mensalidade  Plano de Saúde";;;142,61;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;9,51;3
+1862;"Mensalidade Sindical";;;99,84;3
+1895;"Desconto Líquido Rescisão";;;13.928,72;3
+1900;"FGTS";;266,46;;4
+1903;"FGTS S/Aviso Prévio Indenizado";;283,17;;4
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0013"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+1904;"FGTS S/13o Sal.Proporc.Resc.";;190,02;;4
+1908;"FGTS Multa - Depósito Saldo";;2.464,83;;4
+1914;"FGTS Normal Mês Anterior";;308,91;;4
+1916;"FGTS GRFC";;51,49;;4
+1917;"FGTS 13o Salário GRFC";;107,26;;4
+1918;"FGTS s/Férias GRFC";;22,88;;4
+1950;"INSS";;;297,06;3
+1951;"INSS S/13o Salário";;;298,81;3
+1953;"FGTS s/13o Salário Indenizado GRFC";;21,45;;4
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;86,08;3
+4000;"Dedução Simplificada - IRRF Normal";;1.942,15;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;1.940,40;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;37,41;;4
+4004;"Empréstimo Crédito do Trabalhador";;;1.414,95;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;86,08;;1
+4006;"Planos de Saúde - Total da Fatura";;142,61;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";214,52;;4
+386;"1/3 Férias";;71,51;;4
+890;"Desconto Adiantamento Férias";;;167,13;4
+1952;"INSS S/Férias";;;23,31;4
+
+"";"Por situação:";;7;"Demitido";4
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";3.167,37;3.495,87;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";19.726,50
+"INSS";4.260,46;3.984,27;"INSS";0,00;0,00;"Descontos";19.726,50
+"FGTS";7.192,29;2.375,33;"FGTS";0,00;0,00;"Líquido";0,00
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";7.779,04
+
+"Salários";8.245,86;"Dependentes IR";1;"Dedução do IRRF";189,59;"Total Funcionários";4;"Total Geral";21.037,49
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";619,18;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";1.648,95;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";478,20;"Sal. Contr Empregados: ";8.244,73
+"Parte RAT + Acrés. FAP: ";82,45;"(82,45 + 0,00)";"Líquido: ";2.828,78;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";7.192,29;575,37
+" - ";"Férias";0,00;0,00
+" - ";"13º";2.375,33;190,02
+"  - ";" GRFC ";6.078,19;486,25
+"  - ";" Multa ";6.162,09;2.464,83
+"Total FGTS";21.807,90;3.716,47
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";3.167,37;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";3.495,87;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";6.663,24;0,00
+
+" Situação: 20 Faltas"
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0014"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"000220:00";1.664,00;;1
+23;"Horas Faltas Diurnas";"000220:00";;1.664,00;3
+150;"Salário Família";;202,62;;2
+
+"";"Por situação:";;20;"Faltas";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";0,00;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";1.866,62
+"INSS";0,00;0,00;"INSS";0,00;0,00;"Descontos";1.664,00
+"FGTS";0,00;0,00;"FGTS";0,00;0,00;"Líquido";202,62
+"Dependentes SF";3;"PIS";0,00;0,00;"Outras";0,00
+
+"Salários";1.664,00;"Dependentes IR";3;"Dedução do IRRF";568,77;"Total Funcionários";1;"Total Geral";0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";0,00;"Diretor: ";0,00;"Dedução: ";202,62
+"Parte Empresa: ";0,00;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";0,00;"Sal. Contr Empregados: ";0,00
+"Parte RAT + Acrés. FAP: ";0,00;"(0,00 + 0,00)";"Líquido: ";0,00;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";0,00;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";0,00;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";0,00;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"002836:00";23.141,04;;1
+3;"Horas DSR Diurnas";"000025:00";189,25;;1
+19;"Horas Lic.Médica Diurnas";"000124:67";942,93;;1
+23;"Horas Faltas Diurnas";"000263:98";;1.996,67;3
+25;"Horas Faltas DSR Diurnas";"000043:98";;332,67;3
+33;"Saldo de Salário Diurno";"000403:33";3.389,03;;1
+35;"Horas Extras 50% Diurnas";"000022:68";261,57;;1
+53;"Horas Aviso Prévio Trabalhado Diurno";"000190:67";1.442,13;;1
+59;"DSR S/Horas Extras Diurnas";"000011:45";87,93;;1
+98;"Prêmios";;105,00;;1
+150;"Salário Família";;810,48;;2
+161;"Estouro do Mês Anterior";;;1.636,25;3
+163;"Estouro do Mês";;1.713,75;;2
+200;"Horas Auxílio Doença Diurnas";"000652:67";5.225,76;;5
+448;"Aviso Prévio Indenizado Diurno";"000242:00";3.539,65;;1
+478;"Aviso Prévio Reavido Diurno";"000220:00";;1.664,00;3
+510;"13o Salário Proporcional";;3.716,11;;1
+540;"13o Salário Indenizado";;268,16;;1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0015"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+658;"Horas Férias Proporc.Diurnas";"000586:67";5.623,73;;1
+672;"Med.Eve.Var.S/Férias Proporc.";;0,13;;1
+678;"1/3 S/Férias Proporcionais";;1.874,63;;1
+815;"Vale Transporte";;;1.226,54;3
+820;"Desconto Adiantamento Salarial";;;8.224,61;3
+970;"Horas Férias Proporcionais Diurnas API";"000018:33";268,16;;1
+996;"1/3 S/Férias Proporcionais API";;89,39;;1
+1200;"Vale Combustível (6%)*";;;711,54;3
+1201;"Alimentação *";;;18,00;3
+1202;"Gratificação (Variável)";;134,00;;1
+1203;"Outros Descontos- Diversos*";;;250,00;3
+1234;"Feriado Trabalhado";"000015:42";235,90;;1
+1445;"Mensalidade  Plano de Saúde";;;583,75;3
+1447;"Outras Despesas - Plano de Saúde";;;16,65;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;9,51;3
+1862;"Mensalidade Sindical";;;449,28;3
+1895;"Desconto Líquido Rescisão";;;13.928,72;3
+1900;"FGTS";;2.082,08;;4
+1903;"FGTS S/Aviso Prévio Indenizado";;283,17;;4
+1904;"FGTS S/13o Sal.Proporc.Resc.";;190,02;;4
+1908;"FGTS Multa - Depósito Saldo";;2.464,83;;4
+1914;"FGTS Normal Mês Anterior";;308,91;;4
+1916;"FGTS GRFC";;51,49;;4
+1917;"FGTS 13o Salário GRFC";;107,26;;4
+1918;"FGTS s/Férias GRFC";;22,88;;4
+1950;"INSS";;;2.093,59;3
+1951;"INSS S/13o Salário";;;298,81;3
+1953;"FGTS s/13o Salário Indenizado GRFC";;21,45;;4
+2913;"Horas Lic. Méd. Diurna C/ Concessão Benef. Previd";"000007:33";55,47;;1
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;86,08;3
+4000;"Dedução Simplificada - IRRF Normal";;7.152,56;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;1.940,40;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;37,41;;4
+4004;"Empréstimo Crédito do Trabalhador";;;2.400,33;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;86,08;;1
+4006;"Planos de Saúde - Total da Fatura";;600,40;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";214,52;;4
+386;"1/3 Férias";;71,51;;4
+890;"Desconto Adiantamento Férias";;;167,13;4
+1952;"INSS S/Férias";;;23,31;4
+
+"";"Por situação:";;1;"Trabalhando";14;3;"Auxílio Doença";3;7;"Demitido";4
+
+20;"Faltas";1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:51";"Pág:0016"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";22.671,24;3.495,87;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";48.260,55
+"INSS";27.835,94;3.984,27;"INSS";0,00;0,00;"Descontos";36.117,44
+"FGTS";30.767,77;2.375,33;"FGTS";0,00;0,00;"Líquido";12.143,11
+"Dependentes SF";12;"PIS";0,00;0,00;"Outras";15.262,86
+
+"Salários";38.972,66;"Dependentes IR";16;"Dedução do IRRF";3.033,44;"Total Funcionários";22;"Total Geral";52.929,29
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";2.415,71;"Diretor: ";0,00;"Dedução: ";810,48
+"Parte Empresa: ";6.364,04;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.845,56;"Sal. Contr Empregados: ";31.820,21
+"Parte RAT + Acrés. FAP: ";318,20;"(318,20 + 0,00)";"Líquido: ";10.133,03;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";30.767,77;2.390,99
+" - ";"Férias";0,00;0,00
+" - ";"13º";2.375,33;190,02
+"  - ";" GRFC ";6.078,19;486,25
+"  - ";" Multa ";6.162,09;2.464,83
+"Total FGTS";45.383,38;5.532,09
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";22.671,24;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";3.495,87;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";26.167,11;0,00
+
+" Orgranograma: 009 MANUTENÇÃO"
+
+" Situação: 1 Trabalhando"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"001280:00";19.021,58;;1
+64;"Periculosidade";;3.652,72;;1
+98;"Prêmios";;210,00;;1
+815;"Vale Transporte";;;233,24;3
+820;"Desconto Adiantamento Salarial";;;5.706,46;3
+1200;"Vale Combustível (6%)*";;;235,72;3
+1201;"Alimentação *";;;6,00;3
+1202;"Gratificação (Variável)";;950,00;;1
+1203;"Outros Descontos- Diversos*";;;312,50;3
+1445;"Mensalidade  Plano de Saúde";;;537,04;3
+1447;"Outras Despesas - Plano de Saúde";;;103,48;3
+1862;"Mensalidade Sindical";;;149,76;3
+1900;"FGTS";;1.889,91;;4
+1920;"IRRF";;;645,62;3
+1950;"INSS";;;2.219,21;3
+4000;"Dedução Simplificada - IRRF Normal";;1.197,52;;4
+4004;"Empréstimo Crédito do Trabalhador";;;1.659,11;3
+4006;"Planos de Saúde - Total da Fatura";;640,52;;4
+
+"";"Por situação:";;1;"Trabalhando";6
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0017"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";20.836,32;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";23.834,30
+"INSS";23.624,30;0,00;"INSS";0,00;0,00;"Descontos";11.808,14
+"FGTS";23.624,30;0,00;"FGTS";0,00;0,00;"Líquido";12.026,16
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";3.727,95
+
+"Salários";19.021,58;"Dependentes IR";3;"Dedução do IRRF";568,77;"Total Funcionários";6;"Total Geral";32.055,53
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";2.219,21;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";4.724,86;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.370,21;"Sal. Contr Empregados: ";23.624,30
+"Parte RAT + Acrés. FAP: ";236,25;"(236,25 + 0,00)";"Líquido: ";8.550,53;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";23.624,30;1.889,91
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";23.624,30;1.889,91
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";20.836,32;645,62
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";20.836,32;645,62
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"001280:00";19.021,58;;1
+64;"Periculosidade";;3.652,72;;1
+98;"Prêmios";;210,00;;1
+815;"Vale Transporte";;;233,24;3
+820;"Desconto Adiantamento Salarial";;;5.706,46;3
+1200;"Vale Combustível (6%)*";;;235,72;3
+1201;"Alimentação *";;;6,00;3
+1202;"Gratificação (Variável)";;950,00;;1
+1203;"Outros Descontos- Diversos*";;;312,50;3
+1445;"Mensalidade  Plano de Saúde";;;537,04;3
+1447;"Outras Despesas - Plano de Saúde";;;103,48;3
+1862;"Mensalidade Sindical";;;149,76;3
+1900;"FGTS";;1.889,91;;4
+1920;"IRRF";;;645,62;3
+1950;"INSS";;;2.219,21;3
+4000;"Dedução Simplificada - IRRF Normal";;1.197,52;;4
+4004;"Empréstimo Crédito do Trabalhador";;;1.659,11;3
+4006;"Planos de Saúde - Total da Fatura";;640,52;;4
+
+"";"Por situação:";;1;"Trabalhando";6
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0018"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";20.836,32;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";23.834,30
+"INSS";23.624,30;0,00;"INSS";0,00;0,00;"Descontos";11.808,14
+"FGTS";23.624,30;0,00;"FGTS";0,00;0,00;"Líquido";12.026,16
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";3.727,95
+
+"Salários";19.021,58;"Dependentes IR";3;"Dedução do IRRF";568,77;"Total Funcionários";6;"Total Geral";32.055,53
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";2.219,21;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";4.724,86;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.370,21;"Sal. Contr Empregados: ";23.624,30
+"Parte RAT + Acrés. FAP: ";236,25;"(236,25 + 0,00)";"Líquido: ";8.550,53;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";23.624,30;1.889,91
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";23.624,30;1.889,91
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";20.836,32;645,62
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";20.836,32;645,62
+
+" Orgranograma: 010 RECEPÇÃO"
+
+" Situação: 1 Trabalhando"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"001984:47";21.956,72;;1
+2;"Horas Normais Noturnas";"000383:53";4.421,59;;1
+3;"Horas DSR Diurnas";"000025:00";189,25;;1
+19;"Horas Lic.Médica Diurnas";"000007:33";59,17;;1
+96;"Adicional Noturno";;884,32;;1
+98;"Prêmios";;105,00;;1
+150;"Salário Família";;67,54;;2
+815;"Vale Transporte";;;287,93;3
+820;"Desconto Adiantamento Salarial";;;7.988,04;3
+1200;"Vale Combustível (6%)*";;;998,55;3
+1201;"Alimentação *";;;12,00;3
+1202;"Gratificação (Variável)";;779,13;;1
+1203;"Outros Descontos- Diversos*";;;166,67;3
+1205;"Mensalidade Sindical Ferias";;;1,66;3
+1206;"DSR S/ Adicional Noturno";;176,86;;1
+1445;"Mensalidade  Plano de Saúde";;;1.059,72;3
+1447;"Outras Despesas - Plano de Saúde";;;413,39;3
+1862;"Mensalidade Sindical";;;297,86;3
+1900;"FGTS";;2.206,90;;4
+1902;"FGTS S/Férias";;14,03;;4
+1950;"INSS";;;2.333,46;3
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0019"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+4000;"Dedução Simplificada - IRRF Normal";;4.227,76;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;26,31;;4
+4004;"Empréstimo Crédito do Trabalhador";;;892,00;3
+4006;"Planos de Saúde - Total da Fatura";;1.473,11;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000014:67";118,35;;4
+364;"Med.Eve.Var.S/Férias";;13,21;;4
+386;"1/3 Férias";;43,85;;4
+890;"Desconto Adiantamento Férias";;;159,58;4
+1952;"INSS S/Férias";;;14,17;4
+
+"";"Por situação:";;1;"Trabalhando";12
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";25.375,22;0,00;0,00;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";28.814,99
+"INSS";28.642,45;0,00;"INSS";0,00;0,00;"Descontos";14.625,03
+"FGTS";28.642,45;0,00;"FGTS";0,00;0,00;"Líquido";14.189,96
+"Dependentes SF";1;"PIS";0,00;0,00;"Outras";7.948,11
+
+"Salários";25.579,31;"Dependentes IR";4;"Dedução do IRRF";758,36;"Total Funcionários";12;"Total Geral";38.644,55
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";2.347,63;"Diretor: ";0,00;"Dedução: ";67,54
+"Parte Empresa: ";5.728,50;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";1.661,25;"Sal. Contr Empregados: ";28.642,45
+"Parte RAT + Acrés. FAP: ";286,42;"(286,42 + 0,00)";"Líquido: ";9.956,26;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";28.642,45;2.220,93
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";28.642,45;2.220,93
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";25.375,22;0,00
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";25.375,22;0,00
+
+" Situação: 2 Férias"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"000036:00";474,42;;1
+2;"Horas Normais Noturnas";"000048:00";632,56;;1
+96;"Adicional Noturno";;126,51;;1
+98;"Prêmios";;105,00;;1
+815;"Vale Transporte";;;109,12;3
+1201;"Alimentação *";;;1,00;3
+1202;"Gratificação (Variável)";;208,50;;1
+1205;"Mensalidade Sindical Ferias";;;24,96;3
+1206;"DSR S/ Adicional Noturno";;59,04;;1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0020"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+1233;"Adicional Noturno - Mês Anterior";;168,68;;1
+1447;"Outras Despesas - Plano de Saúde";;;14,88;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;114,32;3
+1900;"FGTS";;133,57;;4
+1902;"FGTS S/Férias";;391,57;;4
+1950;"INSS";;;147,25;3
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;633,96;3
+4000;"Dedução Simplificada - IRRF Normal";;1.067,15;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;513,40;;4
+4004;"Empréstimo Crédito do Trabalhador";;;633,96;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;633,96;;1
+4006;"Planos de Saúde - Total da Fatura";;160,24;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000276:00";3.271,93;;4
+364;"Med.Eve.Var.S/Férias";;399,06;;4
+386;"1/3 Férias";;1.223,67;;4
+890;"Desconto Adiantamento Férias";;;3.703,78;4
+1952;"INSS S/Férias";;;417,64;4
+
+"";"Por situação:";;2;"Férias";2
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";1.522,46;0,00;6.091,28;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";7.303,33
+"INSS";6.564,37;0,00;"INSS";0,00;0,00;"Descontos";5.800,87
+"FGTS";6.564,37;0,00;"FGTS";0,00;0,00;"Líquido";1.502,46
+"Dependentes SF";0;"PIS";0,00;0,00;"Outras";2.265,93
+
+"Salários";4.378,91;"Dependentes IR";0;"Dedução do IRRF";0,00;"Total Funcionários";2;"Total Geral";9.587,73
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";564,89;"Diretor: ";0,00;"Dedução: ";0,00
+"Parte Empresa: ";1.312,87;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";380,75;"Sal. Contr Empregados: ";6.564,37
+"Parte RAT + Acrés. FAP: ";65,64;"(65,64 + 0,00)";"Líquido: ";2.324,15;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";6.564,37;525,14
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";6.564,37;525,14
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";1.522,46;0,00
+" - ";"Férias";6.091,28;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";7.613,74;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"002020:47";22.431,14;;1
+2;"Horas Normais Noturnas";"000431:53";5.054,15;;1
+3;"Horas DSR Diurnas";"000025:00";189,25;;1
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0021"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+19;"Horas Lic.Médica Diurnas";"000007:33";59,17;;1
+96;"Adicional Noturno";;1.010,83;;1
+98;"Prêmios";;210,00;;1
+150;"Salário Família";;67,54;;2
+815;"Vale Transporte";;;397,05;3
+820;"Desconto Adiantamento Salarial";;;7.988,04;3
+1200;"Vale Combustível (6%)*";;;998,55;3
+1201;"Alimentação *";;;13,00;3
+1202;"Gratificação (Variável)";;987,63;;1
+1203;"Outros Descontos- Diversos*";;;166,67;3
+1205;"Mensalidade Sindical Ferias";;;26,62;3
+1206;"DSR S/ Adicional Noturno";;235,90;;1
+1233;"Adicional Noturno - Mês Anterior";;168,68;;1
+1445;"Mensalidade  Plano de Saúde";;;1.059,72;3
+1447;"Outras Despesas - Plano de Saúde";;;428,27;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;114,32;3
+1862;"Mensalidade Sindical";;;297,86;3
+1900;"FGTS";;2.340,47;;4
+1902;"FGTS S/Férias";;405,60;;4
+1950;"INSS";;;2.480,71;3
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;633,96;3
+4000;"Dedução Simplificada - IRRF Normal";;5.294,91;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;539,71;;4
+4004;"Empréstimo Crédito do Trabalhador";;;1.525,96;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;633,96;;1
+4006;"Planos de Saúde - Total da Fatura";;1.633,35;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000290:67";3.390,28;;4
+364;"Med.Eve.Var.S/Férias";;412,27;;4
+386;"1/3 Férias";;1.267,52;;4
+890;"Desconto Adiantamento Férias";;;3.863,36;4
+1952;"INSS S/Férias";;;431,81;4
+
+"";"Por situação:";;1;"Trabalhando";12;2;"Férias";2
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";26.897,68;0,00;6.091,28;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";36.118,32
+"INSS";35.206,82;0,00;"INSS";0,00;0,00;"Descontos";20.425,90
+"FGTS";35.206,82;0,00;"FGTS";0,00;0,00;"Líquido";15.692,42
+"Dependentes SF";1;"PIS";0,00;0,00;"Outras";10.214,04
+
+"Salários";29.958,22;"Dependentes IR";4;"Dedução do IRRF";758,36;"Total Funcionários";14;"Total Geral";48.232,28
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";2.912,52;"Diretor: ";0,00;"Dedução: ";67,54
+"Parte Empresa: ";7.041,37;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";2.042,00;"Sal. Contr Empregados: ";35.206,82
+"Parte RAT + Acrés. FAP: ";352,06;"(352,06 + 0,00)";"Líquido: ";12.280,41;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";35.206,82;2.746,07
+" - ";"Férias";0,00;0,00
+" - ";"13º";0,00;0,00
+"  - ";" GRFC ";0,00;0,00
+"  - ";" Multa ";0,00;0,00
+"Total FGTS";35.206,82;2.746,07
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0022"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";26.897,68;0,00
+" - ";"Férias";6.091,28;0,00
+" - ";"13º";0,00;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";32.988,96;0,00
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"010502:47";105.211,49;;1
+2;"Horas Normais Noturnas";"000431:53";5.054,15;;1
+3;"Horas DSR Diurnas";"000050:00";378,50;;1
+19;"Horas Lic.Médica Diurnas";"000168:67";1.342,83;;1
+23;"Horas Faltas Diurnas";"000263:98";;1.996,67;3
+25;"Horas Faltas DSR Diurnas";"000043:98";;332,67;3
+33;"Saldo de Salário Diurno";"000410:67";3.678,58;;1
+35;"Horas Extras 50% Diurnas";"000022:68";261,57;;1
+53;"Horas Aviso Prévio Trabalhado Diurno";"000190:67";1.442,13;;1
+59;"DSR S/Horas Extras Diurnas";"000011:45";87,93;;1
+64;"Periculosidade";;3.652,72;;1
+96;"Adicional Noturno";;1.010,83;;1
+98;"Prêmios";;840,00;;1
+150;"Salário Família";;945,56;;2
+161;"Estouro do Mês Anterior";;;1.636,25;3
+163;"Estouro do Mês";;1.713,75;;2
+200;"Horas Auxílio Doença Diurnas";"000872:67";8.919,42;;5
+301;"Auxilio moradia";;1.000,00;;1
+448;"Aviso Prévio Indenizado Diurno";"000506:00";13.963,39;;1
+478;"Aviso Prévio Reavido Diurno";"000220:00";;1.664,00;3
+510;"13o Salário Proporcional";;7.824,36;;1
+540;"13o Salário Indenizado";;992,03;;1
+658;"Horas Férias Proporc.Diurnas";"000884:17";14.896,85;;1
+672;"Med.Eve.Var.S/Férias Proporc.";;0,13;;1
+678;"1/3 S/Férias Proporcionais";;4.965,67;;1
+815;"Vale Transporte";;;3.614,30;3
+820;"Desconto Adiantamento Salarial";;;33.839,45;3
+970;"Horas Férias Proporcionais Diurnas API";"000036:67";992,03;;1
+996;"1/3 S/Férias Proporcionais API";;330,68;;1
+1020;"Devolução de Desconto Indevido*";;28,09;;1
+1200;"Vale Combustível (6%)*";;;2.508,13;3
+1201;"Alimentação *";;;58,00;3
+1202;"Gratificação (Variável)";;7.996,60;;1
+1203;"Outros Descontos- Diversos*";;;2.120,85;3
+1205;"Mensalidade Sindical Ferias";;;31,60;3
+1206;"DSR S/ Adicional Noturno";;235,90;;1
+1233;"Adicional Noturno - Mês Anterior";;168,68;;1
+1234;"Feriado Trabalhado";"000015:42";235,90;;1
+1242;"Premio de Assiduidade";;200,00;;1
+1445;"Mensalidade  Plano de Saúde";;;3.187,02;3
+1447;"Outras Despesas - Plano de Saúde";;;565,05;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;134,83;3
+1862;"Mensalidade Sindical";;;1.441,04;3
+1895;"Desconto Líquido Rescisão";;;47.996,27;3
+1900;"FGTS";;9.599,78;;4
+1902;"FGTS S/Férias";;442,92;;4
+1903;"FGTS S/Aviso Prévio Indenizado";;1.117,06;;4
+1904;"FGTS S/13o Sal.Proporc.Resc.";;199,79;;4
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0023"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+1908;"FGTS Multa - Depósito Saldo";;10.283,85;;4
+1914;"FGTS Normal Mês Anterior";;1.220,02;;4
+1916;"FGTS GRFC";;537,94;;4
+1917;"FGTS 13o Salário GRFC";;396,80;;4
+1918;"FGTS s/Férias GRFC";;84,65;;4
+1920;"IRRF";;;1.048,88;3
+1950;"INSS";;;10.736,67;3
+1951;"INSS S/13o Salário";;;745,24;3
+1953;"FGTS s/13o Salário Indenizado GRFC";;79,35;;4
+2913;"Horas Lic. Méd. Diurna C/ Concessão Benef. Previd";"000007:33";55,47;;1
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;741,64;3
+4000;"Dedução Simplificada - IRRF Normal";;22.010,49;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;2.708,37;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;589,75;;4
+4004;"Empréstimo Crédito do Trabalhador";;;6.525,35;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;741,64;;1
+4006;"Planos de Saúde - Total da Fatura";;3.897,43;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000349:33";4.533,74;;4
+386;"1/3 Férias";;1.648,68;;4
+890;"Desconto Adiantamento Férias";;;5.122,58;4
+1952;"INSS S/Férias";;;564,04;4
+364;"Med.Eve.Var.S/Férias";;412,27;;4
+
+"";"Por situação:";;1;"Trabalhando";53;2;"Férias";2;3;"Auxílio Doença";4
+
+7;"Demitido";6;12;"Transferência P/Outra Empresa";1;20;"Faltas";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";112.497,52;7.881,56;6.091,28;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";186.842,15
+"INSS";135.078,63;8.816,39;"INSS";0,00;0,00;"Descontos";126.610,53
+"FGTS";142.546,71;2.864,23;"FGTS";0,00;0,00;"Líquido";60.231,62
+"Dependentes SF";14;"PIS";0,00;0,00;"Outras";53.168,20
+
+"Salários";144.128,44;"Dependentes IR";29;"Dedução do IRRF";5.498,11;"Total Funcionários";67;"Total Geral";230.293,36
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";12.045,95;"Diretor: ";0,00;"Dedução: ";945,56
+"Parte Empresa: ";28.779,00;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";8.345,90;"Sal. Contr Empregados: ";143.895,02
+"Parte RAT + Acrés. FAP: ";1.438,95;"(1.438,95 + 0,00)";"Líquido: ";49.664,24;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";142.546,71;11.262,72
+" - ";"Férias";0,00;0,00
+" - ";"13º";2.864,23;199,79
+"  - ";" GRFC ";27.697,80;2.215,80
+"  - ";" Multa ";25.709,64;10.283,85
+"Total FGTS";198.818,38;23.962,16
+"______________________________________________________________________________________________________________________________________________________________________"
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0024"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";112.497,52;1.048,88
+" - ";"Férias";6.091,28;0,00
+" - ";"13º";7.881,56;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";126.470,36;1.048,88
+"______________________________________________________________________________________________________________________________________________________________________"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+1;"Horas Normais Diurnas";"010502:47";105.211,49;;1
+2;"Horas Normais Noturnas";"000431:53";5.054,15;;1
+3;"Horas DSR Diurnas";"000050:00";378,50;;1
+19;"Horas Lic.Médica Diurnas";"000168:67";1.342,83;;1
+23;"Horas Faltas Diurnas";"000263:98";;1.996,67;3
+25;"Horas Faltas DSR Diurnas";"000043:98";;332,67;3
+33;"Saldo de Salário Diurno";"000410:67";3.678,58;;1
+35;"Horas Extras 50% Diurnas";"000022:68";261,57;;1
+53;"Horas Aviso Prévio Trabalhado Diurno";"000190:67";1.442,13;;1
+59;"DSR S/Horas Extras Diurnas";"000011:45";87,93;;1
+64;"Periculosidade";;3.652,72;;1
+96;"Adicional Noturno";;1.010,83;;1
+98;"Prêmios";;840,00;;1
+150;"Salário Família";;945,56;;2
+161;"Estouro do Mês Anterior";;;1.636,25;3
+163;"Estouro do Mês";;1.713,75;;2
+200;"Horas Auxílio Doença Diurnas";"000872:67";8.919,42;;5
+301;"Auxilio moradia";;1.000,00;;1
+448;"Aviso Prévio Indenizado Diurno";"000506:00";13.963,39;;1
+478;"Aviso Prévio Reavido Diurno";"000220:00";;1.664,00;3
+510;"13o Salário Proporcional";;7.824,36;;1
+540;"13o Salário Indenizado";;992,03;;1
+658;"Horas Férias Proporc.Diurnas";"000884:17";14.896,85;;1
+672;"Med.Eve.Var.S/Férias Proporc.";;0,13;;1
+678;"1/3 S/Férias Proporcionais";;4.965,67;;1
+815;"Vale Transporte";;;3.614,30;3
+820;"Desconto Adiantamento Salarial";;;33.839,45;3
+970;"Horas Férias Proporcionais Diurnas API";"000036:67";992,03;;1
+996;"1/3 S/Férias Proporcionais API";;330,68;;1
+1020;"Devolução de Desconto Indevido*";;28,09;;1
+1200;"Vale Combustível (6%)*";;;2.508,13;3
+1201;"Alimentação *";;;58,00;3
+1202;"Gratificação (Variável)";;7.996,60;;1
+1203;"Outros Descontos- Diversos*";;;2.120,85;3
+1205;"Mensalidade Sindical Ferias";;;31,60;3
+1206;"DSR S/ Adicional Noturno";;235,90;;1
+1233;"Adicional Noturno - Mês Anterior";;168,68;;1
+1234;"Feriado Trabalhado";"000015:42";235,90;;1
+1242;"Premio de Assiduidade";;200,00;;1
+1445;"Mensalidade  Plano de Saúde";;;3.187,02;3
+1447;"Outras Despesas - Plano de Saúde";;;565,05;3
+1448;"Mensalidade  Plano de Saúde - Férias";;;134,83;3
+1862;"Mensalidade Sindical";;;1.441,04;3
+1895;"Desconto Líquido Rescisão";;;47.996,27;3
+1900;"FGTS";;9.599,78;;4
+1902;"FGTS S/Férias";;442,92;;4
+1903;"FGTS S/Aviso Prévio Indenizado";;1.117,06;;4
+1904;"FGTS S/13o Sal.Proporc.Resc.";;199,79;;4
+1908;"FGTS Multa - Depósito Saldo";;10.283,85;;4
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0025"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+1914;"FGTS Normal Mês Anterior";;1.220,02;;4
+1916;"FGTS GRFC";;537,94;;4
+1917;"FGTS 13o Salário GRFC";;396,80;;4
+1918;"FGTS s/Férias GRFC";;84,65;;4
+1920;"IRRF";;;1.048,88;3
+1950;"INSS";;;10.736,67;3
+1951;"INSS S/13o Salário";;;745,24;3
+1953;"FGTS s/13o Salário Indenizado GRFC";;79,35;;4
+2913;"Horas Lic. Méd. Diurna C/ Concessão Benef. Previd";"000007:33";55,47;;1
+2919;" Empréstimo Crédito do Trabalhador-Férias";;;741,64;3
+4000;"Dedução Simplificada - IRRF Normal";;22.010,49;;4
+4001;"Dedução Simplificada - IRRF s/13o. Salário";;2.708,37;;4
+4002;"Dedução Simplificada - IRRF s/Férias";;589,75;;4
+4004;"Empréstimo Crédito do Trabalhador";;;6.525,35;3
+4005;"Devol./Desc Empréstimo Crédito Trabalhador-Férias";;741,64;;1
+4006;"Planos de Saúde - Total da Fatura";;3.897,43;;4
+
+"Total do Demostrativo de Férias"
+"Evento";"Descrição";"Referência";"Proventos";"Descontos";"Líquido"
+358;"Horas Férias Diurnas";"000349:33";4.533,74;;4
+386;"1/3 Férias";;1.648,68;;4
+890;"Desconto Adiantamento Férias";;;5.122,58;4
+1952;"INSS S/Férias";;;564,04;4
+364;"Med.Eve.Var.S/Férias";;412,27;;4
+
+"";"Por situação:";;1;"Trabalhando";53;2;"Férias";2;3;"Auxílio Doença";4
+
+7;"Demitido";6;12;"Transferência P/Outra Empresa";1;20;"Faltas";1
+"Normal";"13º";"Férias";"Lucro";"Prov 13º ";"Prov Férias"
+"IRRF";112.497,52;7.881,56;6.091,28;0,00;"Provisão Mês";0,00;0,00;"Prov/Vant";186.842,15
+"INSS";135.078,63;8.816,39;"INSS";0,00;0,00;"Descontos";126.610,53
+"FGTS";142.546,71;2.864,23;"FGTS";0,00;0,00;"Líquido";60.231,62
+"Dependentes SF";14;"PIS";0,00;0,00;"Outras";53.168,20
+
+"Salários";144.128,44;"Dependentes IR";29;"Dedução do IRRF";5.498,11;"Total Funcionários";67;"Total Geral";230.293,36
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo INSS"
+"Segurados: ";12.045,95;"Diretor: ";0,00;"Dedução: ";945,56
+"Parte Empresa: ";28.779,00;"Acréscimo RAT: ";0,00;"Isenção Filantrópica: ";0,00
+"Entidade Financeira: ";0,00;"Parte Terceiros: ";8.345,90;"Sal. Contr Empregados: ";143.895,02
+"Parte RAT + Acrés. FAP: ";1.438,95;"(1.438,95 + 0,00)";"Líquido: ";49.664,24;"Sal. Contr. Diretores: ";0,00
+
+"______________________________________________________________________________________________________________________________________________________________________"
+"Demonstrativo FGTS"
+"Base";"Valor"
+"Base FGTS - ";"Normal";142.546,71;11.262,72
+" - ";"Férias";0,00;0,00
+" - ";"13º";2.864,23;199,79
+"  - ";" GRFC ";27.697,80;2.215,80
+"  - ";" Multa ";25.709,64;10.283,85
+"Total FGTS";198.818,38;23.962,16
+"______________________________________________________________________________________________________________________________________________________________________"
+
+
+"0001-MAGNA PRAIA HOTEL LTDA";"25/06/2026 10:52";"Pág:0026"
+"CNPJ/CPF: 02.333.096/0001-35";"Relação de Cálculo"
+"Período: 01/06/2026 a 30/06/2026";"Tp: 1 Mensal"
+"Demonstrativo IRRF"
+"Base";"Valor"
+"Base IRRF - ";"Normal";112.497,52;1.048,88
+" - ";"Férias";6.091,28;0,00
+" - ";"13º";7.881,56;0,00
+"  ";;;
+"  ";;;
+"Total IRRF";126.470,36;1.048,88
