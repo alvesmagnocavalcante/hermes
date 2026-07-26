@@ -34,9 +34,6 @@ REQUIRED_SOURCES = set(SOURCE_LABELS)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", PROJECT_ROOT / "assets")).resolve()
 DEFAULT_TEMPLATE = ASSETS_DIR / "folha" / "modelo_folha.xlsm"
-EXAMPLE_TEMPLATE_DIR = (
-    PROJECT_ROOT / "PROCESSOS AUTOMAÇÃO" / "ATIVIDADE 2 - FOLHA DE PAGAMENTO"
-)
 
 
 @dataclass(frozen=True)
@@ -652,13 +649,7 @@ def build_rates(
 
 
 def _default_template() -> Path | None:
-    if DEFAULT_TEMPLATE.exists():
-        return DEFAULT_TEMPLATE
-    return (
-        next(EXAMPLE_TEMPLATE_DIR.glob("*.xlsm"), None)
-        if EXAMPLE_TEMPLATE_DIR.exists()
-        else None
-    )
+    return DEFAULT_TEMPLATE if DEFAULT_TEMPLATE.exists() else None
 
 
 def analyze(paths: list[Path]) -> PayrollResult:

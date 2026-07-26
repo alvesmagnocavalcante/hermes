@@ -29,7 +29,6 @@ Todas as automações que utilizam planilhas Excel aceitam `.xlsx`, `.xlsm`, `.x
 
 ## Guia do usuário
 
-- [Guia em Word](docs/GUIA_USUARIO_HERMES.docx) — versão pronta para distribuição aos usuários.
 - [Guia em Markdown](docs/GUIA_USUARIO_HERMES.md) — versão para consulta no repositório.
 
 ## Requisitos
@@ -145,13 +144,13 @@ cada operação.
 | Contas a Pagar | 8 | Confere fornecedores, adiantamentos e impostos contra o financeiro. |
 | Custos da Mercadoria Vendida | 4 | Compara entradas do CAP e saldos do inventário com a contabilidade. |
 
-As planilhas usadas para validação ficam em `PROCESSOS AUTOMAÇÃO/`, organizadas por atividade.
-
 ### Atividade 2 — Folha de pagamento
 
 Selecione simultaneamente os sete relatórios: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Eles podem estar em CSV ou Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` ou `.xltm`). Os nomes dos arquivos não são usados na identificação; o sistema reconhece cada relatório pelo conteúdo.
 
-A planilha `Projeto 2 - DP CARMEL PADRÃO...xlsm` contém os de/para e as regras adotadas pelo departamento. Ela é carregada automaticamente da pasta de exemplo. Se uma versão atualizada da planilha for selecionada junto aos CSVs, essa versão passa a ser usada na análise.
+A planilha modelo em `assets/folha/modelo_folha.xlsm` contém os de/para e as
+regras adotadas pelo departamento. Se uma versão atualizada for selecionada junto
+aos CSVs, ela passa a ser usada na análise.
 
 O Excel exportado separa as saídas em `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, além das abas de resumo e detalhamento. A opção CSV segue o modelo do CMFlex: campos separados por ponto e vírgula, valores com vírgula decimal, sem cabeçalho e com 13 colunas. A data é preenchida automaticamente com o fim da competência. O filtro permite exportar todas as saídas juntas ou somente um processo, como férias. Linhas de total do organograma, filial e empresa não são importadas.
 
@@ -175,9 +174,13 @@ projeto-hermes/
 │   └── conferencia_custos_mercadoria.py
 ├── hermes_ui/
 │   ├── app.py                               # Janela, navegação e componentes Flet
-│   └── registry.py                          # Catálogo e adaptadores das automações
-├── PROCESSOS AUTOMAÇÃO/                     # Planilhas de exemplo
+│   ├── registry.py                          # Catálogo e adaptadores das automações
+│   └── runtime.py                           # Limites de concorrência e upload
+├── assets/                                  # Ícones, logotipo e modelo da folha
+├── tests/                                   # Testes automatizados
 ├── main.py                                  # Ponto de entrada Flet
+├── compose.yaml
+├── Dockerfile
 ├── pyproject.toml
 └── uv.lock
 ```
@@ -245,16 +248,11 @@ O catálogo adiciona a automação ao menu e reutiliza toda a interface padrão.
 
 ## Validação para manutenção
 
-As pastas que possuem conjuntos completos podem ser analisadas e exportadas sem
-abrir a interface:
-
 ```powershell
-uv run python scripts/validate_examples.py
+uv run python -m unittest discover -s tests -v
 ```
 
-As saídas são criadas em uma pasta temporária e removidas automaticamente. Esse
-comando deve ser executado depois de alterações nas regras, leitores ou
-exportadores.
+Execute os testes depois de alterações nas regras, leitores ou exportadores.
 
 ## Processamento em segundo plano
 

@@ -21,8 +21,6 @@ exclude = [
     ".uv-cache",
     ".venv",
     "build",
-    "PROCESSOS AUTOMAÇÃO",
     "docs",
     "__pycache__",
-    "hermes.ico",
 ]
