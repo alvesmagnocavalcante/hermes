@@ -1,0 +1,26 @@
+services:
+  hermes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hermes:latest
+    restart: unless-stopped
+    mem_limit: "${HERMES_MEMORY_LIMIT:-2g}"
+    cpus: "${HERMES_CPU_LIMIT:-2.0}"
+    pids_limit: 256
+    ports:
+      - "${HERMES_PORT:-8000}:8000"
+    environment:
+      FLET_FORCE_WEB_SERVER: "true"
+      FLET_SERVER_IP: "0.0.0.0"
+      FLET_SERVER_PORT: "8000"
+      FLET_MAX_UPLOAD_SIZE: "${FLET_MAX_UPLOAD_SIZE:-104857600}"
+      FLET_SESSION_TIMEOUT: "${FLET_SESSION_TIMEOUT:-3600}"
+      HERMES_MAX_CONCURRENT_JOBS: "${HERMES_MAX_CONCURRENT_JOBS:-2}"
+      HERMES_MAX_FILES_PER_JOB: "${HERMES_MAX_FILES_PER_JOB:-20}"
+      HERMES_MAX_TOTAL_UPLOAD_SIZE: "${HERMES_MAX_TOTAL_UPLOAD_SIZE:-209715200}"
+      HERMES_LOG_LEVEL: "${HERMES_LOG_LEVEL:-INFO}"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
