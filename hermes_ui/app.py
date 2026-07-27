@@ -189,7 +189,10 @@ class AutomationView:
         ]
         self.quality_title = ft.Text("Qualidade", color=MUTED, size=12)
         self.quality_value = ft.Text("0%", size=18, weight=ft.FontWeight.BOLD)
-        self.table_host = ft.Container(expand=True)
+        self.table_host = ft.Container(
+            expand=True,
+            alignment=ft.Alignment.TOP_LEFT,
+        )
         self.page_text = ft.Text("Página 0 de 0", color=MUTED)
         self.previous = ft.IconButton(
             ft.Icons.CHEVRON_LEFT,
@@ -842,12 +845,19 @@ class AutomationView:
             expand=len(self.spec.columns) <= 7,
         )
         if len(self.spec.columns) <= 7:
-            self.table_host.content = ft.Column(
-                [table],
-                scroll=ft.ScrollMode.AUTO,
+            self.table_host.content = ft.Row(
+                [
+                    ft.Column(
+                        [table],
+                        scroll=ft.ScrollMode.AUTO,
+                        expand=True,
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    )
+                ],
                 expand=True,
                 spacing=0,
-                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             )
         else:
             self.table_host.content = ft.Column(
