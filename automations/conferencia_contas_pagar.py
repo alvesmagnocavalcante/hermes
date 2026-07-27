@@ -21,6 +21,22 @@ from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
+ENTITY_GROUPS = (
+    ("CVC", ("CVC",)),
+    ("DECOLAR / DESPEGAR", ("DECOLAR", "DESPEGAR")),
+    ("BESTBUY", ("BESTBUY",)),
+    ("BRT", ("BRT",)),
+    ("DIVERSA", ("DIVERSA",)),
+    ("INTEREP", ("INTEREP",)),
+    ("ORINTER", ("ORINTER",)),
+    ("PRIMETOUR", ("PRIMETOUR",)),
+    ("TREND", ("TREND",)),
+    ("VIAGENS PROMO", ("VIAGENSPROMO",)),
+    ("VISUAL", ("VISUAL",)),
+    ("STONE LINK", ("STONELINK", "LINKSTONE")),
+    ("REDE HIPERCARD", ("REDEHIPERCARD", "REDECARDHIPERCARD")),
+)
+
 
 @dataclass(frozen=True)
 class EntityRow:
@@ -67,6 +83,14 @@ def normalize(value: Any) -> str:
     return re.sub(r"[^A-Z0-9]", "", text)
 
 
+def entity_group(value: Any) -> tuple[str, str]:
+    normalized = normalize(value)
+    for label, aliases in ENTITY_GROUPS:
+        if any(alias in normalized for alias in aliases):
+            return normalize(label), label
+    return normalized, str(value).strip()
+
+
 def decimal_value(value: Any) -> Decimal:
     if value in (None, ""):
         return Decimal()
@@ -104,27 +128,29 @@ def identify(
     files: dict[str, tuple[tuple[Any, ...], list[tuple[Any, ...]]]] = {}
     for path in paths:
         header, rows = read(path)
+        headers = set(header)
         name = normalize(path.name)
-        if "BALANCETECOMSUBCONTA" in name and "ADTO" in name:
-            key = "balancete_adto"
-        elif "BALANCETECOMSUBCONTA" in name:
-            key = "balancete_fornecedor"
-        elif "POSICAOPORFORNECEDOR" in name:
+        if {"DescricaoSubconta", "Saldo"}.issubset(headers):
+            key = "balancete_adto" if "ADTO" in name else "balancete_fornecedor"
+        elif {"Fornecedor", "Saldo", "DescContaContabil"}.issubset(headers):
             key = "posicao_fornecedor"
-        elif "ADIANTAMENTOSEMABERTO" in name:
+        elif {"NomeFornecedor", "Saldo", "ValorTotalAdiantado"}.issubset(headers):
             key = "adiantamentos"
-        elif "AGREGADOSLANCADOS" in name and "IRRF" in name:
-            key = "agregado_irrf"
-        elif "AGREGADOSLANCADOS" in name and "CSRF" in name:
-            key = "agregado_csrf"
-        elif "AGREGADOSLANCADOS" in name and "ISS" in name:
-            key = "agregado_iss"
-        elif "RAZAOANALITICO" in name:
+        elif {"IdAgregado", "Valor", "TratamentoFiscal"}.issubset(headers):
+            tax = next((tax for tax in ("IRRF", "CSRF", "ISS") if tax in name), None)
+            if tax is None:
+                raise ValueError(
+                    f"{path.name}: informe IRRF, CSRF ou ISS no nome do arquivo."
+                )
+            key = f"agregado_{tax.lower()}"
+        elif {"DescricaoConta", "Movimento", "Historico"}.issubset(headers):
             key = "razao_impostos"
         else:
             raise ValueError(
                 f"{path.name}: arquivo não reconhecido para esta conferência."
             )
+        if key in files:
+            raise ValueError(f"Dois arquivos foram identificados como {key}.")
         files[key] = (header, rows)
     expected = {
         "balancete_adto",
@@ -151,8 +177,8 @@ def grouped(
     for row in rows:
         if len(row) <= max(name_i, value_i) or row[name_i] in (None, "", "NULL"):
             continue
-        key = normalize(row[name_i])
-        labels.setdefault(key, str(row[name_i]).strip())
+        key, label = entity_group(row[name_i])
+        labels.setdefault(key, label)
         sums[key] += decimal_value(row[value_i])
     return {key: (labels[key], abs(value)) for key, value in sums.items()}
 

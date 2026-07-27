@@ -20,6 +20,22 @@ from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
+CLIENT_GROUPS = (
+    ("CVC", ("CVC",)),
+    ("DECOLAR / DESPEGAR", ("DECOLAR", "DESPEGAR")),
+    ("BESTBUY", ("BESTBUY",)),
+    ("BRT", ("BRT",)),
+    ("DIVERSA", ("DIVERSA",)),
+    ("INTEREP", ("INTEREP",)),
+    ("ORINTER", ("ORINTER",)),
+    ("PRIMETOUR", ("PRIMETOUR",)),
+    ("TREND", ("TREND",)),
+    ("VIAGENS PROMO", ("VIAGENSPROMO",)),
+    ("VISUAL", ("VISUAL",)),
+    ("STONE LINK", ("STONELINK", "LINKSTONE")),
+    ("REDE HIPERCARD", ("REDEHIPERCARD", "REDECARDHIPERCARD")),
+)
+
 
 @dataclass(frozen=True)
 class ClientRow:
@@ -66,6 +82,14 @@ def normalize_name(value: Any) -> str:
     return re.sub(r"[^A-Z0-9]", "", text)
 
 
+def client_group(value: Any) -> tuple[str, str]:
+    normalized = normalize_name(value)
+    for label, aliases in CLIENT_GROUPS:
+        if any(alias in normalized for alias in aliases):
+            return normalize_name(label), label
+    return normalized, str(value).strip()
+
+
 def decimal_value(value: Any) -> Decimal:
     if value in (None, ""):
         return Decimal()
@@ -99,6 +123,33 @@ def load_rows(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]]]:
         workbook.close()
 
 
+def identify_ledger(
+    path: Path, header: tuple[Any, ...], rows: list[tuple[Any, ...]]
+) -> str | None:
+    headers = set(header)
+    if not {"DescricaoConta", "Historico"}.issubset(headers):
+        return None
+
+    description_i = header.index("DescricaoConta")
+    descriptions = {
+        normalize_name(row[description_i])
+        for row in rows
+        if len(row) > description_i and row[description_i] not in (None, "")
+    }
+    content = "".join(descriptions)
+    filename = normalize_name(path.stem)
+
+    if "NOTASAFATURAR" in content:
+        return "razao_faturar"
+    if "COMISSAO" in content and "CARTAO" in content:
+        return "razao_comissao"
+    if "NOTASAFATURAR" in filename and "Debito" in headers:
+        return "razao_faturar"
+    if "COMISSAO" in filename and "Movimento" in headers:
+        return "razao_comissao"
+    return None
+
+
 def identify_files(
     paths: list[Path],
 ) -> dict[str, tuple[tuple[Any, ...], list[tuple[Any, ...]]]]:
@@ -112,14 +163,10 @@ def identify_files(
             kind = "posicao"
         elif {"Valor", "NumeroDaTransacao", "Status"}.issubset(headers):
             kind = "bordero"
-        elif {"DescricaoConta", "Debito", "Historico"}.issubset(
-            headers
-        ) and "Notas a Faturar" in path.name:
-            kind = "razao_faturar"
         elif {"NumeroDocumento", "Valor", "IdAgregado"}.issubset(headers):
             kind = "agregados"
-        elif {"DescricaoConta", "Movimento", "Historico"}.issubset(headers):
-            kind = "razao_comissao"
+        elif ledger_kind := identify_ledger(path, header, rows):
+            kind = ledger_kind
         else:
             raise ValueError(
                 f"{path.name}: arquivo não reconhecido para esta conferência."
@@ -153,8 +200,8 @@ def grouped(
     for row in rows:
         if len(row) <= max(name_i, value_i) or row[name_i] in (None, "", "NULL"):
             continue
-        key = normalize_name(row[name_i])
-        labels.setdefault(key, str(row[name_i]).strip())
+        key, label = client_group(row[name_i])
+        labels.setdefault(key, label)
         sums[key] += decimal_value(row[value_i])
     for key, value_sum in sums.items():
         result[key] = (labels[key], value_sum)
