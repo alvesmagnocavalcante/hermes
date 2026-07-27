@@ -1083,7 +1083,7 @@ class HermesApp:
         self._render_sidebar()
 
     def build(self) -> None:
-        self.page.title = "HERMES — Painel de Automação"
+        self.page.title = "HERMES"
         self.page.window.icon = str(WINDOW_ICON_PATH)
         self.page.theme_mode = ft.ThemeMode.DARK
         self.page.bgcolor = "#0D1014"
