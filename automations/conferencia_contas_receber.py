@@ -74,6 +74,7 @@ class ReceivablesResult:
     client_financial_total: Decimal
     billing: TotalCheck
     commissions: TotalCheck
+    hotel: str = "Cumbuco"
 
 
 def normalize_name(value: Any) -> str:
@@ -224,7 +225,7 @@ def column_total(
     return total
 
 
-def analyze(paths: list[Path]) -> ReceivablesResult:
+def analyze(paths: list[Path], hotel: str = "Cumbuco") -> ReceivablesResult:
     if len(paths) != 6:
         raise ValueError("Selecione exatamente os seis arquivos da Atividade 8.")
     files = identify_files(paths)
@@ -255,6 +256,7 @@ def analyze(paths: list[Path]) -> ReceivablesResult:
         sum((value for _, value in financial.values()), Decimal()),
         TotalCheck("Notas a faturar", bordero_total, billing_debit),
         TotalCheck("Comissões de cartão", aggregate_total, commission_movement),
+        hotel,
     )
 
 
@@ -262,6 +264,9 @@ def save_excel(result: ReceivablesResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active
     summary.title = "Resumo"
+    summary.append(["Conferência do Contas a Receber"])
+    summary.append(["Hotel", result.hotel])
+    summary.append([])
     summary.append(["Conferência", "Origem", "Contabilidade", "Diferença", "Status"])
     summary.append(
         [
@@ -285,15 +290,20 @@ def save_excel(result: ReceivablesResult, path: Path) -> None:
                 check.status,
             ]
         )
-    for cell in summary[1]:
+    summary["A1"].style = "Title"
+    summary["A2"].style = "Headline 4"
+    for cell in summary[4]:
         cell.style = "Headline 4"
     for column in ("B", "C", "D"):
-        for cell in summary[column][1:]:
+        for cell in summary[column][4:]:
             cell.number_format = "R$ #,##0.00"
     for column, width in {"A": 28, "B": 20, "C": 20, "D": 18, "E": 16}.items():
         summary.column_dimensions[column].width = width
 
     details = workbook.create_sheet("Clientes")
+    details.append(["Conferência do Contas a Receber"])
+    details.append(["Hotel", result.hotel])
+    details.append([])
     details.append(
         [
             "Cliente / Subconta",
@@ -313,15 +323,17 @@ def save_excel(result: ReceivablesResult, path: Path) -> None:
                 row.status,
             ]
         )
-    for cell in details[1]:
+    details["A1"].style = "Title"
+    details["A2"].style = "Headline 4"
+    for cell in details[4]:
         cell.style = "Headline 4"
     for column in ("B", "C", "D"):
-        for cell in details[column][1:]:
+        for cell in details[column][4:]:
             cell.number_format = "R$ #,##0.00"
     for column, width in {"A": 48, "B": 22, "C": 22, "D": 18, "E": 16}.items():
         details.column_dimensions[column].width = width
-    details.freeze_panes = "A2"
-    details.auto_filter.ref = details.dimensions
+    details.freeze_panes = "A5"
+    details.auto_filter.ref = f"A4:E{details.max_row}"
     workbook.save(path)
 
 

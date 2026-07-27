@@ -361,6 +361,7 @@ SPECS = (
             C("difference", "Diferença", True),
             C("status", "Resultado"),
         ),
+        hotel_option=True,
     ),
     AutomationSpec(
         "pagar",
@@ -377,6 +378,7 @@ SPECS = (
             C("difference", "Diferença", True),
             C("status", "Resultado"),
         ),
+        hotel_option=True,
     ),
     AutomationSpec(
         "custos",

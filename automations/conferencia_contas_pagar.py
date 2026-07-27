@@ -75,6 +75,7 @@ class PayablesResult:
     suppliers: Check
     advances: Check
     taxes: tuple[Check, Check, Check]
+    hotel: str = "Cumbuco"
 
 
 def normalize(value: Any) -> str:
@@ -240,7 +241,7 @@ def absolute_total(data, column: str) -> Decimal:
     )
 
 
-def analyze(paths: list[Path]) -> PayablesResult:
+def analyze(paths: list[Path], hotel: str = "Cumbuco") -> PayablesResult:
     if len(paths) != 8:
         raise ValueError("Selecione exatamente os oito arquivos da Atividade 9.")
     files = identify(paths)
@@ -303,6 +304,7 @@ def analyze(paths: list[Path]) -> PayablesResult:
             Check(tax, tax_financial[tax], tax_accounting[tax])
             for tax in ("IRRF", "CSRF", "ISS")
         ),
+        hotel,
     )
 
 
@@ -310,6 +312,9 @@ def save_excel(result: PayablesResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active
     summary.title = "Resumo"
+    summary.append(["Conferência do Contas a Pagar"])
+    summary.append(["Hotel", result.hotel])
+    summary.append([])
     summary.append(
         ["Conferência", "Financeiro", "Contabilidade", "Diferença", "Status"]
     )
@@ -323,14 +328,19 @@ def save_excel(result: PayablesResult, path: Path) -> None:
                 check.status,
             ]
         )
-    for cell in summary[1]:
+    summary["A1"].style = "Title"
+    summary["A2"].style = "Headline 4"
+    for cell in summary[4]:
         cell.style = "Headline 4"
     for column in ("B", "C", "D"):
-        for cell in summary[column][1:]:
+        for cell in summary[column][4:]:
             cell.number_format = "R$ #,##0.00"
     for column, width in {"A": 25, "B": 20, "C": 20, "D": 18, "E": 16}.items():
         summary.column_dimensions[column].width = width
     details = workbook.create_sheet("Fornecedores e Adiantamentos")
+    details.append(["Conferência do Contas a Pagar"])
+    details.append(["Hotel", result.hotel])
+    details.append([])
     details.append(
         [
             "Tipo",
@@ -352,15 +362,17 @@ def save_excel(result: PayablesResult, path: Path) -> None:
                 row.status,
             ]
         )
-    for cell in details[1]:
+    details["A1"].style = "Title"
+    details["A2"].style = "Headline 4"
+    for cell in details[4]:
         cell.style = "Headline 4"
     for column in ("C", "D", "E"):
-        for cell in details[column][1:]:
+        for cell in details[column][4:]:
             cell.number_format = "R$ #,##0.00"
     for column, width in {"A": 18, "B": 50, "C": 20, "D": 20, "E": 18, "F": 16}.items():
         details.column_dimensions[column].width = width
-    details.freeze_panes = "A2"
-    details.auto_filter.ref = details.dimensions
+    details.freeze_panes = "A5"
+    details.auto_filter.ref = f"A4:F{details.max_row}"
     workbook.save(path)
 
 

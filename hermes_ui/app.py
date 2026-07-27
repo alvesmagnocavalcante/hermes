@@ -401,7 +401,12 @@ class AutomationView:
             return
         extensions = {"Excel": "xlsx", "PDF": "pdf", "CSV": "csv"}
         extension = extensions[self.output_format.value]
-        file_name = f"{self.spec.key}_resultado.{extension}"
+        hotel = normalized(self.hotel.value).replace(" ", "_")
+        file_name = (
+            f"{self.spec.key}_{hotel}_resultado.{extension}"
+            if self.spec.key in {"receber", "pagar"}
+            else f"{self.spec.key}_resultado.{extension}"
+        )
         picker = ft.FilePicker()
         self.export_button.disabled = True
         started_at = time.monotonic()
