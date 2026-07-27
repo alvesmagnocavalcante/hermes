@@ -26,12 +26,13 @@ O HERMES não altera as planilhas selecionadas. Os arquivos originais continuam 
 1. Abra o HERMES pelo atalho.
 2. Escolha a automação no menu esquerdo.
 3. Confira o título da tela para ter certeza de que abriu a automação correta.
-4. Clique em **Selecionar arquivos**.
-5. Selecione todos os relatórios solicitados.
-6. Aguarde a mensagem de conclusão.
-7. Analise primeiro os resultados vermelhos e depois os amarelos.
-8. Escolha **Excel**, **PDF** ou **CSV**, quando disponível.
-9. Clique em **Exportar resultado** e escolha onde salvar.
+4. Escolha o **Hotel**, quando esse campo estiver disponível.
+5. Clique em **Selecionar arquivos**.
+6. Selecione todos os relatórios solicitados.
+7. Aguarde a mensagem de conclusão.
+8. Analise primeiro os resultados vermelhos e depois os amarelos.
+9. Escolha **Excel**, **PDF** ou **CSV**, quando disponível.
+10. Clique em **Exportar resultado** e escolha onde salvar.
 
 Os arquivos podem ser selecionados em qualquer ordem. O HERMES identifica cada relatório pelo conteúdo, e não apenas pelo nome do arquivo.
 
@@ -225,6 +226,8 @@ O ISS é comparado somente entre Prefeitura e CAP.
 
 **O que faz:** confere clientes, notas a faturar e comissões entre Financeiro e Contabilidade.
 
+**Antes de começar:** escolha o hotel no campo exibido na parte superior da tela. Use **Cumbuco** também para relatórios anteriormente identificados como Wind.
+
 **Selecione:**
 
 - Balancete por subcontas;
@@ -242,11 +245,15 @@ O ISS é comparado somente entre Prefeitura e CAP.
 
 A tabela mostra quais clientes ou contas formam cada diferença.
 
+**Para exportar:** escolha **Excel** e clique em **Exportar**. O hotel será mostrado no topo das abas **Resumo** e **Clientes**. O arquivo será salvo com um nome como `receber_cumbuco_resultado.xlsx`.
+
 **Saídas:** Excel detalhado e PDF de resumo.
 
 ### 4.11 Conferência do Contas a Pagar
 
 **O que faz:** confere fornecedores, adiantamentos e impostos entre Financeiro e Contabilidade.
+
+**Antes de começar:** escolha o hotel no campo exibido na parte superior da tela. Use **Cumbuco** também para relatórios anteriormente identificados como Wind.
 
 **Selecione:**
 
@@ -258,6 +265,8 @@ A tabela mostra quais clientes ou contas formam cada diferença.
 - Razão Analítico de impostos.
 
 **Como ler:** o resumo mostra separadamente Fornecedores, Adiantamentos, IRRF, CSRF e ISS. Em cada grupo são exibidos os totais das duas fontes, a diferença e a situação.
+
+**Para exportar:** escolha **Excel** e clique em **Exportar**. O hotel será mostrado no topo das abas **Resumo** e **Fornecedores e Adiantamentos**. O arquivo será salvo com um nome como `pagar_cumbuco_resultado.xlsx`.
 
 **Saídas:** Excel detalhado e PDF de resumo.
 
@@ -332,7 +341,7 @@ Feche o arquivo de destino caso ele esteja aberto no Excel ou em outro programa.
 - Não altere as planilhas antes de carregá-las no HERMES.
 - Verifique primeiro as linhas vermelhas.
 - Leia a explicação apresentada na última coluna da tabela.
-- Salve o resultado com o nome do hotel, período e tipo de conferência.
+- Em Contas a Receber e Contas a Pagar, confirme o hotel no nome do arquivo exportado.
 - Na Folha de Pagamento, confira os totais antes de importar o CSV.
 
 ## 8. Segurança das informações
