@@ -1,0 +1,16 @@
+.agents/
+.codex/
+.flet/
+.git/
+.env
+.ruff_cache/
+.uv-cache/
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+build/
+dist/
+docs/
+PROCESSOS AUTOMAÇÃO/
+scripts/

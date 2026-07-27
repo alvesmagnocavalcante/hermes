@@ -1,0 +1,26 @@
+[project]
+name = "projeto-hermes"
+version = "0.1.0"
+description = "Painel web e desktop modular para automações de planilhas"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flet[all,desktop]>=0.86.1,<0.87",
+    "openpyxl>=3.1.5",
+    "reportlab>=4.4.2",
+    "xlrd>=2.0.2",
+]
+
+[tool.flet.app]
+exclude = [
+    ".agents",
+    ".audit_folha",
+    ".codex",
+    ".flet",
+    ".git",
+    ".uv-cache",
+    ".venv",
+    "build",
+    "docs",
+    "__pycache__",
+]
