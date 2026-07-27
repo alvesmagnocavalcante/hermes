@@ -287,18 +287,18 @@ class AutomationView:
 
     def _file_guidance(self) -> str:
         return {
-            "receita": "Razão Analítico da Contabilidade + Journal de Receita do Opera.",
-            "diarias": "Códigos de transação + Journal Opera - Receita. BI PDV não pertence a esta conferência.",
-            "folha": "Sete relatórios do DP; a planilha modelo pode ser incluída para atualizar o de/para.",
-            "cupons_hospede": "BI PDV + Journal do Opera + planilha de de/para.",
-            "rps": "XML de encerramentos do Opera + Fiscal do CMFlex + Prefeitura.",
-            "debito": "Uma ou mais planilhas de notas de débito.",
-            "entrada": "Manifesto de notas (base completa) + Detalhe de notas recebidas (notas já lançadas).",
-            "cupons": "Simphony + Fiscal do CMFlex + SEFAZ.",
-            "servicos": "CAP + Portal Nacional + arquivos de Prefeitura/ISS aplicáveis ao hotel.",
-            "receber": "Seis relatórios: balancete, posição por cliente, borderô, razão a faturar, agregados e razão.",
-            "pagar": "Oito relatórios de fornecedores, adiantamentos e impostos.",
-            "custos": "Documentos por tipo de desembolso + Razão + Inventário + Razão de estoques.",
+            "receita": "Selecione 2 arquivos: Razão Analítico da Contabilidade e Journal de Receita do Opera.",
+            "diarias": "Selecione 2 arquivos: planilha de Códigos de Transação e Journal de Receita do Opera.",
+            "folha": "Selecione os 7 relatórios do DP: resumo mensal, INSS, FGTS, férias, líquido de férias, provisão de férias e provisão de 13º.",
+            "cupons_hospede": "Selecione 3 arquivos: relatório BI/PDV, Journal do Opera e planilha de correspondência (de/para).",
+            "rps": "Selecione 3 arquivos: encerramentos do Opera (XML), relatório Fiscal do CMFlex e relatório da Prefeitura.",
+            "debito": "Selecione uma ou mais planilhas do Relatório de Notas de Débito.",
+            "entrada": "Selecione 2 arquivos: Manifesto de Notas completo e Detalhe das Notas Recebidas já lançadas.",
+            "cupons": "Selecione 3 arquivos: relatório do Simphony, relatório Fiscal do CMFlex e consulta da SEFAZ.",
+            "servicos": "Selecione 5 arquivos: CAP, Portal Nacional, Prefeitura, ISS e BPM referentes ao mesmo hotel e período.",
+            "receber": "Selecione 6 arquivos: balancete de clientes, posição por cliente, borderô, razão de notas a faturar, agregados e razão de comissões.",
+            "pagar": "Selecione 8 arquivos: balancetes de fornecedores e adiantamentos, posições financeiras, agregados IRRF/CSRF/ISS e razão dos impostos.",
+            "custos": "Selecione 4 arquivos: documentos por tipo de desembolso, razão de entradas, inventário e razão de estoques.",
         }[self.spec.key]
 
     async def _select_files(self, _event=None) -> None:
