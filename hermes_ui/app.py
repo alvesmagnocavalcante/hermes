@@ -127,7 +127,7 @@ class AutomationView:
             visible=spec.hotel_option,
             options=[
                 ft.DropdownOption(key=value, text=value)
-                for value in ("Cumbuco", "Magna", "Taiba", "Charme", "Wind")
+                for value in ("Cumbuco", "Magna", "Taiba", "Charme")
             ],
         )
         self.output_format = ft.Dropdown(
