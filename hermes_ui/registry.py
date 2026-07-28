@@ -320,8 +320,10 @@ SPECS = (
             C("fiscal", "Fiscal", True),
             C("sefaz", "SEFAZ", True),
             C("difference", "Diferença", True),
+            C("simphony_status", "Status Simphony"),
             C("status", "Resultado"),
         ),
+        hotel_option=True,
     ),
     AutomationSpec(
         "servicos",

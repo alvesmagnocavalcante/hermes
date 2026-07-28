@@ -26,6 +26,7 @@ TOLERANCE = Decimal("0.01")
 class SourceEntry:
     value: Decimal
     emission_date: str
+    status: str = "Aprovado"
 
 
 @dataclass(frozen=True)
@@ -38,10 +39,18 @@ class CouponRow:
     simphony: Decimal | None
     fiscal: Decimal | None
     sefaz: Decimal | None
+    simphony_status: str
     status: str
 
     @property
     def difference(self) -> Decimal:
+        if "cancelad" in self.status.casefold() or "cancelamento" in self.status.casefold():
+            downstream = [
+                abs(value)
+                for value in (self.fiscal, self.sefaz)
+                if value is not None
+            ]
+            return max(downstream, default=Decimal())
         values = [
             value
             for value in (self.simphony, self.fiscal, self.sefaz)
@@ -51,6 +60,8 @@ class CouponRow:
 
     @property
     def comparable(self) -> bool:
+        if "cancelad" in self.status.casefold():
+            return True
         return None not in (self.simphony, self.fiscal, self.sefaz)
 
     @property
@@ -72,6 +83,7 @@ class CouponResult:
     fiscal_total: Decimal
     sefaz_total: Decimal
     cancelled: int
+    hotel: str = "Cumbuco"
 
     def count(self, status: str) -> int:
         return sum(row.status.startswith(status) for row in self.rows)
@@ -148,6 +160,7 @@ def read_file(path: Path) -> tuple[str, dict[str, SourceEntry], int]:
     headers = {value for row in rows[:40] for value in row if value}
     values: defaultdict[str, Decimal] = defaultdict(Decimal)
     dates: dict[str, str] = {}
+    statuses: dict[str, str] = {}
     cancelled = 0
 
     if {"Chave da NF", "Valor Total NF", "Status"}.issubset(headers):
@@ -165,10 +178,22 @@ def read_file(path: Path) -> tuple[str, dict[str, SourceEntry], int]:
             if len(row) <= max(key_i, value_i, status_i) or not row[key_i]:
                 continue
             status = " ".join(str(row[status_i]).strip().casefold().split())
-            if status not in {"aprovado", "aprovado (c)"}:
-                cancelled += 1
-                continue
             key = str(row[key_i]).strip()
+            if status not in {"aprovado", "aprovado (c)"}:
+                statuses.setdefault(
+                    key,
+                    "Cancelado" if "cancelad" in status else str(row[status_i]).strip(),
+                )
+                if "cancelad" in status:
+                    cancelled += 1
+                values.setdefault(key, decimal_value(row[value_i]))
+                dates.setdefault(
+                    key, date_value(row[date_i] if len(row) > date_i else None)
+                )
+                continue
+            if statuses.get(key) != "Aprovado":
+                values[key] = Decimal()
+            statuses[key] = "Aprovado"
             values[key] += decimal_value(row[value_i])
             dates.setdefault(
                 key, date_value(row[date_i] if len(row) > date_i else None)
@@ -211,12 +236,15 @@ def read_file(path: Path) -> tuple[str, dict[str, SourceEntry], int]:
         )
     return (
         source,
-        {key: SourceEntry(value, dates.get(key, "—")) for key, value in values.items()},
+        {
+            key: SourceEntry(value, dates.get(key, "—"), statuses.get(key, "Aprovado"))
+            for key, value in values.items()
+        },
         cancelled,
     )
 
 
-def reconcile(paths: list[Path]) -> CouponResult:
+def reconcile(paths: list[Path], hotel: str = "Cumbuco") -> CouponResult:
     if len(paths) != 3:
         raise ValueError("Selecione exatamente as planilhas Simphony, Fiscal e SEFAZ.")
     sources: dict[str, dict[str, SourceEntry]] = {}
@@ -242,7 +270,18 @@ def reconcile(paths: list[Path]) -> CouponResult:
             for name, value in zip(("Simphony", "Fiscal", "SEFAZ"), entries)
             if value is None
         ]
-        if missing:
+        if entries[0] is not None and entries[0].status == "Cancelado":
+            downstream = (values[1], values[2])
+            if all(
+                value is None or abs(value) <= TOLERANCE
+                for value in downstream
+            ):
+                status = "Conciliado: cancelado"
+            else:
+                status = "Divergente: cancelamento"
+        elif entries[0] is not None and entries[0].status != "Aprovado":
+            status = f"{entries[0].status} no Simphony"
+        elif missing:
             status = "Ausente: " + "/".join(missing)
         elif max(values) - min(values) <= TOLERANCE:  # type: ignore[arg-type]
             status = "Conciliado"
@@ -250,17 +289,32 @@ def reconcile(paths: list[Path]) -> CouponResult:
             status = "Divergente: valor"
         source_dates = tuple(entry.emission_date if entry else "—" for entry in entries)
         result_rows.append(
-            CouponRow(key, document_type(key), *source_dates, *values, status)
+            CouponRow(
+                key,
+                document_type(key),
+                *source_dates,
+                *values,
+                entries[0].status if entries[0] else "Ausente",
+                status,
+            )
         )
     result_rows.sort(
         key=lambda row: (row.status == "Conciliado", -row.difference, row.key)
     )
     return CouponResult(
         result_rows,
-        sum((entry.value for entry in simphony.values()), Decimal()),
+        sum(
+            (
+                entry.value
+                for entry in simphony.values()
+                if entry.status == "Aprovado"
+            ),
+            Decimal(),
+        ),
         sum((entry.value for entry in fiscal.values()), Decimal()),
         sum((entry.value for entry in sefaz.values()), Decimal()),
         cancelled,
+        hotel,
     )
 
 
@@ -271,6 +325,7 @@ def save_excel(result: CouponResult, path: Path) -> None:
     missing = sum(row.status.startswith("Ausente") for row in result.rows)
     summary.append(["Indicador", "Valor"])
     for label, value in (
+        ("Hotel", result.hotel),
         ("Total Simphony", float(result.simphony_total)),
         ("Total Fiscal", float(result.fiscal_total)),
         ("Total SEFAZ", float(result.sefaz_total)),
@@ -283,7 +338,7 @@ def save_excel(result: CouponResult, path: Path) -> None:
         summary.append([label, value])
     for cell in summary[1]:
         cell.style = "Headline 4"
-    for cell in summary["B"][1:4]:
+    for cell in summary["B"][2:5]:
         cell.number_format = "R$ #,##0.00"
     summary.column_dimensions["A"].width = 34
     summary.column_dimensions["B"].width = 20
@@ -296,6 +351,7 @@ def save_excel(result: CouponResult, path: Path) -> None:
         "Fiscal - Valor Contábil",
         "SEFAZ - Valor",
         "Diferença",
+        "Status Simphony",
         "Status",
     ]
 
@@ -312,6 +368,7 @@ def save_excel(result: CouponResult, path: Path) -> None:
                     float(row.fiscal) if row.fiscal is not None else None,
                     float(row.sefaz) if row.sefaz is not None else None,
                     float(row.difference) if row.comparable else None,
+                    row.simphony_status,
                     row.status,
                 ]
             )
@@ -328,7 +385,8 @@ def save_excel(result: CouponResult, path: Path) -> None:
             "E": 25,
             "F": 22,
             "G": 18,
-            "H": 24,
+            "H": 20,
+            "I": 24,
         }.items():
             sheet.column_dimensions[column].width = width
         sheet.freeze_panes = "A2"
@@ -368,7 +426,7 @@ def save_pdf(result: CouponResult, path: Path) -> None:
         rightMargin=12 * mm,
         topMargin=12 * mm,
         bottomMargin=12 * mm,
-        title="Resumo da conferência dos cupons",
+        title=f"Resumo da conferência dos cupons — {result.hotel}",
     )
     missing = sum(row.status.startswith("Ausente") for row in result.rows)
     data = [
@@ -399,7 +457,8 @@ def save_pdf(result: CouponResult, path: Path) -> None:
     document.build(
         [
             Paragraph(
-                "Conferência dos cupons — Simphony x Fiscal x SEFAZ", styles["Title"]
+                f"Conferência dos cupons — {result.hotel} — Simphony x Fiscal x SEFAZ",
+                styles["Title"],
             ),
             Spacer(1, 6 * mm),
             table,

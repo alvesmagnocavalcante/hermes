@@ -125,11 +125,13 @@ class AutomationView:
             width=150,
             dense=True,
             visible=spec.hotel_option,
+            on_select=self._hotel_changed,
             options=[
                 ft.DropdownOption(key=value, text=value)
                 for value in ("Cumbuco", "Magna", "Taiba", "Charme")
             ],
         )
+        self.selected_hotel = "Cumbuco"
         self.output_format = ft.Dropdown(
             value=spec.formats[0],
             label="Formato",
@@ -289,7 +291,7 @@ class AutomationView:
         return {
             "receita": "Selecione 2 arquivos: Razão Analítico da Contabilidade e Journal de Receita do Opera.",
             "diarias": "Selecione 2 arquivos: planilha de Códigos de Transação e Journal de Receita do Opera.",
-            "folha": "Selecione os 7 relatórios do DP: resumo mensal, INSS, FGTS, férias, líquido de férias, provisão de férias e provisão de 13º.",
+            "folha": "Sem férias: selecione 6 arquivos (folha, INSS, FGTS, IRRF e provisões). Com férias: selecione 7 arquivos, substituindo IRRF por recibo e líquido de férias.",
             "cupons_hospede": "Selecione 3 arquivos: relatório BI/PDV, Journal do Opera e planilha de correspondência (de/para).",
             "rps": "Selecione 3 arquivos: encerramentos do Opera (XML), relatório Fiscal do CMFlex e relatório da Prefeitura.",
             "debito": "Selecione uma ou mais planilhas do Relatório de Notas de Débito.",
@@ -300,6 +302,15 @@ class AutomationView:
             "pagar": "Selecione 8 arquivos: balancetes de fornecedores e adiantamentos, posições financeiras, agregados IRRF/CSRF/ISS e razão dos impostos.",
             "custos": "Selecione 4 arquivos: documentos por tipo de desembolso, razão de entradas, inventário e razão de estoques.",
         }[self.spec.key]
+
+    def _hotel_changed(self, event) -> None:
+        selected = str(event.control.value or "Cumbuco")
+        if selected == self.selected_hotel:
+            return
+        self.selected_hotel = selected
+        self.hotel.value = selected
+        if self.result is not None:
+            self._clear()
 
     async def _select_files(self, _event=None) -> None:
         picker = ft.FilePicker()
@@ -332,12 +343,12 @@ class AutomationView:
                     ) as temp_dir:
                         paths = self._save_web_files(files, Path(temp_dir))
                         self.result = await asyncio.to_thread(
-                            self.spec.analyze, paths, self.hotel.value
+                            self.spec.analyze, paths, self.selected_hotel
                         )
                 else:
                     paths = [Path(file.path) for file in files if file.path]
                     self.result = await asyncio.to_thread(
-                        self.spec.analyze, paths, self.hotel.value
+                        self.spec.analyze, paths, self.selected_hotel
                     )
             self.records = self.spec.rows(self.result)
         except Exception as error:
@@ -401,10 +412,11 @@ class AutomationView:
             return
         extensions = {"Excel": "xlsx", "PDF": "pdf", "CSV": "csv"}
         extension = extensions[self.output_format.value]
-        hotel = normalized(self.hotel.value).replace(" ", "_")
+        report_hotel = getattr(self.result, "hotel", self.selected_hotel)
+        hotel = normalized(report_hotel).replace(" ", "_")
         file_name = (
             f"{self.spec.key}_{hotel}_resultado.{extension}"
-            if self.spec.key in {"receber", "pagar"}
+            if self.spec.key in {"receber", "pagar", "cupons"}
             else f"{self.spec.key}_resultado.{extension}"
         )
         picker = ft.FilePicker()
@@ -625,6 +637,12 @@ class AutomationView:
             simphony_fiscal = result.simphony_total - result.fiscal_total
             fiscal_sefaz = result.fiscal_total - result.sefaz_total
             self.details.controls = [
+                ft.Text(
+                    f"Hotel selecionado: {result.hotel}",
+                    color=MUTED,
+                    size=12,
+                    weight=ft.FontWeight.BOLD,
+                ),
                 self._comparison_line(
                     "Integração Fiscal",
                     "Simphony",

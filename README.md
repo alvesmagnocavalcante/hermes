@@ -133,12 +133,12 @@ cada operação.
 |---|---:|---|
 | Conciliação de Receita | 2 | Compara Movimento da Contabilidade com `CASHIER_DEBIT` do Opera. |
 | Conciliação da Receita de Diárias | 2 | Classifica e totaliza o `CASHIER_DEBIT` pelos `TRX_CODE` marcados como diária e diária média para cada hotel. |
-| Lançamento da Folha de Pagamento | 7 | Reconhece os relatórios pelo conteúdo e gera as importações da folha mensal, férias, provisões de férias e 13º, além dos rateios de INSS, FGTS e planos por centro de custo. Todos os totalizadores são excluídos para impedir valores duplicados. |
+| Lançamento da Folha de Pagamento | 6 ou 7 | Reconhece os relatórios pelo conteúdo e gera as importações da folha mensal, férias, provisões de férias e 13º, além dos rateios de INSS, FGTS e planos por centro de custo. Todos os totalizadores são excluídos para impedir valores duplicados. |
 | Cupons Emitidos x Conta do Hóspede | 3 | Confere se os cupons do BI/PDV constam no `CHECK#` do Journal e se o valor foi efetivamente cobrado na conta do hóspede. |
 | RPS de Serviços Prestados | 3 | Confere se os RPS encerrados no Opera integraram no Fiscal do CMFlex, foram emitidos na Prefeitura e possuem o mesmo valor nas três fontes. |
 | Relatório de Notas de Débito | 1 ou mais | Consolida hotel, comprador, nota, emissão, item e valor. |
 | Notas Fiscais de Entrada em Atraso | 2 | Compara Manifesto e Detalhe, aplicando prazo de 11 dias para o Ceará e 30 dias para outros estados. |
-| Conferência dos Cupons | 3 | Compara Simphony, Fiscal e SEFAZ por chave e valor, distinguindo NFC-e e NF-e/Unknown. |
+| Conferência dos Cupons | 3 | Compara Simphony, Fiscal e SEFAZ por chave e valor, distinguindo NFC-e e NF-e/Unknown. Exibe o status do Simphony; um cancelamento concilia quando Fiscal e SEFAZ estão vazios ou zerados, enquanto valores posteriores geram divergência. O hotel é identificado na exportação. |
 | Notas de Serviços Tomados | 5 | Compara Portal Nacional, prefeituras, CAP, BPM, hotel e ISS retido. |
 | Contas a Receber | 6 | Confere clientes, notas a faturar e comissões contra o financeiro. |
 | Contas a Pagar | 8 | Confere fornecedores, adiantamentos e impostos contra o financeiro. |
@@ -146,7 +146,7 @@ cada operação.
 
 ### Atividade 2 — Folha de pagamento
 
-Selecione simultaneamente os sete relatórios: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Eles podem estar em CSV ou Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` ou `.xltm`). Os nomes dos arquivos não são usados na identificação; o sistema reconhece cada relatório pelo conteúdo.
+Sem férias, selecione seis relatórios: resumo mensal, relação de INSS, relação de FGTS, relação de IRRF, provisão de férias e provisão de 13º. Com férias, selecione sete relatórios: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Recibo e líquido de férias devem ser enviados juntos. Os arquivos podem estar em CSV ou Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` ou `.xltm`) e são reconhecidos pelo conteúdo.
 
 A planilha modelo em `assets/folha/modelo_folha.xlsm` contém os de/para e as
 regras adotadas pelo departamento. Se uma versão atualizada for selecionada junto

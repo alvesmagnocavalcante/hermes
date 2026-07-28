@@ -25,12 +25,20 @@ SOURCE_LABELS = {
     "summary": "Folha mensal",
     "inss": "INSS mensal",
     "fgts": "FGTS mensal",
+    "irrf": "IRRF mensal",
     "vacation_receipt": "Recibo de férias",
     "vacation_liquid": "Líquido de férias",
     "vacation_provision": "Provisão de férias",
     "thirteenth_provision": "Provisão de 13º",
 }
-REQUIRED_SOURCES = set(SOURCE_LABELS)
+BASE_REQUIRED_SOURCES = {
+    "summary",
+    "inss",
+    "fgts",
+    "vacation_provision",
+    "thirteenth_provision",
+}
+VACATION_SOURCES = {"vacation_receipt", "vacation_liquid"}
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", PROJECT_ROOT / "assets")).resolve()
 DEFAULT_TEMPLATE = ASSETS_DIR / "folha" / "modelo_folha.xlsm"
@@ -177,6 +185,7 @@ def identify_file(path: Path) -> str:
     sample = normalize("\n".join(";".join(row) for row in read_tabular(path)[:80]))
     markers = (
         ("DEMONSTRATIVODEINSS", "inss"),
+        ("RELACAODEIRRFDOSEMPREGADOS", "irrf"),
         ("LIQUIDOSDEFERIAS", "vacation_liquid"),
         ("RECIBODEFERIAS", "vacation_receipt"),
         ("PROVISAODEFERIAS", "vacation_provision"),
@@ -185,6 +194,21 @@ def identify_file(path: Path) -> str:
         ("RELACAODECALCULO", "summary"),
     )
     return next((kind for marker, kind in markers if marker in sample), "unknown")
+
+
+def required_sources(grouped: dict[str, list[Path]]) -> set[str]:
+    vacation_selected = {
+        kind for kind in VACATION_SOURCES if grouped.get(kind)
+    }
+    if vacation_selected and vacation_selected != VACATION_SOURCES:
+        missing = VACATION_SOURCES - vacation_selected
+        labels = ", ".join(SOURCE_LABELS[kind] for kind in sorted(missing))
+        raise ValueError(
+            f"Para processar férias, selecione os dois relatórios. Falta: {labels}."
+        )
+    return BASE_REQUIRED_SOURCES | (
+        VACATION_SOURCES if vacation_selected else {"irrf"}
+    )
 
 
 def _account(value: Any) -> str:
@@ -669,7 +693,8 @@ def analyze(paths: list[Path]) -> PayrollResult:
     ]
     if duplicated:
         raise ValueError(f"Há mais de um arquivo para: {', '.join(duplicated)}.")
-    missing = [SOURCE_LABELS[kind] for kind in SOURCE_LABELS if not grouped.get(kind)]
+    required = required_sources(grouped)
+    missing = [SOURCE_LABELS[kind] for kind in required if not grouped.get(kind)]
     if missing:
         raise ValueError(
             f"Faltam {len(missing)} relatório(s): {', '.join(sorted(missing))}."
@@ -681,7 +706,8 @@ def analyze(paths: list[Path]) -> PayrollResult:
     if not template:
         raise ValueError("A planilha modelo da atividade 2 não foi encontrada.")
 
-    sources = {kind: read_tabular(grouped[kind][0]) for kind in REQUIRED_SOURCES}
+    selected_sources = required | ({"irrf"} if grouped.get("irrf") else set())
+    sources = {kind: read_tabular(grouped[kind][0]) for kind in selected_sources}
     mappings = read_mappings(template)
     period_end = extract_period(sources["summary"])
     earnings, deductions, net_payable = extract_payroll_totals(sources["summary"])
@@ -701,13 +727,20 @@ def analyze(paths: list[Path]) -> PayrollResult:
     thirteenth, thirteenth_ignored = parse_provision(
         sources["thirteenth_provision"], mappings, True
     )
-    employees, liquid_totals, liquid_ignored = parse_vacation_employees(
-        sources["vacation_liquid"], mappings
-    )
-    vacations = parse_vacation_receipts(
-        sources["vacation_receipt"], employees, mappings
-    )
-    receipt_employees = vacation_receipt_employees(sources["vacation_receipt"])
+    vacations: list[PostingRow] = []
+    liquid_totals: dict[tuple[str, str, str], Decimal] = {}
+    liquid_ignored = 0
+    receipt_employees: dict[str, str] = {}
+    if VACATION_SOURCES.issubset(sources):
+        employees, liquid_totals, liquid_ignored = parse_vacation_employees(
+            sources["vacation_liquid"], mappings
+        )
+        vacations = parse_vacation_receipts(
+            sources["vacation_receipt"], employees, mappings
+        )
+        receipt_employees = vacation_receipt_employees(
+            sources["vacation_receipt"]
+        )
     generated_employees = {normalize(row.employee) for row in vacations if row.employee}
     missing_employees = [
         name
@@ -783,7 +816,10 @@ def analyze(paths: list[Path]) -> PayrollResult:
             item.source_line,
         )
     )
-    files = {SOURCE_LABELS[kind]: grouped[kind][0].name for kind in REQUIRED_SOURCES}
+    files = {
+        SOURCE_LABELS[kind]: grouped[kind][0].name
+        for kind in selected_sources
+    }
     return PayrollResult(
         company,
         period_end,

@@ -109,9 +109,12 @@ O botão **Limpar** apaga somente os dados exibidos na tela. Ele não exclui as 
 - resumo mensal da folha;
 - relação de INSS;
 - relação de FGTS;
-- recibo e líquido de férias;
 - provisão de férias;
 - provisão de 13º salário.
+
+**Quando não houver férias:** selecione também a relação mensal de IRRF. Serão 6 arquivos no total.
+
+**Quando houver férias:** selecione o recibo e o líquido de férias no lugar da relação mensal de IRRF. Serão 7 arquivos no total. O recibo e o líquido de férias devem ser selecionados juntos.
 
 **Como ler:**
 
@@ -188,15 +191,17 @@ Se aparecer **fora do período**, gere um relatório Fiscal que inclua a data in
 
 **O que faz:** verifica se cupons e notas do Simphony chegaram ao Fiscal do CMFlex e à SEFAZ.
 
+**Antes de começar:** escolha o hotel no campo exibido na parte superior da tela. Use **Cumbuco** também para relatórios anteriormente identificados como Wind.
+
 **Selecione:**
 
 - relatório do Simphony;
 - relatório Fiscal do CMFlex;
 - relatório da SEFAZ.
 
-**Como ler:** o HERMES compara chave, data e valor nas três fontes. A tabela diferencia **Cupom (NFC-e)** de **Nota (NF-e)** e informa onde o documento está ausente ou diferente.
+**Como ler:** o HERMES compara chave, data e valor nas três fontes. A coluna **Status Simphony** informa se o documento está aprovado, cancelado ou ausente. A tabela diferencia **Cupom (NFC-e)** de **Nota (NF-e)** e informa onde o documento está ausente ou diferente. Um documento cancelado permanece visível e não entra no total do Simphony. Se os valores no Fiscal e na SEFAZ estiverem vazios ou zerados, o resultado será **Conciliado: cancelado**. Se alguma dessas fontes tiver valor diferente de zero, o resultado será **Divergente: cancelamento**.
 
-**Saídas:** Excel detalhado e PDF de resumo. No Excel, cupons e notas também ficam em abas separadas.
+**Saídas:** Excel detalhado e PDF de resumo com o hotel identificado. No Excel, cupons e notas também ficam em abas separadas. O nome do arquivo inclui o hotel, por exemplo: `cupons_cumbuco_resultado.xlsx`.
 
 ### 4.9 Notas de Serviços Tomados
 
