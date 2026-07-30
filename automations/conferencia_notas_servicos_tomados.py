@@ -108,12 +108,16 @@ def note_number(value: Any) -> str:
 
 
 def decimal_value(value: Any) -> Decimal:
-    if value in (None, "", "NULL"):
+    if value in (None, "", "NULL", "-", "—"):
         return Decimal()
+    text = str(value).strip().replace("R$", "").replace("\xa0", "").replace(" ", "")
     try:
-        return Decimal(str(value))
+        return Decimal(text)
     except InvalidOperation:
-        return Decimal(str(value).replace(".", "").replace(",", "."))
+        try:
+            return Decimal(text.replace(".", "").replace(",", "."))
+        except InvalidOperation:
+            return Decimal()
 
 
 def date_text(value: Any) -> str:
@@ -312,12 +316,20 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         raise ValueError(f"Colunas obrigatórias não encontradas em {path.name}.")
 
     result = []
+    source = (
+        "Prefeitura"
+        if "PREF" in normalize(path.stem)
+        else "Relatório externo"
+    )
     for row in source_rows:
         number = value(row, "NUMERO", "NUMERONFSE", "NUMERODANOTA", "NOTA")
         provider_field = str(
             value(row, "PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL") or ""
         )
-        match = re.match(r"\s*([\d./-]{14,})\s+-\s+(.+)", provider_field)
+        match = re.match(
+            r"\s*(\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})\s*-\s*(.+)",
+            provider_field,
+        )
         document = match.group(1) if match else value(row, "CNPJ", "CPFCNPJ", "CNPJCPF")
         provider = match.group(2) if match else provider_field
         if not number or not cnpj(document) or not provider:
@@ -325,13 +337,13 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         provider = re.sub(r"^\s*[\d./-]{8,}\s+", "", str(provider)).strip()
         result.append(
             {
-                "source": "Relatório externo",
+                "source": source,
                 "number": number,
                 "date": value(row, "DATADEEMISSAO", "DATAEMISSAO", "DATA"),
                 "cnpj": document,
                 "provider": provider,
                 "gross": value(row, "VALORDOSERVICO", "VALORBRUTO", "VALOR"),
-                "iss": value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS", "ISSRETIDO"),
+                "iss": value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS"),
             }
         )
     if not result:

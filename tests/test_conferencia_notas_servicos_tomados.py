@@ -7,6 +7,7 @@ from openpyxl import Workbook, load_workbook
 
 from automations.conferencia_notas_servicos_tomados import (
     analyze,
+    decimal_value,
     external_csv,
     save_excel,
 )
@@ -87,6 +88,12 @@ def create_city(
 
 
 class ServiceNotesTest(TestCase):
+    def test_non_numeric_iss_markers_are_zero(self):
+        self.assertEqual(decimal_value("Não Retido"), Decimal())
+        self.assertEqual(decimal_value("—"), Decimal())
+        self.assertEqual(decimal_value("-"), Decimal())
+        self.assertEqual(decimal_value("R$ 1.234,56"), Decimal("1234.56"))
+
     def test_uses_portal_retained_iss_and_ignores_name_differences(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -271,3 +278,69 @@ class ServiceNotesTest(TestCase):
             row = analyze([cap, tax, portal]).rows[0]
 
             self.assertIn("Ausente na Prefeitura", row.status)
+
+    def test_prefeitura_provider_without_spaces_around_hyphen_is_matched(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            cap = root / "cap (TAIBA).xlsx"
+            tax = root / "iss (TAIBA).xlsx"
+            portal = root / "portal (TAIBA).xlsx"
+            city = root / "PREF (TAIBA).xlsx"
+            document = "60245303000104"
+
+            create_cap(cap, document, "145", Decimal("2250"))
+            create_tax(tax)
+
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(
+                [
+                    "Número NFS-e",
+                    "Retenção ISSQN",
+                    "Data Geração",
+                    "CNPJ/CPF Prestador",
+                    "Nome Prestador",
+                    "Valor do Serviço (R$)",
+                    "Valor do ISSQN (R$)",
+                ]
+            )
+            sheet.append(
+                [
+                    "145",
+                    "1 - Não retido",
+                    "06/07/2026",
+                    document,
+                    "F DA ROCHA MARTINS TRANSPORTES LTDA",
+                    2250,
+                    0,
+                ]
+            )
+            workbook.save(portal)
+
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(
+                [
+                    "Número",
+                    "Prestador do Serviço",
+                    "Data de Emissão",
+                    "Valor do Serviço",
+                    "ISS Devido",
+                ]
+            )
+            sheet.append(
+                [
+                    "145",
+                    "60.245.303/0001-04-F DA ROCHA MARTINS TRANSPORTES LTDA",
+                    "01/07/2026",
+                    2250,
+                    0,
+                ]
+            )
+            workbook.save(city)
+
+            row = analyze([cap, tax, portal, city]).rows[0]
+
+            self.assertTrue(row.reconciled)
+            self.assertIn("Prefeitura", row.source)
+            self.assertNotIn("Ausente na Prefeitura", row.status)
