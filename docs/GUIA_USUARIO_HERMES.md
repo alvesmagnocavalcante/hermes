@@ -219,13 +219,18 @@ A quantidade de arquivos pode mudar conforme o hotel e o município.
 
 - **Conciliada:** nota localizada com as informações corretas;
 - **Ausente no CAP:** nota externa não encontrada no CAP;
-- **Não escriturada:** BPM ainda não aprovado;
+- **BPM pendente:** nota existente no CAP, mas com aprovação do BPM ainda em andamento;
 - **Hotel divergente:** hotel do CAP diferente do hotel analisado;
 - **ISS divergente:** ISS da Prefeitura diferente do ISS do CAP.
 
-O ISS é comparado somente entre Prefeitura e CAP.
+O ISS do Portal Nacional é considerado quando o relatório indicar retenção. Para notas de São Paulo, o ISS da planilha municipal não entra na comparação. Uma nota encontrada somente no Portal Nacional continua sinalizada como ausente na Prefeitura.
 
-**Saídas:** Excel detalhado e PDF de resumo.
+**Saídas:** PDF de resumo e Excel organizado em quatro abas:
+
+- **Resumo:** totais e orientação de uso;
+- **Pendências:** itens que precisam ser verificados, com o motivo nas primeiras colunas;
+- **Conciliadas:** itens sem divergência;
+- **Base completa:** todas as informações disponíveis.
 
 ### 4.10 Conferência do Contas a Receber
 

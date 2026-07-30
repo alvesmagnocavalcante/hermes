@@ -3,74 +3,271 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
-from automations.conferencia_notas_servicos_tomados import analyze
+from automations.conferencia_notas_servicos_tomados import (
+    analyze,
+    external_csv,
+    save_excel,
+)
+
+
+def create_cap(
+    path: Path,
+    cnpj: str,
+    number: str,
+    gross: Decimal,
+    bpm: str = "BPM APROVADO",
+) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(
+        [
+            "RazaoSocialFornecedor",
+            "DocumentoPrincipalFornecedor",
+            "Numero",
+            "DataEmissao",
+            "ValorBruto",
+            "StatusBPM",
+            "EmpresaNomeResumido",
+        ]
+    )
+    sheet.append(
+        [
+            "PRESTADOR NO CAP",
+            cnpj,
+            number,
+            "01/07/2026",
+            gross,
+            bpm,
+            "CARMEL TAÍBA",
+        ]
+    )
+    workbook.save(path)
+
+
+def create_tax(
+    path: Path,
+    cnpj: str | None = None,
+    number: str | None = None,
+    gross: Decimal = Decimal(),
+    iss: Decimal = Decimal(),
+) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(
+        [
+            "DocumentoPrincipalFornecedor",
+            "NumeroDocumento",
+            "ValorBaseCalculo",
+            "Valor",
+        ]
+    )
+    if cnpj and number:
+        sheet.append([cnpj, number, gross, iss])
+    workbook.save(path)
+
+
+def create_city(
+    path: Path,
+    cnpj: str,
+    number: str,
+    gross: Decimal,
+    iss: Decimal,
+) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(
+        ["N°", "DATA", "CNPJ", "PRESTADOR", "Valor Serviços", "Valor ISS"]
+    )
+    sheet.append(
+        [number, "02/07/2026", cnpj, "PRESTADOR PREFEITURA", gross, iss]
+    )
+    workbook.save(path)
 
 
 class ServiceNotesTest(TestCase):
-    def test_uses_iss_devido_and_ignores_date_and_provider_name_differences(self):
+    def test_uses_portal_retained_iss_and_ignores_name_differences(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            cap = root / "cap (WIND).xlsx"
-            tax = root / "iss (WIND).xlsx"
-            city = root / "prefeitura (WIND).csv"
+            cap = root / "cap (TAIBA).xlsx"
+            tax = root / "iss (TAIBA).xlsx"
+            portal = root / "portal (TAIBA).xlsx"
+            city = root / "prefeitura (TAIBA).xlsx"
+            document = "12345678000190"
+
+            create_cap(cap, document, "10", Decimal("100"))
+            create_tax(
+                tax, document, "10", Decimal("100"), Decimal("5")
+            )
 
             workbook = Workbook()
             sheet = workbook.active
             sheet.append(
                 [
-                    "RazaoSocialFornecedor",
-                    "DocumentoPrincipalFornecedor",
-                    "Numero",
-                    "DataEmissao",
-                    "ValorBruto",
-                    "StatusBPM",
-                    "EmpresaNomeResumido",
+                    "Número NFS-e",
+                    "Retenção ISSQN",
+                    "Data Geração",
+                    "CNPJ/CPF Prestador",
+                    "Nome Prestador",
+                    "Valor do Serviço (R$)",
+                    "Valor do ISSQN (R$)",
                 ]
             )
             sheet.append(
                 [
-                    "PRESTADOR NO CAP",
-                    "12345678000190",
                     "10",
-                    "01/07/2026",
+                    "2 - Retido",
+                    "02/07/2026",
+                    document,
+                    "NOME DIFERENTE NO PORTAL",
                     100,
-                    "BPM APROVADO",
-                    "CARMEL CUMBUCO",
+                    5,
                 ]
             )
-            workbook.save(cap)
+            workbook.save(portal)
+            create_city(city, document, "10", Decimal("100"), Decimal("5"))
 
-            workbook = Workbook()
-            sheet = workbook.active
-            sheet.append(
-                [
-                    "DocumentoPrincipalFornecedor",
-                    "NumeroDocumento",
-                    "ValorBaseCalculo",
-                    "Valor",
-                ]
-            )
-            sheet.append(["12345678000190", "10", 100, 5])
-            workbook.save(tax)
+            result = analyze([cap, tax, portal, city])
+            row = result.rows[0]
 
-            city.write_text(
+            self.assertTrue(row.reconciled)
+            self.assertEqual(result.expected_hotel, "CARMELTAIBA")
+            self.assertEqual(row.iss, Decimal("5"))
+            self.assertEqual(row.provider, "NOME DIFERENTE NO PORTAL")
+            self.assertEqual(row.cap_provider, "PRESTADOR NO CAP")
+            self.assertNotIn("Data divergente", row.status)
+            self.assertNotIn("Razão social divergente", row.status)
+
+    def test_spreadsheet_from_sao_paulo_does_not_compare_iss(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "prefeitura-sp.csv"
+            path.write_text(
                 "Nº NFS-e;Data Hora NFE;CPF/CNPJ do Prestador;"
                 "Razão Social do Prestador;Valor dos Serviços;"
                 "ISS Retido;ISS devido\n"
                 "10;02/07/2026;12345678000190;"
-                "NOME DIFERENTE NA PREFEITURA;100,00;N;5,00\n",
+                "PRESTADOR;100,00;S;5,00\n",
                 encoding="latin1",
             )
 
-            result = analyze([cap, tax, city])
-            row = result.rows[0]
+            row = external_csv(path)[0]
 
-            self.assertTrue(row.reconciled)
-            self.assertEqual(result.expected_hotel, "CARMELCUMBUCO")
-            self.assertEqual(row.iss, Decimal("5.00"))
-            self.assertEqual(row.provider, "NOME DIFERENTE NA PREFEITURA")
-            self.assertEqual(row.cap_provider, "PRESTADOR NO CAP")
-            self.assertNotIn("Data divergente", row.status)
-            self.assertNotIn("Razão social divergente", row.status)
+            self.assertIsNone(row["iss"])
+            self.assertFalse(row["iss_applicable"])
+
+    def test_matches_unique_cap_note_by_number_and_value_when_cnpj_differs(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            cap = root / "cap (TAIBA).xlsx"
+            tax = root / "iss (TAIBA).xlsx"
+            city = root / "prefeitura (TAIBA).xlsx"
+
+            create_cap(cap, "11111111000111", "2932", Decimal("3242"))
+            create_tax(tax)
+            create_city(
+                city,
+                "22222222000122",
+                "2932",
+                Decimal("3242"),
+                Decimal(),
+            )
+
+            result = analyze([cap, tax, city])
+
+            self.assertEqual(len(result.rows), 1)
+            self.assertEqual(result.matched_count, 1)
+            self.assertTrue(result.rows[0].reconciled)
+
+            output = root / "resultado.xlsx"
+            save_excel(result, output)
+            exported = load_workbook(output)
+            try:
+                self.assertEqual(
+                    exported.sheetnames,
+                    ["Resumo", "Pendências", "Conciliadas", "Base completa"],
+                )
+                self.assertEqual(
+                    exported["Base completa"]["A1"].value, "Situação"
+                )
+                self.assertEqual(
+                    exported["Base completa"]["B1"].value, "Detalhes"
+                )
+                self.assertEqual(exported["Pendências"].freeze_panes, "A2")
+                self.assertEqual(exported["Conciliadas"].freeze_panes, "A2")
+                self.assertEqual(exported["Base completa"].freeze_panes, "A2")
+                self.assertEqual(len(exported["Pendências"].tables), 0)
+                self.assertEqual(len(exported["Conciliadas"].tables), 0)
+                self.assertEqual(len(exported["Base completa"].tables), 0)
+            finally:
+                exported.close()
+
+    def test_bpm_in_approval_is_pending_not_unposted(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            cap = root / "cap (TAIBA).xlsx"
+            tax = root / "iss (TAIBA).xlsx"
+            city = root / "prefeitura (TAIBA).xlsx"
+
+            create_cap(
+                cap,
+                "11111111000111",
+                "159",
+                Decimal("11500"),
+                "BPM em Aprovação",
+            )
+            create_tax(tax)
+            create_city(
+                city,
+                "11111111000111",
+                "159",
+                Decimal("11500"),
+                Decimal(),
+            )
+
+            row = analyze([cap, tax, city]).rows[0]
+
+            self.assertEqual(row.situation, "BPM pendente")
+            self.assertIn("BPM pendente de aprovação", row.status)
+            self.assertNotIn("Não escriturada", row.status)
+
+    def test_portal_only_note_reports_missing_city_source(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            cap = root / "cap (TAIBA).xlsx"
+            tax = root / "iss (TAIBA).xlsx"
+            portal = root / "portal (TAIBA).xlsx"
+            document = "12345678000190"
+
+            create_cap(cap, document, "1", Decimal("17500"))
+            create_tax(tax)
+
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(
+                [
+                    "Número NFS-e",
+                    "Retenção ISSQN",
+                    "Data Geração",
+                    "CNPJ/CPF Prestador",
+                    "Nome Prestador",
+                    "Valor do Serviço (R$)",
+                    "Valor do ISSQN (R$)",
+                ]
+            )
+            sheet.append(
+                [
+                    "1",
+                    "1 - Não retido",
+                    "20/07/2026",
+                    document,
+                    "PRESTADOR",
+                    17500,
+                    0,
+                ]
+            )
+            workbook.save(portal)
+
+            row = analyze([cap, tax, portal]).rows[0]
+
+            self.assertIn("Ausente na Prefeitura", row.status)

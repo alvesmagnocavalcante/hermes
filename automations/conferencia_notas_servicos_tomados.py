@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import Workbook
+from openpyxl.styles import Alignment
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -65,8 +66,8 @@ class ResultRow:
     def situation(self) -> str:
         if self.reconciled:
             return "Conciliada"
-        if "Não escriturada" in self.status:
-            return "Não escriturada"
+        if "BPM pendente" in self.status:
+            return "BPM pendente"
         if "Ausente" in self.status:
             return "Informação ausente"
         return "Divergente"
@@ -286,7 +287,8 @@ def external_csv(path: Path) -> list[dict[str, Any]]:
                 "cnpj": data.get("CPF/CNPJ do Prestador"),
                 "provider": data.get("Razão Social do Prestador"),
                 "gross": data.get("Valor dos Serviços"),
-                "iss": data.get("ISS devido"),
+                "iss": None,
+                "iss_applicable": False,
             }
         )
     return result
@@ -347,6 +349,27 @@ def expected_hotel(paths: list[Path]) -> str:
     return max(set(matches), key=matches.count) if matches else ""
 
 
+def bpm_approved(value: Any) -> bool:
+    return normalize(value) in {"BMAPROVADO", "BPMAPROVADO"}
+
+
+def unique_cap_match(
+    occurrences: list[dict[str, Any]],
+    number: str,
+    cap_map: dict[tuple[str, str], CapNote],
+    used: set[tuple[str, str]],
+) -> tuple[tuple[str, str], CapNote] | None:
+    gross_values = [decimal_value(item["gross"]) for item in occurrences]
+    candidates = [
+        (key, cap)
+        for key, cap in cap_map.items()
+        if key not in used
+        and cap.number == number
+        and any(abs(cap.gross - gross) <= TOLERANCE for gross in gross_values)
+    ]
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def analyze(paths: list[Path]) -> AnalysisResult:
     if len(paths) < 3:
         raise ValueError(
@@ -389,6 +412,7 @@ def analyze(paths: list[Path]) -> AnalysisResult:
 
     result = []
     retained_count = 0
+    matched_cap_keys: set[tuple[str, str]] = set()
     for key, occurrences in grouped_external.items():
         raw = occurrences[0]
         sources = " + ".join(sorted({str(item["source"]) for item in occurrences}))
@@ -398,16 +422,28 @@ def analyze(paths: list[Path]) -> AnalysisResult:
             decimal_value(raw["gross"]),
         )
         gross_values = [decimal_value(item["gross"]) for item in occurrences]
-        prefeitura = [
-            item for item in occurrences if str(item["source"]) != "Portal Nacional"
+        iss_sources = [
+            item
+            for item in occurrences
+            if item.get("iss_applicable", True)
+            and item.get("iss") not in (None, "")
         ]
         iss = (
-            max((decimal_value(item["iss"]) for item in prefeitura), default=Decimal())
-            if prefeitura
+            max((decimal_value(item["iss"]) for item in iss_sources), default=Decimal())
+            if iss_sources
             else None
         )
         cap = cap_map.get(key)
-        tax = taxes.get(key)
+        cap_key = key
+        if cap is None:
+            fallback = unique_cap_match(
+                occurrences, key[1], cap_map, matched_cap_keys
+            )
+            if fallback:
+                cap_key, cap = fallback
+        if cap is not None:
+            matched_cap_keys.add(cap_key)
+        tax = taxes.get(cap_key) or taxes.get(key)
         issues = []
         if max(gross_values) - min(gross_values) > TOLERANCE:
             issues.append("Valor divergente entre fontes externas")
@@ -417,15 +453,17 @@ def analyze(paths: list[Path]) -> AnalysisResult:
         else:
             sources = f"CAP + {sources}"
             bpm = cap.bpm
-            if (
-                normalize(cap.bpm) != "BMAPROVADO"
-                and normalize(cap.bpm) != "BPMAPROVADO"
-            ):
-                issues.append("Não escriturada: BPM não aprovado")
+            if not bpm_approved(cap.bpm):
+                issues.append(f"BPM pendente de aprovação ({cap.bpm})")
             if hotel and cap.hotel and hotel not in normalize(cap.hotel):
                 issues.append(f"Hotel divergente ({cap.hotel})")
             if abs(gross - cap.gross) > TOLERANCE:
                 issues.append("Valor bruto divergente")
+        has_city_source = any(
+            str(item["source"]) != "Portal Nacional" for item in occurrences
+        )
+        if not has_city_source:
+            issues.append("Ausente na Prefeitura")
         if iss is not None and iss > 0:
             retained_count += 1
             if not tax:
@@ -453,14 +491,14 @@ def analyze(paths: list[Path]) -> AnalysisResult:
             )
         )
     for key, cap in cap_map.items():
-        if key in grouped_external:
+        if key in matched_cap_keys:
             continue
         tax = taxes.get(key)
         issues = ["Ausente nas fontes externas"]
         if tax and tax.iss > 0:
             issues.append("ISS retido ausente na prefeitura")
-        if normalize(cap.bpm) != "BPMAPROVADO":
-            issues.append("Não escriturada: BPM não aprovado")
+        if not bpm_approved(cap.bpm):
+            issues.append(f"BPM pendente de aprovação ({cap.bpm})")
         if hotel and cap.hotel and hotel not in normalize(cap.hotel):
             issues.append(f"Hotel divergente ({cap.hotel})")
         result.append(
@@ -487,7 +525,7 @@ def analyze(paths: list[Path]) -> AnalysisResult:
         len(grouped_external),
         len(cap_notes),
         sum(row.cap_gross is not None and row.source != "CAP" for row in result),
-        sum(normalize(x.bpm) == "BPMAPROVADO" for x in cap_notes),
+        sum(bpm_approved(x.bpm) for x in cap_notes),
         retained_count,
         sum(entry.iss > 0 for entry in taxes.values()),
         hotel,
@@ -517,76 +555,153 @@ def save_excel(result: AnalysisResult, path: Path) -> None:
         ("Com pendências", len(result.rows) - reconciled),
     ):
         summary.append([label, value])
+    summary.append([])
+    summary.append(["Como usar", "Orientação"])
+    summary.append(
+        ["Pendências", "Comece por esta aba; motivo e situação aparecem primeiro."]
+    )
+    summary.append(
+        ["Conciliadas", "Notas sem diferença entre as fontes consideradas."]
+    )
+    summary.append(
+        ["Base completa", "Todas as notas e todas as informações disponíveis."]
+    )
     for cell in summary[1]:
         cell.style = "Headline 4"
-    summary.column_dimensions["A"].width = 40
-    summary.column_dimensions["B"].width = 24
-
-    sheet = workbook.create_sheet("Comparação detalhada")
-    sheet.append(
-        [
-            "Fonte",
-            "CNPJ",
-            "Número da nota",
-            "Prestador Prefeitura/Portal",
-            "Data externa",
-            "Valor externo",
-            "ISS prefeitura",
-            "Prestador CAP",
-            "Data CAP",
-            "Valor CAP",
-            "ISS CAP",
-            "BPM",
-            "Hotel CAP",
-            "Situação",
-            "Detalhes",
-        ]
-    )
-    for row in result.rows:
-        sheet.append(
-            [
-                row.source,
-                row.cnpj,
-                row.number,
-                row.provider,
-                row.emission_date,
-                float(row.gross) if row.gross is not None else None,
-                float(row.iss) if row.iss is not None else None,
-                row.cap_provider,
-                row.cap_date,
-                float(row.cap_gross) if row.cap_gross is not None else None,
-                float(row.cap_iss) if row.cap_iss is not None else None,
-                row.bpm,
-                row.cap_hotel,
-                row.situation,
-                row.status,
-            ]
-        )
-    for cell in sheet[1]:
+    for cell in summary[14]:
         cell.style = "Headline 4"
-    for column in ("F", "G", "J", "K"):
-        for cell in sheet[column][1:]:
-            cell.number_format = "R$ #,##0.00"
-    for column, width in {
-        "A": 30,
-        "B": 20,
-        "C": 18,
-        "D": 48,
-        "E": 14,
-        "F": 18,
-        "G": 18,
-        "H": 48,
-        "I": 14,
-        "J": 18,
-        "K": 18,
-        "L": 20,
-        "M": 22,
-        "N": 22,
-        "O": 70,
-    }.items():
-        sheet.column_dimensions[column].width = width
-    sheet.freeze_panes = "A2"
-    sheet.auto_filter.ref = sheet.dimensions
+    summary.column_dimensions["A"].width = 40
+    summary.column_dimensions["B"].width = 72
+
+    full_headers = [
+        "Situação",
+        "Detalhes",
+        "Número da nota",
+        "CNPJ",
+        "Fonte",
+        "Prestador Prefeitura/Portal",
+        "Prestador CAP",
+        "Data externa",
+        "Data CAP",
+        "Valor externo",
+        "Valor CAP",
+        "ISS externo",
+        "ISS CAP",
+        "BPM",
+        "Hotel CAP",
+    ]
+    compact_headers = [
+        "Situação",
+        "Motivo",
+        "Número da nota",
+        "CNPJ",
+        "Prestador",
+        "Fonte",
+        "Valor externo",
+        "Valor CAP",
+        "ISS externo",
+        "ISS CAP",
+        "BPM",
+        "Hotel CAP",
+    ]
+
+    def create_detail_sheet(
+        title: str,
+        rows: list[ResultRow],
+        compact: bool,
+    ) -> None:
+        sheet = workbook.create_sheet(title)
+        sheet.append(compact_headers if compact else full_headers)
+        for row in rows:
+            if compact:
+                sheet.append(
+                    [
+                        row.situation,
+                        row.status,
+                        row.number,
+                        row.cnpj,
+                        row.provider if row.provider != "—" else row.cap_provider,
+                        row.source,
+                        float(row.gross) if row.gross is not None else None,
+                        float(row.cap_gross) if row.cap_gross is not None else None,
+                        float(row.iss) if row.iss is not None else None,
+                        float(row.cap_iss) if row.cap_iss is not None else None,
+                        row.bpm,
+                        row.cap_hotel,
+                    ]
+                )
+            else:
+                sheet.append(
+                    [
+                        row.situation,
+                        row.status,
+                        row.number,
+                        row.cnpj,
+                        row.source,
+                        row.provider,
+                        row.cap_provider,
+                        row.emission_date,
+                        row.cap_date,
+                        float(row.gross) if row.gross is not None else None,
+                        float(row.cap_gross) if row.cap_gross is not None else None,
+                        float(row.iss) if row.iss is not None else None,
+                        float(row.cap_iss) if row.cap_iss is not None else None,
+                        row.bpm,
+                        row.cap_hotel,
+                    ]
+                )
+        for cell in sheet[1]:
+            cell.style = "Headline 4"
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        currency_columns = ("G", "H", "I", "J") if compact else ("J", "K", "L", "M")
+        for column in currency_columns:
+            for cell in sheet[column][1:]:
+                cell.number_format = "R$ #,##0.00"
+        widths = (
+            {
+                "A": 20,
+                "B": 50,
+                "C": 18,
+                "D": 18,
+                "E": 42,
+                "F": 28,
+                "G": 18,
+                "H": 18,
+                "I": 16,
+                "J": 16,
+                "K": 22,
+                "L": 22,
+            }
+            if compact
+            else {
+                "A": 20,
+                "B": 50,
+                "C": 18,
+                "D": 18,
+                "E": 28,
+                "F": 42,
+                "G": 42,
+                "H": 14,
+                "I": 14,
+                "J": 18,
+                "K": 18,
+                "L": 16,
+                "M": 16,
+                "N": 22,
+                "O": 22,
+            }
+        )
+        for column, width in widths.items():
+            sheet.column_dimensions[column].width = width
+        sheet.freeze_panes = "A2"
+        last_column = "L" if compact else "O"
+        sheet.auto_filter.ref = f"A1:{last_column}{sheet.max_row}"
+
+    pending = [row for row in result.rows if not row.reconciled]
+    reconciled_rows = [row for row in result.rows if row.reconciled]
+    create_detail_sheet("Pendências", pending, True)
+    create_detail_sheet("Conciliadas", reconciled_rows, True)
+    create_detail_sheet("Base completa", result.rows, False)
     workbook.save(path)
 
 

@@ -139,7 +139,7 @@ cada operação.
 | Relatório de Notas de Débito | 1 ou mais | Consolida hotel, comprador, nota, emissão, item e valor. |
 | Notas Fiscais de Entrada em Atraso | 2 | Compara Manifesto e Detalhe, aplicando prazo de 11 dias para o Ceará e 30 dias para outros estados. |
 | Conferência dos Cupons | 3 | Compara Simphony, Fiscal e SEFAZ por chave e valor, distinguindo NFC-e e NF-e/Unknown. Exibe o status do Simphony; um cancelamento concilia quando Fiscal e SEFAZ estão vazios ou zerados, enquanto valores posteriores geram divergência. O hotel é identificado na exportação. |
-| Notas de Serviços Tomados | 5 | Compara Portal Nacional, prefeituras, CAP, BPM, hotel e ISS retido. |
+| Notas de Serviços Tomados | 5 | Compara Portal Nacional, prefeituras, CAP, BPM, hotel e ISS retido. O Excel separa pendências, conciliadas e base completa; notas são consolidadas por CNPJ/número ou por correspondência única de número e valor. |
 | Contas a Receber | 6 | Confere clientes, notas a faturar e comissões contra o financeiro. |
 | Contas a Pagar | 8 | Confere fornecedores, adiantamentos e impostos contra o financeiro. |
 | Custos da Mercadoria Vendida | 4 | Compara entradas do CAP e saldos do inventário com a contabilidade. |
