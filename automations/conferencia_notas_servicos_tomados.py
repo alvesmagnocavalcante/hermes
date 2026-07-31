@@ -188,6 +188,12 @@ def identify_file(path: Path) -> str:
         or {"NUMERO", "PRESTADORDOSERVICO", "DATADEEMISSAO", "VALORDOSERVICO"}.issubset(
             columns
         )
+        or {
+            "NUMERO",
+            "CPFCNPJPRESTADOR",
+            "RAZAOSOCIALNOMEDOPRESTADOR",
+            "VALORDOSSERVICOS",
+        }.issubset(columns)
     ):
         return "external"
     return "external" if suffix == ".xls" else "unknown"
@@ -308,29 +314,50 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
 
     required_groups = (
         ("NUMERO", "NUMERONFSE", "NUMERODANOTA", "NOTA"),
-        ("PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL"),
+        (
+            "PRESTADORDOSERVICO",
+            "PRESTADOR",
+            "RAZAOSOCIAL",
+            "RAZAOSOCIALNOMEDOPRESTADOR",
+        ),
         ("DATADEEMISSAO", "DATAEMISSAO", "DATA"),
-        ("VALORDOSERVICO", "VALORBRUTO", "VALOR"),
+        ("VALORDOSERVICO", "VALORDOSSERVICOS", "VALORBRUTO", "VALOR"),
     )
     if any(not any(name in header for name in group) for group in required_groups):
         raise ValueError(f"Colunas obrigatórias não encontradas em {path.name}.")
 
     result = []
+    city_report = {
+        "CPFCNPJPRESTADOR",
+        "RAZAOSOCIALNOMEDOPRESTADOR",
+        "VALORDOSSERVICOS",
+    }.issubset(header)
     source = (
         "Prefeitura"
-        if "PREF" in normalize(path.stem)
+        if city_report or "PREF" in normalize(path.stem)
         else "Relatório externo"
     )
     for row in source_rows:
         number = value(row, "NUMERO", "NUMERONFSE", "NUMERODANOTA", "NOTA")
         provider_field = str(
-            value(row, "PRESTADORDOSERVICO", "PRESTADOR", "RAZAOSOCIAL") or ""
+            value(
+                row,
+                "PRESTADORDOSERVICO",
+                "PRESTADOR",
+                "RAZAOSOCIAL",
+                "RAZAOSOCIALNOMEDOPRESTADOR",
+            )
+            or ""
         )
         match = re.match(
             r"\s*(\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})\s*-\s*(.+)",
             provider_field,
         )
-        document = match.group(1) if match else value(row, "CNPJ", "CPFCNPJ", "CNPJCPF")
+        document = (
+            match.group(1)
+            if match
+            else value(row, "CNPJ", "CPFCNPJ", "CNPJCPF", "CPFCNPJPRESTADOR")
+        )
         provider = match.group(2) if match else provider_field
         if not number or not cnpj(document) or not provider:
             continue
@@ -342,7 +369,9 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
                 "date": value(row, "DATADEEMISSAO", "DATAEMISSAO", "DATA"),
                 "cnpj": document,
                 "provider": provider,
-                "gross": value(row, "VALORDOSERVICO", "VALORBRUTO", "VALOR"),
+                "gross": value(
+                    row, "VALORDOSERVICO", "VALORDOSSERVICOS", "VALORBRUTO", "VALOR"
+                ),
                 "iss": value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS"),
             }
         )

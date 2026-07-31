@@ -9,6 +9,8 @@ from automations.conferencia_notas_servicos_tomados import (
     analyze,
     decimal_value,
     external_csv,
+    external_html_xls,
+    identify_file,
     save_excel,
 )
 
@@ -88,6 +90,46 @@ def create_city(
 
 
 class ServiceNotesTest(TestCase):
+    def test_recognizes_municipal_services_taken_layout(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "NF-141111-072026-ServicosTomados.xlsx"
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(
+                [
+                    "Tipo Doc.",
+                    "Número",
+                    "Data",
+                    "Valor dos Serviços",
+                    "ISS Retido",
+                    "Valor do ISS",
+                    "CPF/CNPJ Prestador",
+                    "Razão Social/Nome do Prestador",
+                ]
+            )
+            sheet.append(
+                [
+                    "NFS-e",
+                    "395",
+                    "27/07/2026",
+                    18634.18,
+                    "Sim",
+                    719.28,
+                    "37694753000154",
+                    "A C CONSTRUCOES CTS CRUZ LTDA",
+                ]
+            )
+            workbook.save(path)
+
+            self.assertEqual(identify_file(path), "external")
+            row = external_html_xls(path)[0]
+            self.assertEqual(row["source"], "Prefeitura")
+            self.assertEqual(row["number"], "395")
+            self.assertEqual(row["cnpj"], "37694753000154")
+            self.assertEqual(row["provider"], "A C CONSTRUCOES CTS CRUZ LTDA")
+            self.assertEqual(row["gross"], 18634.18)
+            self.assertEqual(row["iss"], 719.28)
+
     def test_non_numeric_iss_markers_are_zero(self):
         self.assertEqual(decimal_value("Não Retido"), Decimal())
         self.assertEqual(decimal_value("—"), Decimal())
