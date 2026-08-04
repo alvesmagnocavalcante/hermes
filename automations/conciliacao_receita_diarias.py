@@ -18,6 +18,8 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
+CHARME_IGNORED_CODES = {"1011"}
+
 
 @dataclass(frozen=True)
 class DailyRevenueRow:
@@ -142,12 +144,16 @@ def read_rules(path: Path, hotel: str) -> dict[str, tuple[str, bool, bool]]:
         result = {}
         for row in rows:
             code_index = indexes["TRXCODE"]
-            if code_index >= len(row) or not trx_code(row[code_index]):
+            if code_index >= len(row):
+                continue
+            code = trx_code(row[code_index])
+            is_charme = normalize(hotel) == "CHARME"
+            if not code or is_charme and code in CHARME_IGNORED_CODES:
                 continue
             daily = (
                 indexes["DIARIA"] < len(row)
                 and normalize(row[indexes["DIARIA"]]) == "SIM"
-            )
+            ) or code == "1011"
             average = (
                 indexes["DIARIAMEDIA"] < len(row)
                 and normalize(row[indexes["DIARIAMEDIA"]]) == "SIM"
@@ -159,7 +165,7 @@ def read_rules(path: Path, hotel: str) -> dict[str, tuple[str, bool, bool]]:
                 if description_index is not None and description_index < len(row)
                 else ""
             )
-            result[trx_code(row[code_index])] = description, daily, average
+            result[code] = description, daily, average
         if not result:
             raise ValueError(
                 f"Nenhum TRX_CODE marcado como SIM foi encontrado para {hotel}."
