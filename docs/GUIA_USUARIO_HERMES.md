@@ -125,6 +125,8 @@ O botão **Limpar** apaga somente os dados exibidos na tela. Ele não exclui as 
 
 **Saídas:** Excel para conferência, PDF de resumo e CSV para importação no CMFlex.
 
+Os valores de plano odontológico e plano de saúde não são incluídos automaticamente. Eles devem ser preenchidos manualmente somente após o recebimento das notas fiscais.
+
 Antes de importar o CSV, confira empresa, competência, contas, centros de custo e totais.
 
 ### 4.4 Cupons Emitidos x Conta do Hóspede

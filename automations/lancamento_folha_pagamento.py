@@ -42,6 +42,9 @@ VACATION_SOURCES = {"vacation_receipt", "vacation_liquid"}
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", PROJECT_ROOT / "assets")).resolve()
 DEFAULT_TEMPLATE = ASSETS_DIR / "folha" / "modelo_folha.xlsm"
+MANUAL_INVOICE_EVENTS = frozenset(
+    {"REFPLANOODONTOLOGICO", "REFPLANODESAUDE"}
+)
 
 
 @dataclass(frozen=True)
@@ -300,14 +303,12 @@ def read_mappings(path: Path) -> Mappings:
         )
 
         rate_events = (
-            "REF PLANO ODONTOLOGICO",
-            "REF PLANO DE SAUDE",
-            "REF INSS MENSAL",
-            "REF FGTS MENSAL",
+            ("REF INSS MENSAL", 16),
+            ("REF FGTS MENSAL", 17),
         )
         rate_totals = {
             event: decimal_value(values["C"].cell(2, column).value)
-            for event, column in zip(rate_events, range(14, 18))
+            for event, column in rate_events
         }
         return Mappings(
             descriptions,
@@ -638,7 +639,11 @@ def build_rates(
         if row.cost_center:
             weights[row.cost_center] += row.value
             names[row.cost_center] = row.cost_center_name
-    totals = dict(mappings.rate_totals)
+    totals = {
+        event: total
+        for event, total in mappings.rate_totals.items()
+        if normalize(event) not in MANUAL_INVOICE_EVENTS
+    }
     validation: list[str] = []
     for event, source_total in (
         ("REF INSS MENSAL", inss_total),

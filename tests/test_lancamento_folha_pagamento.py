@@ -1,14 +1,66 @@
+from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from automations.lancamento_folha_pagamento import (
+    Mappings,
+    PostingRow,
+    build_rates,
     identify_file,
     required_sources,
 )
 
 
 class PayrollSourceSelectionTest(TestCase):
+    def test_does_not_generate_health_and_dental_plan_rates(self):
+        monthly = [
+            PostingRow(
+                "Folha mensal",
+                1,
+                "1 - Administração",
+                "100",
+                "Administração",
+                "1",
+                "SALÁRIO",
+                "1",
+                "2",
+                Decimal("1000"),
+            )
+        ]
+        mappings = Mappings(
+            set(),
+            {},
+            {},
+            {},
+            {
+                "REFPLANOODONTOLOGICO": ("1", "2"),
+                "REFPLANODESAUDE": ("1", "2"),
+                "REFINSSMENSAL": ("1", "2"),
+                "REFFGTSMENSAL": ("1", "2"),
+            },
+            {},
+            {
+                "REF PLANO ODONTOLOGICO": Decimal("550.02"),
+                "REF PLANO DE SAUDE": Decimal("8272.17"),
+                "REF INSS MENSAL": Decimal("100"),
+                "REF FGTS MENSAL": Decimal("80"),
+            },
+            frozenset(),
+        )
+
+        rows, _ = build_rates(
+            monthly,
+            mappings,
+            Decimal("100"),
+            Decimal("80"),
+            datetime(2026, 7, 31),
+        )
+
+        descriptions = {row.description for row in rows}
+        self.assertEqual(descriptions, {"REF INSS MENSAL", "REF FGTS MENSAL"})
+
     def test_requires_irrf_when_there_are_no_vacation_reports(self):
         grouped = {
             kind: [Path(f"{kind}.csv")]

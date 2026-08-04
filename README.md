@@ -133,7 +133,7 @@ cada operação.
 |---|---:|---|
 | Conciliação de Receita | 2 | Compara Movimento da Contabilidade com `CASHIER_DEBIT` do Opera. |
 | Conciliação da Receita de Diárias | 2 | Classifica e totaliza o `CASHIER_DEBIT` pelos `TRX_CODE` marcados como diária e diária média para cada hotel. |
-| Lançamento da Folha de Pagamento | 6 ou 7 | Reconhece os relatórios pelo conteúdo e gera as importações da folha mensal, férias, provisões de férias e 13º, além dos rateios de INSS, FGTS e planos por centro de custo. Todos os totalizadores são excluídos para impedir valores duplicados. |
+| Lançamento da Folha de Pagamento | 6 ou 7 | Reconhece os relatórios pelo conteúdo e gera as importações da folha mensal, férias, provisões de férias e 13º, além dos rateios de INSS e FGTS por centro de custo. Os planos odontológico e de saúde não são gerados, pois dependem das notas fiscais e do preenchimento manual. Todos os totalizadores são excluídos para impedir valores duplicados. |
 | Cupons Emitidos x Conta do Hóspede | 3 | Confere se os cupons do BI/PDV constam no `CHECK#` do Journal e se o valor foi efetivamente cobrado na conta do hóspede. |
 | RPS de Serviços Prestados | 3 | Confere se os RPS encerrados no Opera integraram no Fiscal do CMFlex, foram emitidos na Prefeitura e possuem o mesmo valor nas três fontes. |
 | Relatório de Notas de Débito | 1 ou mais | Consolida hotel, comprador, nota, emissão, item e valor. |
@@ -153,6 +153,8 @@ regras adotadas pelo departamento. Se uma versão atualizada for selecionada jun
 aos CSVs, ela passa a ser usada na análise.
 
 O Excel exportado separa as saídas em `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, além das abas de resumo e detalhamento. A opção CSV segue o modelo do CMFlex: campos separados por ponto e vírgula, valores com vírgula decimal, sem cabeçalho e com 13 colunas. A data é preenchida automaticamente com o fim da competência. O filtro permite exportar todas as saídas juntas ou somente um processo, como férias. Linhas de total do organograma, filial e empresa não são importadas.
+
+Os campos `REF PLANO ODONTOLÓGICO` e `REF PLANO DE SAÚDE` do modelo não geram lançamentos. Esses valores são preenchidos manualmente somente após o recebimento das respectivas notas fiscais.
 
 ## Estrutura
 
