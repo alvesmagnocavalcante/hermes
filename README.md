@@ -137,7 +137,7 @@ cada operação.
 | Cupons Emitidos x Conta do Hóspede | 3 | Confere se os cupons do BI/PDV constam no `CHECK#` do Journal e se o valor foi efetivamente cobrado na conta do hóspede. |
 | RPS de Serviços Prestados | 3 | Confere se os RPS encerrados no Opera integraram no Fiscal do CMFlex, foram emitidos na Prefeitura e possuem o mesmo valor nas três fontes. |
 | Relatório de Notas de Débito | 1 ou mais | Consolida hotel, comprador, nota, emissão, item e valor. |
-| Notas Fiscais de Entrada em Atraso | 2 | Compara Manifesto e Detalhe, aplicando prazo de 11 dias para o Ceará e 30 dias para outros estados. |
+| Notas Fiscais de Entrada em Atraso | 2 | Compara Manifesto e Detalhe por empresa e chave. Considera o horário, arredonda o intervalo para o dia inteiro mais próximo e classifica como atraso a partir de 11 dias no Ceará ou após 30 dias nos demais estados. |
 | Conferência dos Cupons | 3 | Compara Simphony, Fiscal e SEFAZ por chave e valor, distinguindo NFC-e e NF-e/Unknown. Exibe o status do Simphony; um cancelamento concilia quando Fiscal e SEFAZ estão vazios ou zerados, enquanto valores posteriores geram divergência. O hotel é identificado na exportação. |
 | Notas de Serviços Tomados | 5 | Compara Portal Nacional, prefeituras, CAP, BPM, hotel e ISS retido. O Excel separa pendências, conciliadas e base completa; notas são consolidadas por CNPJ/número ou por correspondência única de número e valor. |
 | Contas a Receber | 6 | Confere clientes, notas a faturar e comissões contra o financeiro. |

@@ -4,7 +4,8 @@ import re
 import unicodedata
 import warnings
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
@@ -81,6 +82,18 @@ def as_date(value: Any) -> date | None:
     return None
 
 
+def as_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    parsed = as_date(value)
+    return datetime.combine(parsed, time.min) if parsed else None
+
+
+def rounded_days(start: datetime, end: datetime) -> int:
+    elapsed = Decimal(str((end - start).total_seconds())) / Decimal(86400)
+    return max(0, int(elapsed.quantize(Decimal("1"), rounding=ROUND_HALF_UP)))
+
+
 def normalized_header(value: Any) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
     return re.sub(
@@ -105,9 +118,13 @@ def header_index(headers: tuple[Any, ...], *names: str) -> int:
     raise ValueError(f"Coluna não encontrada: {' ou '.join(names)}.")
 
 
+def row_value(row: tuple[Any, ...], index: int) -> Any:
+    return row[index] if index < len(row) else None
+
+
 def note_status(days: int, state: str) -> tuple[int, str]:
     alert, limit = (6, 11) if state == "CE" else (20, 30)
-    if days >= limit:
+    if (state == "CE" and days >= limit) or (state != "CE" and days > limit):
         return limit, "Em atraso"
     if days >= alert:
         return limit, "Alerta"
@@ -155,42 +172,49 @@ def analyze(paths: list[Path], reference_date: date | None = None) -> AnalysisRe
     state_i = header_index(headers, "Estado")
     company_i = header_index(headers, "Empresa")
     supplier_i = header_index(headers, "Fornecedor", "Razão Social")
-    max_i = max(key_i, emission_i, state_i, company_i, supplier_i)
-    manifest: dict[str, tuple[date | None, str, str, str]] = {}
+    required_max_i = max(key_i, emission_i, company_i)
+    manifest: dict[tuple[str, str], tuple[datetime | None, str, str, str]] = {}
     try:
         for row in rows:
-            if len(row) <= max_i or not row[key_i]:
+            if len(row) <= required_max_i or not row[key_i]:
                 continue
-            manifest[str(row[key_i]).strip()] = (
-                as_date(row[emission_i]),
-                state_code(row[state_i]),
-                str(row[company_i] or ""),
-                str(row[supplier_i] or ""),
+            company = str(row[company_i] or "").strip()
+            key = str(row[key_i]).strip()
+            manifest[(normalized_header(company), key)] = (
+                as_datetime(row[emission_i]),
+                state_code(row_value(row, state_i)),
+                company,
+                str(row_value(row, supplier_i) or ""),
             )
     finally:
         workbook.close()
 
     workbook, headers, rows = open_rows(detalhe_path)
     key_i = header_index(headers, "Chave")
+    company_i = header_index(headers, "Empresa")
     entry_i = header_index(headers, "Data de Entrada")
-    max_i = max(key_i, entry_i)
-    entries: dict[str, date | None] = {}
+    max_i = max(key_i, company_i, entry_i)
+    entries: dict[tuple[str, str], datetime | None] = {}
     try:
         for row in rows:
             if len(row) <= max_i or not row[key_i]:
                 continue
-            key = str(row[key_i]).strip()
-            entry = as_date(row[entry_i])
+            key = (
+                normalized_header(row[company_i]),
+                str(row[key_i]).strip(),
+            )
+            entry = as_datetime(row[entry_i])
             previous = entries.get(key)
             if previous is None or (entry is not None and entry < previous):
                 entries[key] = entry
     finally:
         workbook.close()
 
-    today = reference_date or date.today()
+    today = datetime.combine(reference_date or date.today(), time.min)
     results: list[NoteResult] = []
-    for key, (emission, state, company, supplier) in manifest.items():
-        entry = entries.get(key)
+    for company_key, (emission, state, company, supplier) in manifest.items():
+        key = company_key[1]
+        entry = entries.get(company_key)
         launch_status = "Lançada" if entry else "Não lançada"
         if not emission:
             results.append(
@@ -200,7 +224,7 @@ def analyze(paths: list[Path], reference_date: date | None = None) -> AnalysisRe
                     supplier,
                     state,
                     None,
-                    entry,
+                    entry.date() if entry else None,
                     None,
                     None,
                     f"{launch_status} • emissão ausente",
@@ -209,7 +233,7 @@ def analyze(paths: list[Path], reference_date: date | None = None) -> AnalysisRe
             )
             continue
         reference = entry or today
-        days = max(0, (reference - emission).days)
+        days = rounded_days(emission, reference)
         limit, status = note_status(days, state)
         results.append(
             NoteResult(
@@ -217,8 +241,8 @@ def analyze(paths: list[Path], reference_date: date | None = None) -> AnalysisRe
                 company,
                 supplier,
                 state,
-                emission,
-                entry,
+                emission.date(),
+                entry.date() if entry else None,
                 days,
                 limit,
                 launch_status,

@@ -183,7 +183,9 @@ Se aparecer **fora do período**, gere um relatório Fiscal que inclua a data in
 **Prazos usados:**
 
 - Ceará: atraso a partir de 11 dias;
-- outros estados: atraso a partir de 30 dias.
+- outros estados: atraso após 30 dias.
+
+O cálculo considera os horários de emissão e entrada e arredonda o intervalo para o dia inteiro mais próximo.
 
 **Como ler:** a tabela mostra emissão, entrada, quantidade de dias, prazo permitido e situação. Notas sem data ou não localizadas precisam ser verificadas nas planilhas originais.
 

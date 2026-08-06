@@ -9,7 +9,7 @@ services:
     cpus: "${HERMES_CPU_LIMIT:-2.0}"
     pids_limit: 256
     ports:
-      - "0.0.0.0:${HERMES_PORT:-8000}:8000"
+      - "${HERMES_BIND_ADDRESS:-0.0.0.0}:${HERMES_PORT:-8000}:8000"
     environment:
       FLET_FORCE_WEB_SERVER: "true"
       FLET_SERVER_IP: "0.0.0.0"
