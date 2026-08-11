@@ -317,11 +317,18 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         (
             "PRESTADORDOSERVICO",
             "PRESTADOR",
+            "NOMEPRESTADOR",
             "RAZAOSOCIAL",
             "RAZAOSOCIALNOMEDOPRESTADOR",
         ),
         ("DATADEEMISSAO", "DATAEMISSAO", "DATA"),
-        ("VALORDOSERVICO", "VALORDOSSERVICOS", "VALORBRUTO", "VALOR"),
+        (
+            "VALORDOSERVICO",
+            "VALORDOSSERVICOS",
+            "VALORFATURADO",
+            "VALORBRUTO",
+            "VALOR",
+        ),
     )
     if any(not any(name in header for name in group) for group in required_groups):
         raise ValueError(f"Colunas obrigatórias não encontradas em {path.name}.")
@@ -344,6 +351,7 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
                 row,
                 "PRESTADORDOSERVICO",
                 "PRESTADOR",
+                "NOMEPRESTADOR",
                 "RAZAOSOCIAL",
                 "RAZAOSOCIALNOMEDOPRESTADOR",
             )
@@ -356,7 +364,14 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         document = (
             match.group(1)
             if match
-            else value(row, "CNPJ", "CPFCNPJ", "CNPJCPF", "CPFCNPJPRESTADOR")
+            else value(
+                row,
+                "CNPJ",
+                "CPFCNPJ",
+                "CNPJCPF",
+                "CPFCNPJPRESTADOR",
+                "DOCPRESTADOR",
+            )
         )
         provider = match.group(2) if match else provider_field
         if not number or not cnpj(document) or not provider:
@@ -370,7 +385,12 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
                 "cnpj": document,
                 "provider": provider,
                 "gross": value(
-                    row, "VALORDOSERVICO", "VALORDOSSERVICOS", "VALORBRUTO", "VALOR"
+                    row,
+                    "VALORDOSERVICO",
+                    "VALORDOSSERVICOS",
+                    "VALORFATURADO",
+                    "VALORBRUTO",
+                    "VALOR",
                 ),
                 "iss": value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS"),
             }

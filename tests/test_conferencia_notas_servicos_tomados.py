@@ -386,3 +386,52 @@ class ServiceNotesTest(TestCase):
             self.assertTrue(row.reconciled)
             self.assertIn("Prefeitura", row.source)
             self.assertNotIn("Ausente na Prefeitura", row.status)
+
+    def test_recognizes_charme_prefeitura_layout(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "PREF OFC.xlsx"
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(
+                [
+                    "Numero",
+                    "Data",
+                    "Mes competencia",
+                    "Ano competencia",
+                    "Forma entrada",
+                    "Doc prestador",
+                    "Nome prestador",
+                    "Item servico",
+                    "Valor faturado",
+                    "Base de calculo",
+                    "Aliquota",
+                    "Valor iss",
+                    "Iss retido",
+                ]
+            )
+            sheet.append(
+                [
+                    "388",
+                    "31/07/2026",
+                    7,
+                    2026,
+                    "Manual",
+                    "21002293000116",
+                    "WEMBLEY VIAGENS E TURISMO LTDA",
+                    "902",
+                    "R$ 9.803,47",
+                    "R$ 9.803,47",
+                    0,
+                    "R$ 0,00",
+                    "NÃO",
+                ]
+            )
+            workbook.save(path)
+
+            rows = external_html_xls(path)
+
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["number"], "388")
+            self.assertEqual(rows[0]["cnpj"], "21002293000116")
+            self.assertEqual(rows[0]["provider"], "WEMBLEY VIAGENS E TURISMO LTDA")
+            self.assertEqual(rows[0]["gross"], "R$ 9.803,47")
