@@ -39,6 +39,7 @@ STATE_CODES = {
 }
 
 
+# Modelos da nota analisada e dos totais de prazo e lançamento.
 @dataclass(frozen=True)
 class NoteResult:
     key: str
@@ -131,6 +132,7 @@ def note_status(days: int, state: str) -> tuple[int, str]:
     return limit, "Em dia"
 
 
+# Identifica Manifesto e Detalhe e prepara suas linhas para comparação.
 def open_rows(path: Path):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -142,6 +144,7 @@ def open_rows(path: Path):
     return workbook, headers, rows
 
 
+# Calcula o prazo por empresa e chave e classifica atraso, alerta ou em dia.
 def analyze(paths: list[Path], reference_date: date | None = None) -> AnalysisResult:
     if len(paths) != 2:
         raise ValueError(
@@ -258,6 +261,7 @@ def date_text(value: date | None) -> str:
     return value.strftime("%d/%m/%Y") if value else "—"
 
 
+# Exporta as notas e os indicadores consolidados em Excel e PDF.
 def save_excel(result: AnalysisResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

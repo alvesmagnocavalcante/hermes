@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -17,9 +16,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import normalize_key as normalize, optional_money as money
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 
+# Modelos das fontes e do resultado da conciliação de cupons por hóspede.
 @dataclass(frozen=True)
 class CouponResult:
     company: str
@@ -99,15 +100,6 @@ class _JournalRow:
     room: str
 
 
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    return re.sub(
-        r"[^A-Z0-9]",
-        "",
-        "".join(char for char in text if not unicodedata.combining(char)).upper(),
-    )
-
-
 def decimal_value(value: Any) -> Decimal:
     if value in (None, "", "-"):
         return Decimal()
@@ -118,12 +110,6 @@ def decimal_value(value: Any) -> Decimal:
         return Decimal(text)
     except InvalidOperation:
         return Decimal()
-
-
-def money(value: Decimal | None) -> str:
-    if value is None:
-        return "—"
-    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
 def parse_date(value: Any) -> date | None:
@@ -149,6 +135,7 @@ def _header_map(values: tuple[Any, ...]) -> dict[str, int]:
     return result
 
 
+# Identifica e lê PDV, Journal e tabela de relacionamento de contas.
 def identify_file(path: Path) -> str:
     if path.suffix.lower() not in {".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
         return "unknown"
@@ -305,6 +292,7 @@ def _match_account(check: str, accounts: set[str]) -> str | None:
     return max(matches, key=len) if matches else None
 
 
+# Relaciona cupom, check e conta do hóspede e classifica cada ocorrência.
 def analyze(paths: list[Path]) -> ReconciliationResult:
     if len(paths) != 3:
         raise ValueError(
@@ -442,6 +430,7 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     )
 
 
+# Exporta detalhes e resumo da conciliação em Excel e PDF.
 def save_excel(result: ReconciliationResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

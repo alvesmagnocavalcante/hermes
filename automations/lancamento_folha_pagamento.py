@@ -3,12 +3,11 @@ from __future__ import annotations
 import csv
 import os
 import re
-import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +18,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import money, normalize_key as normalize
+from automations.common import report_decimal as decimal_value
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 SOURCE_LABELS = {
@@ -47,6 +48,7 @@ MANUAL_INVOICE_EVENTS = frozenset(
 )
 
 
+# Modelos dos lançamentos contábeis, resultado e tabelas de relacionamento.
 @dataclass(frozen=True)
 class PostingRow:
     source: str
@@ -120,31 +122,7 @@ class Mappings:
     excluded_events: frozenset[str]
 
 
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    return re.sub(
-        r"[^A-Z0-9]",
-        "",
-        "".join(char for char in text if not unicodedata.combining(char)).upper(),
-    )
-
-
-def decimal_value(value: Any) -> Decimal:
-    if value in (None, "", "NULL", "-"):
-        return Decimal()
-    text = str(value).strip().replace("R$", "").replace(" ", "")
-    if "," in text:
-        text = text.replace(".", "").replace(",", ".")
-    try:
-        return Decimal(text)
-    except InvalidOperation:
-        return Decimal()
-
-
-def money(value: Decimal) -> str:
-    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-
-
+# Lê, identifica e padroniza os relatórios que compõem a folha do período.
 def read_csv(path: Path) -> list[list[str]]:
     raw = path.read_bytes()
     for encoding in ("utf-8-sig", "cp1252", "latin1"):
@@ -681,6 +659,7 @@ def _default_template() -> Path | None:
     return DEFAULT_TEMPLATE if DEFAULT_TEMPLATE.exists() else None
 
 
+# Consolida folha, provisões, férias e encargos e monta os lançamentos finais.
 def analyze(paths: list[Path]) -> PayrollResult:
     identified = [(path, identify_file(path)) for path in paths]
     unknown = [path.name for path, kind in identified if kind == "unknown"]
@@ -885,6 +864,7 @@ def _posting_values(
     ]
 
 
+# Gera os arquivos de importação, conferência em Excel e resumo em PDF.
 def save_csv(
     result: PayrollResult,
     path: Path,

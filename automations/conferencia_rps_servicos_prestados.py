@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import re
-import unicodedata
 import warnings
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -18,6 +17,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import normalize_key as normalize
+from automations.common import optional_money as money, report_decimal as decimal_value
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 DEFAULT_SERVICE_CODES = {
@@ -95,6 +96,7 @@ SERVICE_CODE_PROFILES = {
 }
 
 
+# Modelos de RPS lidos do Opera, Fiscal e Prefeitura e do resultado comparado.
 @dataclass(frozen=True)
 class OperaRPS:
     rps: str
@@ -187,33 +189,6 @@ class AnalysisResult:
     @property
     def issues(self) -> int:
         return len(self.rows) - self.reconciled - self.incomplete - self.cancelled
-
-
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    return re.sub(
-        r"[^A-Z0-9]",
-        "",
-        "".join(char for char in text if not unicodedata.combining(char)).upper(),
-    )
-
-
-def decimal_value(value: Any) -> Decimal:
-    if value in (None, "", "NULL", "-"):
-        return Decimal()
-    text = str(value).strip().replace("R$", "").replace(" ", "")
-    if "," in text:
-        text = text.replace(".", "").replace(",", ".")
-    try:
-        return Decimal(text)
-    except InvalidOperation:
-        return Decimal()
-
-
-def money(value: Decimal | None) -> str:
-    if value is None:
-        return "—"
-    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
 def identifier(value: Any) -> str:
@@ -332,6 +307,7 @@ def _sheet_rows(path: Path) -> tuple[list[Any], list[dict[str, Any]]]:
         workbook.close()
 
 
+# Identifica e lê os diferentes formatos de Opera, Fiscal e Prefeitura.
 def identify_file(path: Path) -> str:
     if path.suffix.lower() == ".xml":
         try:
@@ -460,6 +436,7 @@ def read_city(
     return result
 
 
+# Relaciona os RPS e aponta ausência ou diferença de situação e valor.
 def analyze(paths: list[Path]) -> AnalysisResult:
     if len(paths) != 3:
         raise ValueError(
@@ -616,6 +593,7 @@ def analyze(paths: list[Path]) -> AnalysisResult:
     )
 
 
+# Exporta a conferência de RPS em Excel e PDF.
 def save_excel(result: AnalysisResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

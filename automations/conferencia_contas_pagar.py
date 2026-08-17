@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import re
-import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
@@ -17,6 +15,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import decimal_value, money as currency
+from automations.common import normalize_key as normalize
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
@@ -38,6 +38,7 @@ ENTITY_GROUPS = (
 )
 
 
+# Modelos das entidades agrupadas, conferências e totais de Contas a Pagar.
 @dataclass(frozen=True)
 class EntityRow:
     category: str
@@ -78,12 +79,6 @@ class PayablesResult:
     hotel: str = "Cumbuco"
 
 
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    text = "".join(char for char in text if not unicodedata.combining(char)).upper()
-    return re.sub(r"[^A-Z0-9]", "", text)
-
-
 def entity_group(value: Any) -> tuple[str, str]:
     normalized = normalize(value)
     for label, aliases in ENTITY_GROUPS:
@@ -92,24 +87,7 @@ def entity_group(value: Any) -> tuple[str, str]:
     return normalized, str(value).strip()
 
 
-def decimal_value(value: Any) -> Decimal:
-    if value in (None, ""):
-        return Decimal()
-    try:
-        return Decimal(str(value))
-    except InvalidOperation:
-        return Decimal(str(value).replace(".", "").replace(",", "."))
-
-
-def currency(value: Decimal) -> str:
-    text = f"R$ {value:,.2f}"
-    return text.replace(",", "_").replace(".", ",").replace("_", ".")
-
-
-def integer(value: int) -> str:
-    return f"{value:,}".replace(",", ".")
-
-
+# Lê e identifica cada relatório contábil ou financeiro pelos cabeçalhos.
 def read(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]]]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -241,6 +219,7 @@ def absolute_total(data, column: str) -> Decimal:
     )
 
 
+# Consolida fornecedores, adiantamentos e impostos e compara os dois lados.
 def analyze(paths: list[Path], hotel: str = "Cumbuco") -> PayablesResult:
     if len(paths) != 8:
         raise ValueError("Selecione exatamente os oito arquivos da Atividade 9.")
@@ -308,6 +287,7 @@ def analyze(paths: list[Path], hotel: str = "Cumbuco") -> PayablesResult:
     )
 
 
+# Exporta o resultado de Contas a Pagar em Excel e PDF.
 def save_excel(result: PayablesResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

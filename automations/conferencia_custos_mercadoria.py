@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-import re
-import unicodedata
-import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
-from typing import Any
-
 from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -16,7 +11,9 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.excel_reader import load_workbook_compatible as load_workbook
+from automations.common import active_sheet_rows as read
+from automations.common import money, normalize_key as normalize
+from automations.common import nullable_decimal as number
 
 TOLERANCE = Decimal("0.01")
 ENTRY_ACCOUNTS = {
@@ -55,6 +52,7 @@ INVENTORY_CODES = {
 }
 
 
+# Modelo de uma linha consolidada de custo por conta contábil.
 @dataclass(frozen=True)
 class Row:
     analysis: str
@@ -71,39 +69,7 @@ class Row:
         return "Conciliado" if abs(self.difference) <= TOLERANCE else "Divergente"
 
 
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    return re.sub(
-        r"[^A-Z0-9]",
-        "",
-        "".join(c for c in text if not unicodedata.combining(c)).upper(),
-    )
-
-
-def number(value: Any) -> Decimal:
-    if value in (None, "", "NULL"):
-        return Decimal()
-    try:
-        return Decimal(str(value))
-    except InvalidOperation:
-        return Decimal(str(value).replace(".", "").replace(",", "."))
-
-
-def money(value: Decimal) -> str:
-    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-
-
-def read(path: Path):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        workbook = load_workbook(path, data_only=True, read_only=True)
-    sheet = workbook.active
-    sheet.reset_dimensions()
-    rows = list(sheet.iter_rows(values_only=True))
-    workbook.close()
-    return rows[0], rows[1:]
-
-
+# Identifica CAP, Inventário e Contabilidade e agrupa seus valores.
 def identify(paths: list[Path]):
     files = {}
     for path in paths:
@@ -134,6 +100,7 @@ def grouped(data, key: str, value: str):
     return result
 
 
+# Compara os custos das fontes e classifica diferenças por conta.
 def analyze(paths: list[Path]) -> list[Row]:
     if len(paths) != 4:
         raise ValueError("Selecione exatamente os quatro arquivos da Atividade 10.")
@@ -180,6 +147,7 @@ def analyze(paths: list[Path]) -> list[Row]:
     return result
 
 
+# Exporta a conferência de custos em Excel e PDF.
 def export_excel(rows: list[Row], path: Path) -> None:
     workbook = Workbook()
     sheet = workbook.active

@@ -5,7 +5,7 @@ from calendar import monthrange
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from itertools import combinations
 from pathlib import Path
 from typing import Any
@@ -18,11 +18,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import decimal_value, integer, money as currency
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
 
+# Estruturas que representam cada dia conciliado e os totais do período.
 @dataclass(frozen=True)
 class ReconciliationRow:
     business_date: date
@@ -54,25 +56,7 @@ class ReconciliationResult:
         return sum(row.status == "Conciliado" for row in self.rows)
 
 
-def currency(value: Decimal) -> str:
-    text = f"R$ {value:,.2f}"
-    return text.replace(",", "_").replace(".", ",").replace("_", ".")
-
-
-def integer(value: int) -> str:
-    return f"{value:,}".replace(",", ".")
-
-
-def decimal_value(value: Any) -> Decimal:
-    if value in (None, ""):
-        return Decimal(0)
-    try:
-        return Decimal(str(value))
-    except InvalidOperation:
-        text = str(value).replace(".", "").replace(",", ".")
-        return Decimal(text)
-
-
+# Converte datas e valores e extrai os movimentos das planilhas de origem.
 def normalize(value: Any) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
     return " ".join(
@@ -187,6 +171,7 @@ def read_values(
         workbook.close()
 
 
+# Consolida Opera e Contabilidade por data e calcula as divergências.
 def reconcile(paths: list[Path], hotel: str = "Cumbuco") -> ReconciliationResult:
     if len(paths) != 2:
         raise ValueError(
@@ -270,6 +255,7 @@ def reconcile(paths: list[Path], hotel: str = "Cumbuco") -> ReconciliationResult
     )
 
 
+# Exporta a conciliação consolidada para Excel e PDF.
 def save_excel_result(result: ReconciliationResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

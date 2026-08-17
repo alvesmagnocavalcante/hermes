@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import re
-import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +14,14 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import identifier as trx_code
+from automations.common import money, normalize_key as normalize, nullable_decimal as decimal_value
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 CHARME_IGNORED_CODES = {"1011"}
 
 
+# Estruturas do resultado diário apresentado na tela e nas exportações.
 @dataclass(frozen=True)
 class DailyRevenueRow:
     trx_code: str
@@ -54,37 +55,7 @@ class DailyRevenueResult:
         return sum(row.transactions > 0 for row in self.rows)
 
 
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    return re.sub(
-        r"[^A-Z0-9]",
-        "",
-        "".join(char for char in text if not unicodedata.combining(char)).upper(),
-    )
-
-
-def trx_code(value: Any) -> str:
-    text = str(value or "").strip()
-    return (
-        str(int(float(text)))
-        if re.fullmatch(r"\d+(?:\.0+)?", text)
-        else normalize(text)
-    )
-
-
-def decimal_value(value: Any) -> Decimal:
-    if value in (None, "", "NULL"):
-        return Decimal()
-    try:
-        return Decimal(str(value))
-    except InvalidOperation:
-        return Decimal(str(value).replace(".", "").replace(",", "."))
-
-
-def money(value: Decimal) -> str:
-    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-
-
+# Identifica os arquivos e lê as regras contábeis e o Journal do Opera.
 def workbook_headers(path: Path) -> list[tuple[str, set[str]]]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -204,6 +175,7 @@ def read_journal(path: Path) -> tuple[dict[str, tuple[int, Decimal]], int]:
         workbook.close()
 
 
+# Compara os códigos do Journal com as regras válidas para o hotel selecionado.
 def analyze(paths: list[Path], hotel: str) -> DailyRevenueResult:
     if len(paths) != 2:
         raise ValueError("Selecione a planilha de códigos de transação e o Journal.")
@@ -236,6 +208,7 @@ def analyze(paths: list[Path], hotel: str) -> DailyRevenueResult:
     return DailyRevenueResult(hotel, rows, journal_rows)
 
 
+# Gera os relatórios finais em Excel e PDF.
 def save_excel(result: DailyRevenueResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

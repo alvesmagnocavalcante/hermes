@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import re
-import unicodedata
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -19,11 +18,15 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import active_sheet_rows as xlsx_rows
+from automations.common import identifier as note_number
+from automations.common import normalize_key as normalize
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
 
+# Modelos das notas do CAP, alteradores de ISS e fontes municipais/nacionais.
 @dataclass(frozen=True)
 class CapNote:
     provider: str
@@ -85,26 +88,8 @@ class AnalysisResult:
     expected_hotel: str
 
 
-def normalize(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    return re.sub(
-        r"[^A-Z0-9]",
-        "",
-        "".join(c for c in text if not unicodedata.combining(c)).upper(),
-    )
-
-
 def cnpj(value: Any) -> str:
     return re.sub(r"\D", "", str(value or ""))
-
-
-def note_number(value: Any) -> str:
-    text = str(value or "").strip()
-    return (
-        str(int(float(text)))
-        if re.fullmatch(r"\d+(?:\.0+)?", text)
-        else normalize(text)
-    )
 
 
 def portal_note_number(value: Any, emission_date: Any) -> str:
@@ -143,21 +128,6 @@ def date_text(value: Any) -> str:
     return text
 
 
-def money(value: Decimal) -> str:
-    return f"R$ {value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-
-
-def xlsx_rows(path: Path):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        workbook = load_workbook(path, data_only=True, read_only=True)
-    sheet = workbook.active
-    sheet.reset_dimensions()
-    rows = list(sheet.iter_rows(values_only=True))
-    workbook.close()
-    return rows[0], rows[1:]
-
-
 def xlsx_columns(path: Path) -> set[str]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -169,6 +139,7 @@ def xlsx_columns(path: Path) -> set[str]:
     return {normalize(value) for value in header if value not in (None, "")}
 
 
+# Reconhece cada layout e converte suas linhas para o modelo externo comum.
 def identify_file(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix == ".csv":
@@ -450,6 +421,7 @@ def unique_cap_match(
     return candidates[0] if len(candidates) == 1 else None
 
 
+# Consolida as fontes e confere CAP, BPM, hotel, valor bruto e ISS retido.
 def analyze(paths: list[Path]) -> AnalysisResult:
     if len(paths) < 3:
         raise ValueError(
@@ -612,6 +584,7 @@ def analyze(paths: list[Path]) -> AnalysisResult:
     )
 
 
+# Organiza resumo, pendências, conciliadas e base completa nas exportações.
 def save_excel(result: AnalysisResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

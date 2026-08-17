@@ -4,7 +4,7 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +17,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from automations.common import decimal_value, integer, optional_money as currency
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
 
+# Modelos das ocorrências do Simphony, Fiscal, SEFAZ e do resultado final.
 @dataclass(frozen=True)
 class SourceEntry:
     value: Decimal
@@ -89,26 +91,6 @@ class CouponResult:
         return sum(row.status.startswith(status) for row in self.rows)
 
 
-def decimal_value(value: Any) -> Decimal:
-    if value in (None, ""):
-        return Decimal()
-    try:
-        return Decimal(str(value))
-    except InvalidOperation:
-        return Decimal(str(value).replace(".", "").replace(",", "."))
-
-
-def currency(value: Decimal | None) -> str:
-    if value is None:
-        return "—"
-    text = f"R$ {value:,.2f}"
-    return text.replace(",", "_").replace(".", ",").replace("_", ".")
-
-
-def integer(value: int) -> str:
-    return f"{value:,}".replace(",", ".")
-
-
 def date_value(value: Any) -> str:
     if value in (None, "", "NULL"):
         return "—"
@@ -134,6 +116,7 @@ def document_type(key: str) -> str:
     )
 
 
+# Detecta o cabeçalho e lê cada uma das três fontes de cupons e notas.
 def workbook_rows(path: Path) -> list[tuple[Any, ...]]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -244,6 +227,7 @@ def read_file(path: Path) -> tuple[str, dict[str, SourceEntry], int]:
     )
 
 
+# Compara chave, valor e cancelamento entre Simphony, Fiscal e SEFAZ.
 def reconcile(paths: list[Path], hotel: str = "Cumbuco") -> CouponResult:
     if len(paths) != 3:
         raise ValueError("Selecione exatamente as planilhas Simphony, Fiscal e SEFAZ.")
@@ -318,6 +302,7 @@ def reconcile(paths: list[Path], hotel: str = "Cumbuco") -> CouponResult:
     )
 
 
+# Exporta a conferência de cupons em Excel e PDF.
 def save_excel(result: CouponResult, path: Path) -> None:
     workbook = Workbook()
     summary = workbook.active

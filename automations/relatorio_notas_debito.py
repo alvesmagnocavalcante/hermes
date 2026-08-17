@@ -41,6 +41,7 @@ STOP_WORDS = (
 )
 
 
+# Modelo consolidado de cada item encontrado nas notas de débito.
 @dataclass(frozen=True)
 class ReportRow:
     hotel: str
@@ -61,6 +62,7 @@ class ReportRow:
         ]
 
 
+# Localiza campos variáveis e converte datas, números e valores das planilhas.
 def normalize(value: Any) -> str:
     text = unicodedata.normalize("NFKD", "" if value is None else str(value))
     return (
@@ -229,6 +231,7 @@ def extract_sheet(sheet: Worksheet, source: Path) -> list[ReportRow]:
     return rows
 
 
+# Consolida todas as abas válidas dos arquivos selecionados.
 def extract(paths: list[Path]) -> list[ReportRow]:
     result: list[ReportRow] = []
     for path in paths:
@@ -241,6 +244,7 @@ def extract(paths: list[Path]) -> list[ReportRow]:
     return result
 
 
+# Exporta o relatório consolidado em Excel e PDF.
 def save_excel(rows: list[ReportRow], path: Path) -> None:
     workbook = Workbook()
     sheet = workbook.active

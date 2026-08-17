@@ -11,6 +11,7 @@ import xlrd
 from openpyxl import Workbook, load_workbook
 
 
+# Constrói uma planilha uniforme a partir de tabelas HTML ou arquivos XLS.
 def _make_sheet(workbook: Workbook, title: str):
     sheet = workbook.create_sheet(title)
     if not hasattr(sheet, "reset_dimensions"):
@@ -159,6 +160,7 @@ def _xls_workbook(content: bytes, source: Path) -> Workbook:
     return workbook
 
 
+# Detecta o formato real do arquivo e devolve um Workbook compatível.
 def load_workbook_compatible(
     filename: str | Path,
     *,
