@@ -90,6 +90,49 @@ def create_city(
 
 
 class ServiceNotesTest(TestCase):
+    def test_matches_portal_number_with_national_prefix_to_cap(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            cap = root / "cap.xlsx"
+            tax = root / "tax.xlsx"
+            portal = root / "portal.xlsx"
+            document = "39906832000107"
+
+            create_cap(cap, document, "119115", Decimal("50"))
+            create_tax(tax)
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(
+                [
+                    "Número NFS-e",
+                    "Retenção ISSQN",
+                    "Data Geração",
+                    "CNPJ/CPF Prestador",
+                    "Nome Prestador",
+                    "Valor do Serviço (R$)",
+                    "Valor do ISSQN (R$)",
+                ]
+            )
+            sheet.append(
+                [
+                    "2600000119115",
+                    "1 - Não retido",
+                    "01/08/2026",
+                    document,
+                    "IFT SERVICOS DE TELECOMUNICACOES LTDA",
+                    50,
+                    0,
+                ]
+            )
+            workbook.save(portal)
+
+            rows = analyze([cap, tax, portal]).rows
+
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].number, "119115")
+            self.assertEqual(rows[0].cap_gross, Decimal("50"))
+            self.assertIn("CAP + Portal Nacional", rows[0].source)
+
     def test_recognizes_municipal_services_taken_layout(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "NF-141111-072026-ServicosTomados.xlsx"
@@ -422,7 +465,7 @@ class ServiceNotesTest(TestCase):
                     "R$ 9.803,47",
                     "R$ 9.803,47",
                     0,
-                    "R$ 0,00",
+                    "R$ 51,92",
                     "NÃO",
                 ]
             )
@@ -435,3 +478,5 @@ class ServiceNotesTest(TestCase):
             self.assertEqual(rows[0]["cnpj"], "21002293000116")
             self.assertEqual(rows[0]["provider"], "WEMBLEY VIAGENS E TURISMO LTDA")
             self.assertEqual(rows[0]["gross"], "R$ 9.803,47")
+            self.assertEqual(rows[0]["iss"], 0)
+            self.assertEqual(rows[0]["source"], "Prefeitura")

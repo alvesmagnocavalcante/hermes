@@ -227,7 +227,7 @@ A quantidade de arquivos pode mudar conforme o hotel e o município.
 - **Hotel divergente:** hotel do CAP diferente do hotel analisado;
 - **ISS divergente:** ISS da Prefeitura diferente do ISS do CAP.
 
-O ISS do Portal Nacional é considerado quando o relatório indicar retenção. Para notas de São Paulo, o ISS da planilha municipal não entra na comparação. Uma nota encontrada somente no Portal Nacional continua sinalizada como ausente na Prefeitura.
+O ISS só é considerado retido quando a fonte indicar retenção; se a Prefeitura informar **ISS retido = Não**, o valor do ISS não gera pendência no CAP. O prefixo nacional incluído em alguns números de NFS-e é removido automaticamente para localizar o número correspondente no CAP. Para notas de São Paulo, o ISS da planilha municipal não entra na comparação. Uma nota encontrada somente no Portal Nacional continua sinalizada como ausente na Prefeitura.
 
 **Saídas:** PDF de resumo e Excel organizado em quatro abas:
 

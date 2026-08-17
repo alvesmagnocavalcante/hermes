@@ -107,6 +107,15 @@ def note_number(value: Any) -> str:
     )
 
 
+def portal_note_number(value: Any, emission_date: Any) -> str:
+    number = note_number(value)
+    issued = date_text(emission_date)
+    year = issued[-2:] if re.fullmatch(r"\d{2}/\d{2}/\d{4}", issued) else ""
+    if year and len(number) == 13 and number.startswith(year):
+        return note_number(number[2:])
+    return number
+
+
 def decimal_value(value: Any) -> Decimal:
     if value in (None, "", "NULL", "-", "—"):
         return Decimal()
@@ -256,7 +265,9 @@ def external_xlsx(path: Path) -> list[dict[str, Any]]:
             result.append(
                 {
                     "source": "Portal Nacional",
-                    "number": data["Número NFS-e"],
+                    "number": portal_note_number(
+                        data["Número NFS-e"], data.get("Data Geração")
+                    ),
                     "date": data.get("Data Geração"),
                     "cnpj": data.get("CNPJ/CPF Prestador"),
                     "provider": data.get("Nome Prestador"),
@@ -338,6 +349,10 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         "CPFCNPJPRESTADOR",
         "RAZAOSOCIALNOMEDOPRESTADOR",
         "VALORDOSSERVICOS",
+    }.issubset(header) or {
+        "DOCPRESTADOR",
+        "NOMEPRESTADOR",
+        "VALORFATURADO",
     }.issubset(header)
     source = (
         "Prefeitura"
@@ -377,6 +392,10 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
         if not number or not cnpj(document) or not provider:
             continue
         provider = re.sub(r"^\s*[\d./-]{8,}\s+", "", str(provider)).strip()
+        iss = value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS")
+        retained = normalize(value(row, "ISSRETIDO", "RETENCAOISSQN"))
+        if retained in {"NAO", "N", "0"} or "NAORETIDO" in retained:
+            iss = 0
         result.append(
             {
                 "source": source,
@@ -392,7 +411,7 @@ def external_html_xls(path: Path) -> list[dict[str, Any]]:
                     "VALORBRUTO",
                     "VALOR",
                 ),
-                "iss": value(row, "ISSDEVIDO", "VALORDOISS", "VALORISS"),
+                "iss": iss,
             }
         )
     if not result:
