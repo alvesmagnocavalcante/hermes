@@ -4,9 +4,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
-from automations.conciliacao_receita import reconcile
+from automations.conciliacao_receita import reconcile, save_excel_result
 
 
 class ReconcileRevenueTest(TestCase):
@@ -75,8 +75,20 @@ class ReconcileRevenueTest(TestCase):
     def test_other_hotels_keep_tourism_fees_and_damage(self):
         result = reconcile([self.accounting, self.journal], "Cumbuco")
 
+        self.assertEqual(result.hotel, "Cumbuco")
         self.assertEqual(result.opera_total, Decimal("1270"))
         row = next(
             row for row in result.rows if row.business_date == date(2026, 7, 13)
         )
         self.assertEqual(row.difference, Decimal("-115"))
+
+    def test_export_identifies_selected_hotel(self):
+        result = reconcile([self.accounting, self.journal], "Charme")
+        output = Path(self.temp_dir.name) / "resultado.xlsx"
+
+        save_excel_result(result, output)
+
+        workbook = load_workbook(output, data_only=True)
+        self.assertEqual(workbook["Resumo"]["B2"].value, "Charme")
+        self.assertEqual(workbook["Conciliação"]["B1"].value, "Charme")
+        workbook.close()

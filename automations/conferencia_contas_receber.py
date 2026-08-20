@@ -326,7 +326,7 @@ def save_pdf(result: ReceivablesResult, path: Path) -> None:
         rightMargin=12 * mm,
         topMargin=12 * mm,
         bottomMargin=12 * mm,
-        title="Conferência do Contas a Receber",
+        title=f"Conferência do Contas a Receber — {result.hotel}",
     )
     client_diff = result.client_financial_total - result.client_accounting_total
     data = [
@@ -365,7 +365,10 @@ def save_pdf(result: ReceivablesResult, path: Path) -> None:
     )
     document.build(
         [
-            Paragraph("Conferência do Contas a Receber", styles["Title"]),
+            Paragraph(
+                f"Conferência do Contas a Receber — {result.hotel}",
+                styles["Title"],
+            ),
             Spacer(1, 6 * mm),
             table,
         ]

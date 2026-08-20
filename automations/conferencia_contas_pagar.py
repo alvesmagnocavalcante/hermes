@@ -365,7 +365,7 @@ def save_pdf(result: PayablesResult, path: Path) -> None:
         rightMargin=12 * mm,
         topMargin=12 * mm,
         bottomMargin=12 * mm,
-        title="Conferência do Contas a Pagar",
+        title=f"Conferência do Contas a Pagar — {result.hotel}",
     )
     data = [["Conferência", "Financeiro", "Contabilidade", "Diferença", "Status"]]
     for check in (result.suppliers, result.advances, *result.taxes):
@@ -394,7 +394,10 @@ def save_pdf(result: PayablesResult, path: Path) -> None:
     )
     document.build(
         [
-            Paragraph("Conferência do Contas a Pagar", styles["Title"]),
+            Paragraph(
+                f"Conferência do Contas a Pagar — {result.hotel}",
+                styles["Title"],
+            ),
             Spacer(1, 6 * mm),
             table,
         ]

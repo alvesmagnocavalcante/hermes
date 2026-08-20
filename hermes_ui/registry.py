@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import importlib
+import unicodedata
 from dataclasses import dataclass, fields, is_dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+
+from automations.common import append_source_workbooks
+
+
+SOURCE_TABS_AUTOMATIONS = {"receita", "cupons", "receber", "pagar", "custos"}
 
 
 @dataclass(frozen=True)
@@ -32,7 +38,26 @@ class AutomationSpec:
         function = getattr(importlib.import_module(self.module), self.analyzer)
         return function(paths, hotel) if self.hotel_option else function(paths)
 
-    def export(self, result: Any, output: Path, output_format: str) -> None:
+    def output_filename(
+        self, result: Any, selected_hotel: str, output_format: str
+    ) -> str:
+        extension = {"Excel": "xlsx", "PDF": "pdf", "CSV": "csv"}[output_format]
+        if not self.hotel_option:
+            return f"{self.key}_resultado.{extension}"
+        report_hotel = str(getattr(result, "hotel", selected_hotel))
+        decomposed = unicodedata.normalize("NFKD", report_hotel)
+        hotel = "".join(
+            char for char in decomposed if not unicodedata.combining(char)
+        ).casefold().replace(" ", "_")
+        return f"{self.key}_{hotel}_resultado.{extension}"
+
+    def export(
+        self,
+        result: Any,
+        output: Path,
+        output_format: str,
+        source_paths: tuple[Path, ...] = (),
+    ) -> None:
         module = importlib.import_module(self.module)
         names = {
             "Excel": "save_excel",
@@ -46,6 +71,8 @@ class AutomationSpec:
             function_name = f"export_{output_format.lower()}"
         function = getattr(module, function_name)
         function(result, output)
+        if output_format == "Excel" and self.key in SOURCE_TABS_AUTOMATIONS:
+            append_source_workbooks(output, source_paths)
 
     def rows(self, result: Any) -> list[Any]:
         if self.key == "receber":

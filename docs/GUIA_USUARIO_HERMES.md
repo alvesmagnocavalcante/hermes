@@ -83,7 +83,7 @@ O botão **Limpar** apaga somente os dados exibidos na tela. Ele não exclui as 
 
 **Como ler:** cada documento aparece como conciliado ou divergente. Uma divergência significa que o documento está ausente em uma fonte ou possui valores diferentes.
 
-**Saídas:** Excel detalhado e PDF de resumo.
+**Saídas:** Excel detalhado e PDF de resumo. O nome do hotel selecionado aparece no relatório e no nome do arquivo, por exemplo: `receita_charme_resultado.xlsx`.
 
 ### 4.2 Conciliação da Receita de Diárias
 
@@ -98,7 +98,7 @@ O botão **Limpar** apaga somente os dados exibidos na tela. Ele não exclui as 
 
 **Como ler:** a tabela mostra cada código, a quantidade de lançamentos e o valor encontrado. Um código sem movimento é uma informação, não necessariamente um erro.
 
-**Saídas:** Excel detalhado e PDF de resumo.
+**Saídas:** Excel detalhado e PDF de resumo. O nome do hotel selecionado aparece no relatório e no nome do arquivo, por exemplo: `diarias_charme_resultado.xlsx`.
 
 ### 4.3 Lançamento da Folha de Pagamento
 
@@ -297,10 +297,10 @@ A tabela mostra quais clientes ou contas formam cada diferença.
 
 **Como ler:**
 
-- **Entradas:** compara CAP com Contabilidade;
+- **Entradas:** compara o CAP somente com os lançamentos contábeis de notas fiscais de mercadoria de terceiros. Transferências, requisições, ajustes e integrações de custo não entram nessa comparação;
 - **Saldo final:** compara Inventário com Contabilidade.
 
-A tabela mostra as contas ou grupos de estoque responsáveis pelas diferenças.
+A tabela mostra as contas ou grupos de estoque responsáveis pelas diferenças. No Excel, as duas conferências ficam separadas nas abas **Entradas** e **Saldo final**.
 
 **Saídas:** Excel detalhado e PDF de resumo.
 
@@ -309,6 +309,10 @@ A tabela mostra as contas ou grupos de estoque responsáveis pelas diferenças.
 ### Excel
 
 Use quando precisar analisar todos os registros, aplicar filtros ou guardar o resultado detalhado.
+
+Quando a atividade possuir o campo **Hotel**, o hotel selecionado será exibido dentro do relatório e no nome do arquivo exportado.
+
+Na **Conciliação de Receita**, **Conferência dos Cupons**, **Conferência do Contas a Receber**, **Conferência do Contas a Pagar** e **Custos da Mercadoria Vendida**, o arquivo baixado também contém uma cópia das planilhas usadas na conferência. As abas de resultado ficam primeiro; as abas dos arquivos-base aparecem ao lado, com o nome do arquivo de origem. Use essas abas para consultar os dados que geraram uma divergência sem precisar procurar novamente os arquivos enviados.
 
 ### PDF
 

@@ -46,6 +46,7 @@ class ReconciliationResult:
     rows: list[ReconciliationRow]
     cmflex_total: Decimal
     opera_total: Decimal
+    hotel: str = "Cumbuco"
 
     @property
     def difference(self) -> Decimal:
@@ -252,6 +253,7 @@ def reconcile(paths: list[Path], hotel: str = "Cumbuco") -> ReconciliationResult
         rows,
         sum((row.cmflex for row in rows), Decimal()),
         sum((row.opera for row in rows), Decimal()),
+        hotel,
     )
 
 
@@ -261,6 +263,7 @@ def save_excel_result(result: ReconciliationResult, path: Path) -> None:
     summary = workbook.active
     summary.title = "Resumo"
     summary.append(["Indicador", "Valor"])
+    summary.append(["Hotel", result.hotel])
     summary.append(["Total Contabilidade (Movimento)", float(result.cmflex_total)])
     summary.append(["Total Opera (CASHIER_DEBIT)", float(result.opera_total)])
     summary.append(["Diferença", float(result.difference)])
@@ -270,10 +273,12 @@ def save_excel_result(result: ReconciliationResult, path: Path) -> None:
     summary.column_dimensions["B"].width = 20
     for cell in summary[1]:
         cell.style = "Headline 4"
-    for cell in summary["B"][1:4]:
+    for cell in summary["B"][2:5]:
         cell.number_format = "R$ #,##0.00"
 
     details = workbook.create_sheet("Conciliação")
+    details.append(["Hotel", result.hotel])
+    details.append([])
     details.append(
         [
             "Data",
@@ -295,12 +300,12 @@ def save_excel_result(result: ReconciliationResult, path: Path) -> None:
                 row.status,
             ]
         )
-    for cell in details[1]:
+    for cell in details[3]:
         cell.style = "Headline 4"
-    for cell in details["A"][1:]:
+    for cell in details["A"][3:]:
         cell.number_format = "dd/mm/yyyy"
     for column in ("B", "C", "D"):
-        for cell in details[column][1:]:
+        for cell in details[column][3:]:
             cell.number_format = "R$ #,##0.00"
     for column, width in {
         "A": 16,
@@ -311,8 +316,8 @@ def save_excel_result(result: ReconciliationResult, path: Path) -> None:
         "F": 16,
     }.items():
         details.column_dimensions[column].width = width
-    details.auto_filter.ref = details.dimensions
-    details.freeze_panes = "A2"
+    details.auto_filter.ref = f"A3:F{details.max_row}"
+    details.freeze_panes = "A4"
     workbook.save(path)
 
 
@@ -330,6 +335,7 @@ def save_pdf_result(result: ReconciliationResult, path: Path) -> None:
     divergent = len(result.rows) - result.reconciled
     summary_data = [
         [
+            "Hotel",
             "Total Contabilidade",
             "Total Opera",
             "Diferença",
@@ -337,6 +343,7 @@ def save_pdf_result(result: ReconciliationResult, path: Path) -> None:
             "Divergentes",
         ],
         [
+            result.hotel,
             currency(result.cmflex_total),
             currency(result.opera_total),
             currency(result.difference),
@@ -344,9 +351,7 @@ def save_pdf_result(result: ReconciliationResult, path: Path) -> None:
             integer(divergent),
         ],
     ]
-    summary = Table(
-        summary_data, colWidths=[48 * mm, 48 * mm, 48 * mm, 35 * mm, 35 * mm]
-    )
+    summary = Table(summary_data, colWidths=[36 * mm, 42 * mm, 42 * mm, 42 * mm, 34 * mm, 34 * mm])
     summary.setStyle(
         TableStyle(
             [

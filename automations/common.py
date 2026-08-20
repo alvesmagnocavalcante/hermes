@@ -3,9 +3,12 @@ from __future__ import annotations
 import re
 import unicodedata
 import warnings
+from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+
+from openpyxl import load_workbook as load_openpyxl_workbook
 
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
@@ -79,3 +82,56 @@ def active_sheet_rows(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]
     rows = list(sheet.iter_rows(values_only=True))
     workbook.close()
     return rows[0], rows[1:]
+
+
+_INVALID_SHEET_TITLE = re.compile(r"[\\/*?:\[\]]")
+
+
+def _source_sheet_title(
+    file_stem: str,
+    source_title: str,
+    multiple_sheets: bool,
+    existing: set[str],
+) -> str:
+    raw_title = f"{file_stem} - {source_title}" if multiple_sheets else file_stem
+    base = _INVALID_SHEET_TITLE.sub("-", raw_title).strip(" '") or "Arquivo base"
+    candidate = base[:31]
+    suffix = 2
+    while candidate.casefold() in existing:
+        marker = f" ({suffix})"
+        candidate = f"{base[: 31 - len(marker)]}{marker}"
+        suffix += 1
+    existing.add(candidate.casefold())
+    return candidate
+
+
+# Acrescenta ao resultado uma cópia consultável de cada aba dos arquivos-base.
+def append_source_workbooks(output: Path, source_paths: Iterable[Path]) -> None:
+    paths = [Path(path) for path in source_paths]
+    if not paths:
+        return
+
+    result = load_openpyxl_workbook(output)
+    existing = {title.casefold() for title in result.sheetnames}
+    try:
+        for path in paths:
+            source = load_workbook(path, data_only=True, read_only=True)
+            try:
+                multiple_sheets = len(source.worksheets) > 1
+                for source_sheet in source.worksheets:
+                    if hasattr(source_sheet, "reset_dimensions"):
+                        source_sheet.reset_dimensions()
+                    title = _source_sheet_title(
+                        path.stem,
+                        source_sheet.title,
+                        multiple_sheets,
+                        existing,
+                    )
+                    target = result.create_sheet(title)
+                    for row in source_sheet.iter_rows(values_only=True):
+                        target.append(list(row))
+            finally:
+                source.close()
+        result.save(output)
+    finally:
+        result.close()

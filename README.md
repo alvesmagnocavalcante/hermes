@@ -142,7 +142,11 @@ cada operação.
 | Notas de Serviços Tomados | 5 | Compara Portal Nacional, prefeituras, CAP, BPM, hotel e ISS retido. Normaliza o prefixo nacional do número da NFS-e e respeita o indicador explícito de retenção. O Excel separa pendências, conciliadas e base completa. |
 | Contas a Receber | 6 | Confere clientes, notas a faturar e comissões contra o financeiro. |
 | Contas a Pagar | 8 | Confere fornecedores, adiantamentos e impostos contra o financeiro. |
-| Custos da Mercadoria Vendida | 4 | Compara entradas do CAP e saldos do inventário com a contabilidade. |
+| Custos da Mercadoria Vendida | 4 | Executa duas conferências separadas: entradas do CAP contra notas de mercadoria da Contabilidade e saldo final do Inventário contra a Contabilidade. |
+
+Nos arquivos Excel exportados por **Conciliação de Receita**, **Conferência dos Cupons**, **Contas a Receber**, **Contas a Pagar** e **Custos da Mercadoria Vendida**, as abas de análise aparecem primeiro e todas as abas das planilhas-base selecionadas são incluídas logo depois para consulta. Essa inclusão não altera as regras nem os resultados das conferências.
+
+Toda automação que possui seleção de hotel inclui o hotel escolhido dentro do relatório e no nome do arquivo exportado.
 
 ### Atividade 2 — Folha de pagamento
 

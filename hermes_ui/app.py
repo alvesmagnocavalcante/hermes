@@ -16,6 +16,7 @@ import flet as ft
 
 from hermes_ui.registry import (
     SPECS,
+    SOURCE_TABS_AUTOMATIONS,
     AutomationSpec,
     format_value,
     record_status,
@@ -88,6 +89,8 @@ class AutomationView:
         self.set_status = set_status
         self.result: Any = None
         self.records: list[Any] = []
+        self.source_paths: tuple[Path, ...] = ()
+        self.source_payloads: tuple[tuple[str, bytes], ...] = ()
         self.current_page = 0
         self.search = ft.TextField(
             label="Buscar nos resultados",
@@ -328,6 +331,8 @@ class AutomationView:
             return
         self.select_button.disabled = True
         self.export_button.disabled = True
+        self.source_paths = ()
+        self.source_payloads = ()
         started_at = time.monotonic()
         self.page.update()
         try:
@@ -345,11 +350,17 @@ class AutomationView:
                         self.result = await asyncio.to_thread(
                             self.spec.analyze, paths, self.selected_hotel
                         )
+                        if self.spec.key in SOURCE_TABS_AUTOMATIONS:
+                            self.source_payloads = tuple(
+                                (path.name, path.read_bytes()) for path in paths
+                            )
                 else:
                     paths = [Path(file.path) for file in files if file.path]
                     self.result = await asyncio.to_thread(
                         self.spec.analyze, paths, self.selected_hotel
                     )
+                    if self.spec.key in SOURCE_TABS_AUTOMATIONS:
+                        self.source_paths = tuple(paths)
             self.records = self.spec.rows(self.result)
         except Exception as error:
             LOGGER.exception("Falha na automação %s", self.spec.key)
@@ -410,14 +421,13 @@ class AutomationView:
     async def _export(self, _event=None) -> None:
         if self.result is None:
             return
-        extensions = {"Excel": "xlsx", "PDF": "pdf", "CSV": "csv"}
-        extension = extensions[self.output_format.value]
-        report_hotel = getattr(self.result, "hotel", self.selected_hotel)
-        hotel = normalized(report_hotel).replace(" ", "_")
-        file_name = (
-            f"{self.spec.key}_{hotel}_resultado.{extension}"
-            if self.spec.key in {"receber", "pagar", "cupons"}
-            else f"{self.spec.key}_resultado.{extension}"
+        extension = {"Excel": "xlsx", "PDF": "pdf", "CSV": "csv"}[
+            self.output_format.value
+        ]
+        file_name = self.spec.output_filename(
+            self.result,
+            self.selected_hotel,
+            self.output_format.value,
         )
         picker = ft.FilePicker()
         self.export_button.disabled = True
@@ -432,12 +442,21 @@ class AutomationView:
                     with tempfile.TemporaryDirectory(
                         prefix="hermes_export_"
                     ) as temp_dir:
-                        path = Path(temp_dir) / file_name
+                        export_dir = Path(temp_dir)
+                        path = export_dir / file_name
+                        source_dir = export_dir / "fontes"
+                        source_dir.mkdir()
+                        source_paths = []
+                        for name, payload in self.source_payloads:
+                            source_path = source_dir / name
+                            source_path.write_bytes(payload)
+                            source_paths.append(source_path)
                         await asyncio.to_thread(
                             self.spec.export,
                             self.result,
                             path,
                             self.output_format.value,
+                            tuple(source_paths),
                         )
                         content = await asyncio.to_thread(path.read_bytes)
                     await picker.save_file(
@@ -460,7 +479,11 @@ class AutomationView:
                     if path.suffix.lower() != f".{extension}":
                         path = path.with_suffix(f".{extension}")
                     await asyncio.to_thread(
-                        self.spec.export, self.result, path, self.output_format.value
+                        self.spec.export,
+                        self.result,
+                        path,
+                        self.output_format.value,
+                        self.source_paths,
                     )
         except Exception as error:
             LOGGER.exception("Falha na exportação %s", self.spec.key)
@@ -1002,6 +1025,8 @@ class AutomationView:
     def _clear(self, _event=None) -> None:
         self.result = None
         self.records = []
+        self.source_paths = ()
+        self.source_payloads = ()
         self.current_page = 0
         self.search.value = ""
         self.status_filter.value = "Todos"
