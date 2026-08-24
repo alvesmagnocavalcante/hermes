@@ -125,6 +125,8 @@ O botão **Limpar** apaga somente os dados exibidos na tela. Ele não exclui as 
 
 **Saídas:** Excel para conferência, PDF de resumo e CSV para importação no CMFlex.
 
+O modelo padrão reconhece os eventos `271` (Ajuda de transporte estagiário), `311` (13º Salário Adiantamento) e `359` (Horas Férias Noturnas).
+
 Os valores de plano odontológico e plano de saúde não são incluídos automaticamente. Eles devem ser preenchidos manualmente somente após o recebimento das notas fiscais.
 
 Antes de importar o CSV, confira empresa, competência, contas, centros de custo e totais.
@@ -156,6 +158,8 @@ Se aparecer **período incompleto**, o Journal não possui todas as datas dos cu
 - relatório da Prefeitura.
 
 **Como ler:** a tabela compara o RPS e o valor nas três fontes. A coluna **Explicação** informa claramente o motivo de cada pendência.
+
+O XML do Opera reconhece os códigos já parametrizados e também os serviços adicionais de diárias, early check-in, late check-out, cama extra, hóspede adicional, abertura de porta, garçom exclusivo, SPA, shooting, pulseira, chave, lanterna, rolha, toalha, ofurô, bolsa personalizada, multas e respectivos ajustes.
 
 Se aparecer **fora do período**, gere um relatório Fiscal que inclua a data indicada antes de considerar o registro como erro.
 

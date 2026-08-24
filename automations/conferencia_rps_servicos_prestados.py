@@ -95,6 +95,72 @@ SERVICE_CODE_PROFILES = {
     "Charme": CHARME_SERVICE_CODES,
 }
 
+# Serviços adicionais identificados pelo nome no XML do Opera, inclusive ajustes.
+ADDITIONAL_SERVICE_DESCRIPTIONS = frozenset(
+    normalize(description)
+    for description in (
+        "Diaria",
+        "Diaria Manual",
+        "Diaria No Show",
+        "Early Check In",
+        "Late Check Out",
+        "Cama Extra / Berco",
+        "Hospede Adicional",
+        "Ajuste Diaria Manual",
+        "Ajuste Early Check In",
+        "Ajuste Late Check Out",
+        "Ajuste Cama Extra / Berco",
+        "Ajuste Hospede Adicional",
+        "Serviço Abertura de Porta",
+        "Serviço Garçom Exclusivo",
+        "SPA-VINOPERFECT",
+        "SPA MASSAGEM",
+        "SPA-RESVERATROL LIFT",
+        "SPA-VINOPURE",
+        "SPA-TRATAMENTO CORPORAL RELAXANTE",
+        "SPA-CARMEL CORPORAL",
+        "SPA-CRUSCH CARBERNET CORPORAL",
+        "SPA MULTA CANCELAMENTO",
+        "SPA-VINOSOURCE",
+        "Ajuste Spa",
+        "Ajuste Shooting",
+        "Pulseira",
+        "Chave",
+        "Lanterna",
+        "Ajuste Lanterna",
+        "Rolha",
+        "Taxa Toalha",
+        "Ajuste Taxa Toalha",
+        "Shooting",
+        "Ajuste Rolha",
+        "Spa - Vinosource",
+        "Spa - Vinopure",
+        "Spa - Vinoperfct Facial",
+        "Spa - Vineactive Facial",
+        "Spa - Reveratrol Lift Facial",
+        "Spa - Relaxante Corporal",
+        "Spa - Fleur Vigne Corporal",
+        "Spa - Crushed Carbenet Corporal",
+        "Spa - Carmel Corporal",
+        "Ofuro",
+        "Multa Spa",
+        "Bolsa Personalizada Carmel",
+        "Ajuste Spa - Vinosource",
+        "Ajuste Spa - Vinopure",
+        "Ajuste Spa - Vinoperfct Facial",
+        "Ajuste Spa - Vineactive Facial",
+        "Ajuste Spa - Reveratrol Lift Facial",
+        "Ajuste Spa - Relaxante Corporal",
+        "Ajuste Spa - Fleur Vigne Corporal",
+        "Ajuste Spa - Crushed Carbenet Corporal",
+        "Ajuste Spa - Carmel Corporal",
+        "Ajuste Ofuro",
+        "Ajuste Multa Spa",
+        "Ajuste Bolsa Personalizada Carmel",
+        "Diversos",
+    )
+)
+
 
 # Modelos de RPS lidos do Opera, Fiscal e Prefeitura e do resultado comparado.
 @dataclass(frozen=True)
@@ -344,12 +410,15 @@ def read_opera(
         total = Decimal()
         descriptions = set()
         for transaction in bill.findall(".//G_TRX_NO"):
-            if transaction.findtext("TRX_CODE") not in service_codes:
-                continue
-            total += decimal_value(transaction.findtext("FT_DEBIT"))
             description = re.sub(
                 r"\s+", " ", transaction.findtext("TRANSACTION_DESCRIPTION") or ""
             ).strip()
+            if (
+                transaction.findtext("TRX_CODE") not in service_codes
+                and normalize(description) not in ADDITIONAL_SERVICE_DESCRIPTIONS
+            ):
+                continue
+            total += decimal_value(transaction.findtext("FT_DEBIT"))
             if description:
                 descriptions.add(description)
         if not total:

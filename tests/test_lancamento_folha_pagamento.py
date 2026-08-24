@@ -5,15 +5,25 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from automations.lancamento_folha_pagamento import (
+    DEFAULT_TEMPLATE,
     Mappings,
     PostingRow,
     build_rates,
     identify_file,
+    read_mappings,
     required_sources,
 )
 
 
 class PayrollSourceSelectionTest(TestCase):
+    def test_default_template_contains_additional_event_mappings(self):
+        mappings = read_mappings(DEFAULT_TEMPLATE)
+
+        self.assertEqual(mappings.events["271"], ("302020101", "201010101"))
+        self.assertEqual(mappings.events["311"], ("101020104", "201010101"))
+        self.assertEqual(mappings.events["359"], ("201010601", "201010103"))
+        self.assertIn("AJUDADETRANSPORTEESTAGIARIO", mappings.descriptions)
+
     def test_does_not_generate_health_and_dental_plan_rates(self):
         monthly = [
             PostingRow(
