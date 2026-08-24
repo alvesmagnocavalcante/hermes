@@ -5,6 +5,7 @@ description = "Painel web e desktop modular para automações de planilhas"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "bcrypt>=5.0.0",
     "flet[all,desktop]>=0.86.1,<0.87",
     "openpyxl>=3.1.5",
     "reportlab>=4.4.2",

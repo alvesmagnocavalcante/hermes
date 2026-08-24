@@ -14,6 +14,11 @@ from typing import Any
 
 import flet as ft
 
+from hermes_ui.auth import (
+    LOGIN_ATTEMPT_LIMITER,
+    AuthenticationConfigurationError,
+    verify_credentials,
+)
 from hermes_ui.registry import (
     SPECS,
     SOURCE_TABS_AUTOMATIONS,
@@ -43,6 +48,10 @@ LOGO_SOURCE = "data:image/png;base64," + base64.b64encode(
 ).decode("ascii")
 WINDOW_ICON_PATH = ASSETS_DIR / "icon_windows.ico"
 LOGGER = logging.getLogger("hermes")
+HTPASSWD_PATH = Path(
+    os.environ.get("HERMES_HTPASSWD_PATH", ROOT_DIR / "nginx" / ".htpasswd")
+).resolve()
+AUTHENTICATED_KEY = "hermes_authenticated"
 
 
 def normalized(value: str) -> str:
@@ -1337,5 +1346,165 @@ class HermesApp:
         self.progress.value = progress
 
 
+class AuthenticatedHermesSession:
+    """Controla o login transitório de uma sessão Flet no navegador."""
+
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.username = ft.TextField(
+            label="Usuário",
+            prefix_icon=ft.Icons.PERSON_OUTLINE,
+            autofocus=True,
+            width=360,
+            on_submit=self._login,
+        )
+        self.password = ft.TextField(
+            label="Senha",
+            prefix_icon=ft.Icons.LOCK_OUTLINE,
+            password=True,
+            can_reveal_password=True,
+            width=360,
+            on_submit=self._login,
+        )
+        self.message = ft.Text("", color=RED, size=12, visible=False)
+        self.login_button = ft.FilledButton(
+            "Entrar",
+            icon=ft.Icons.LOGIN,
+            bgcolor=BLUE,
+            color=ft.Colors.WHITE,
+            width=360,
+            on_click=self._login,
+        )
+
+    # Configuração visual compartilhada pela tela de login e pelo painel.
+    def start(self) -> None:
+        self.page.title = "HERMES"
+        self.page.window.icon = str(WINDOW_ICON_PATH)
+        self.page.theme_mode = ft.ThemeMode.DARK
+        self.page.bgcolor = "#0D1014"
+        self.page.padding = 0
+        self.page.theme = ft.Theme(color_scheme_seed=BLUE, font_family="Segoe UI")
+        self.page.on_connect = self._on_connect
+        self.page.on_disconnect = self._on_disconnect
+        self.page.on_close = self._on_close
+        self._render_login()
+
+    def _client_key(self) -> str:
+        return self.page.client_ip or f"session:{self.page.session.id}"
+
+    def _is_authenticated(self) -> bool:
+        return self.page.session.store.get(AUTHENTICATED_KEY) is True
+
+    # Valida o arquivo htpasswd sem persistir usuário ou senha no navegador.
+    def _login(self, _event=None) -> None:
+        client_key = self._client_key()
+        retry_after = LOGIN_ATTEMPT_LIMITER.retry_after(client_key)
+        if retry_after:
+            self._show_login_error(
+                f"Muitas tentativas. Tente novamente em {retry_after} segundos."
+            )
+            return
+
+        username = (self.username.value or "").strip()
+        password = self.password.value or ""
+        if not username or not password:
+            self._show_login_error("Informe usuário e senha.")
+            return
+
+        try:
+            authenticated = verify_credentials(HTPASSWD_PATH, username, password)
+        except AuthenticationConfigurationError as error:
+            LOGGER.exception("Falha na configuração da autenticação")
+            self._show_login_error(str(error))
+            return
+
+        self.password.value = ""
+        if not authenticated:
+            retry_after = LOGIN_ATTEMPT_LIMITER.record_failure(client_key)
+            LOGGER.warning("Login recusado para %s a partir de %s", username, client_key)
+            message = "Usuário ou senha inválidos."
+            if retry_after:
+                message = (
+                    f"Muitas tentativas. Tente novamente em {retry_after} segundos."
+                )
+            self._show_login_error(message)
+            return
+
+        LOGIN_ATTEMPT_LIMITER.record_success(client_key)
+        self.page.session.store.set(AUTHENTICATED_KEY, True)
+        LOGGER.info("Login autorizado para %s a partir de %s", username, client_key)
+        self._render_application()
+
+    def _show_login_error(self, message: str) -> None:
+        self.message.value = message
+        self.message.visible = True
+        self.password.value = ""
+        self.page.update()
+
+    def _render_login(self) -> None:
+        self.page.clean()
+        self.message.value = ""
+        self.message.visible = False
+        self.page.add(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Image(
+                            src=LOGO_SOURCE,
+                            width=72,
+                            height=72,
+                            fit=ft.BoxFit.CONTAIN,
+                        ),
+                        ft.Text("HERMES", size=28, weight=ft.FontWeight.BOLD),
+                        ft.Text("Acesso às automações", color=MUTED, size=13),
+                        ft.Container(height=8),
+                        self.username,
+                        self.password,
+                        self.message,
+                        self.login_button,
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=12,
+                    tight=True,
+                ),
+                width=430,
+                padding=ft.Padding(left=34, top=34, right=34, bottom=38),
+                bgcolor=CARD,
+                border=ft.Border.all(1, BORDER),
+                border_radius=18,
+                shadow=ft.BoxShadow(
+                    blur_radius=30,
+                    color="#66000000",
+                    offset=ft.Offset(0, 12),
+                ),
+            )
+        )
+        self.page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        self.page.vertical_alignment = ft.MainAxisAlignment.CENTER
+        self.page.update()
+
+    def _render_application(self) -> None:
+        self.page.clean()
+        self.page.horizontal_alignment = ft.CrossAxisAlignment.START
+        self.page.vertical_alignment = ft.MainAxisAlignment.START
+        HermesApp(self.page).build()
+
+    # Qualquer perda da conexão invalida o login antes de uma reconexão.
+    def _clear_authentication(self) -> None:
+        store = self.page.session.store
+        if store.contains_key(AUTHENTICATED_KEY):
+            store.remove(AUTHENTICATED_KEY)
+
+    def _on_disconnect(self, _event=None) -> None:
+        self._clear_authentication()
+
+    def _on_close(self, _event=None) -> None:
+        self._clear_authentication()
+
+    def _on_connect(self, _event=None) -> None:
+        if not self._is_authenticated():
+            self._render_login()
+
+
 def main(page: ft.Page) -> None:
-    HermesApp(page).build()
+    AuthenticatedHermesSession(page).start()

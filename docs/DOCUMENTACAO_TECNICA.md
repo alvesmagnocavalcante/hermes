@@ -327,7 +327,7 @@ docker compose logs -f hermes
 | `NGINX_BIND_ADDRESS` | `0.0.0.0` | Interface em que o proxy reverso atende |
 | `NGINX_PORT` | `80` | Porta HTTP publicada pelo Nginx |
 | `FLET_MAX_UPLOAD_SIZE` | `104857600` | Limite individual aceito pelo Flet, em bytes |
-| `FLET_SESSION_TIMEOUT` | `3600` | Retenção da sessão desconectada, em segundos |
+| `FLET_SESSION_TIMEOUT` | `30` | Limite de retenção da sessão desconectada, em segundos |
 | `HERMES_MAX_CONCURRENT_JOBS` | `2` | Análises/exportações pesadas simultâneas |
 | `HERMES_MAX_FILES_PER_JOB` | `20` | Arquivos por operação |
 | `HERMES_MAX_TOTAL_UPLOAD_SIZE` | `209715200` | Soma máxima por operação, em bytes |
@@ -356,11 +356,13 @@ New-NetFirewallRule -DisplayName "HERMES Nginx - Rede Administrativa" `
 O Nginx preserva WebSocket e encaminha as requisições para `hermes:8000`;
 essa porta fica disponível apenas na rede interna do Compose.
 
-O acesso é protegido por autenticação HTTP Basic. A credencial fica em
-`nginx/.htpasswd` usando hash bcrypt com custo 12; o arquivo está excluído do
-Git e é montado no contêiner somente para leitura. Para trocar a senha, gere
-novamente o arquivo e recrie o serviço `nginx`. Enquanto HTTPS não estiver
-configurado, a autenticação não criptografa o tráfego da rede.
+O HERMES apresenta uma tela de login e valida a credencial em
+`nginx/.htpasswd`, usando hash bcrypt com custo 12. O arquivo está excluído do
+Git e é montado no contêiner `hermes` somente para leitura. O estado autenticado
+permanece apenas na memória da sessão Flet e é removido nos eventos de
+desconexão ou fechamento. Para trocar a senha, gere novamente o arquivo e
+recrie o serviço `hermes`. Enquanto HTTPS não estiver configurado, a
+autenticação não criptografa o tráfego da rede.
 
 ## 10. Segurança operacional
 
@@ -368,7 +370,7 @@ configurado, a autenticação não criptografa o tráfego da rede.
 - Todas as capabilities Linux são removidas e `no-new-privileges` é habilitado.
 - O contêiner possui limite de CPU, memória e processos.
 - O healthcheck consulta a aplicação localmente a cada 30 segundos.
-- O HERMES não implementa autenticação própria.
+- O HERMES exige login e limita cinco tentativas incorretas por cliente em uma janela de cinco minutos.
 - O Nginx atua como proxy reverso e preserva as conexões WebSocket do Flet.
 - A porta da aplicação não é publicada diretamente; somente o Nginx atende na porta 80.
 - Em rede não confiável ou internet, adicione HTTPS e autenticação ao proxy.

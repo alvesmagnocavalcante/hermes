@@ -53,8 +53,10 @@ Na instalação atual, os computadores autorizados acessam
 Windows somente para a rede administrativa `10.197.0.0/22`, conforme a
 [Documentação Técnica](docs/DOCUMENTACAO_TECNICA.md#92-docker).
 
-O Nginx exige autenticação HTTP Basic. O arquivo local `nginx/.htpasswd`
-armazena somente o hash bcrypt da senha e não é versionado pelo Git.
+O HERMES exibe uma tela de login e valida a credencial pelo arquivo local
+`nginx/.htpasswd`. O arquivo armazena somente o hash bcrypt, não é versionado
+pelo Git e é montado no contêiner apenas para leitura. A autenticação é apagada
+quando a página perde a conexão, exigindo novo login no próximo acesso.
 
 Para encerrar:
 
