@@ -356,11 +356,6 @@ New-NetFirewallRule -DisplayName "HERMES Nginx - Rede Administrativa" `
 O Nginx preserva WebSocket e encaminha as requisições para `hermes:8000`;
 essa porta fica disponível apenas na rede interna do Compose.
 
-O nome interno publicado é `hermes.carmel`. O DNS da rede administrativa deve
-conter um registro `A` com o nome `hermes.carmel` apontando para
-`10.197.0.127`. O endereço IP continua sendo o destino técnico, mas os usuários
-acessam `http://hermes.carmel`.
-
 O acesso é protegido por autenticação HTTP Basic. A credencial fica em
 `nginx/.htpasswd` usando hash bcrypt com custo 12; o arquivo está excluído do
 Git e é montado no contêiner somente para leitura. Para trocar a senha, gere

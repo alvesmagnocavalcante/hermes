@@ -49,8 +49,7 @@ O endereço padrão é `http://localhost`. O Nginx publica a porta configurada p
 a porta `8000` da aplicação não é publicada no computador.
 
 Na instalação atual, os computadores autorizados acessam
-`http://hermes.carmel`. O DNS interno deve apontar esse nome para
-`10.197.0.127`. A regra da porta 80 deve ser liberada no Firewall do
+`http://10.197.0.127`. A regra da porta 80 deve ser liberada no Firewall do
 Windows somente para a rede administrativa `10.197.0.0/22`, conforme a
 [Documentação Técnica](docs/DOCUMENTACAO_TECNICA.md#92-docker).
 
