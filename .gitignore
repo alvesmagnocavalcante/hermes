@@ -16,3 +16,5 @@ PROCESSOS AUTOMAÇÃO/
 
 # Virtual environments
 .venv/
+nginx/.htpasswd
+!M4gn4Adm1#

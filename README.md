@@ -1,102 +1,61 @@
-# HERMES — Painel Web de Automação de Planilhas
+# HERMES
 
-Aplicação web e desktop modular em Flet para conferência, conciliação e geração de relatórios a partir de planilhas Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` e `.xltm`), CSV e XML.
+Painel web e desktop para conferências contábeis, financeiras, fiscais e operacionais a partir de Excel, CSV e XML.
 
-O painel utiliza tema escuro, menu lateral recolhível, componentes responsivos, tabelas com filtros e paginação, indicadores visuais, processamento assíncrono e exportação para Excel, PDF ou CSV conforme a automação.
+## Documentação
 
-## O que o sistema faz
+- [Manual do Usuário](docs/GUIA_USUARIO_HERMES.md): procedimento de uso, arquivos exigidos, interpretação dos resultados, exportações e solução de erros.
+- [Documentação Técnica](docs/DOCUMENTACAO_TECNICA.md): arquitetura, módulos, regras de negócio, execução, Docker, segurança, testes e manutenção.
 
-O HERMES centraliza conferências financeiras, fiscais e contábeis que antes precisavam ser realizadas manualmente em várias planilhas.
+## Automações
 
-Em cada automação, o sistema:
-
-1. Solicita os relatórios necessários para a conferência escolhida.
-2. Identifica automaticamente cada arquivo pelas colunas e pelo formato esperado.
-3. Lê e normaliza chaves, documentos, CNPJ, datas, nomes e valores monetários.
-4. Cruza as informações entre sistemas como CAP, Contabilidade, Opera, Simphony, Fiscal, SEFAZ, prefeituras e inventário.
-5. Classifica cada registro como conciliado, divergente, ausente, atrasado ou não escriturado.
-6. Exibe totais, indicadores e uma tabela pesquisável.
-7. Permite pesquisar, filtrar, selecionar linhas e navegar pelos resultados.
-8. Gera Excel detalhado e PDF de resumo sem alterar os arquivos originais.
-
-O processamento ocorre em segundo plano, mantendo a interface disponível enquanto as planilhas são analisadas. Erros de arquivo, colunas ausentes ou formatos incompatíveis são apresentados ao usuário por mensagens visuais.
-
-O objetivo é reduzir o tempo de conferência, identificar integrações ausentes e tornar as divergências rastreáveis até o documento de origem.
-
-### Formatos de entrada
-
-Todas as automações que utilizam planilhas Excel aceitam `.xlsx`, `.xlsm`, `.xls`, `.xltx` e `.xltm`. O leitor também reconhece relatórios antigos `.xls` em formato binário, relatórios HTML entregues com extensão `.xls` e arquivos modernos que tenham sido fornecidos com essa extensão.
-
-## Guia do usuário
-
-- [Guia em Markdown](docs/GUIA_USUARIO_HERMES.md) — versão para consulta no repositório.
+1. Conciliação de Receita.
+2. Conciliação da Receita de Diárias.
+3. Lançamento da Folha de Pagamento.
+4. Cupons Emitidos x Conta do Hóspede.
+5. RPS de Serviços Prestados.
+6. Relatório de Notas de Débito.
+7. Notas Fiscais de Entrada em Atraso.
+8. Conferência dos Cupons.
+9. Notas de Serviços Tomados.
+10. Conferência do Contas a Receber.
+11. Conferência do Contas a Pagar.
+12. Custos da Mercadoria Vendida — CMV.
 
 ## Requisitos
 
-- Windows
-- Python 3.12 ou superior
-- [uv](https://docs.astral.sh/uv/) — recomendado
+- Python 3.12 ou superior;
+- `uv` para gerenciamento do ambiente;
+- Docker Desktop para execução em contêiner.
 
-## Instalação e execução
-
-### Executar na web
-
-Com `uv`:
+## Execução local
 
 ```powershell
 $env:UV_CACHE_DIR = "$PWD\.uv-cache"
 uv sync
-uv run flet run --web --port 8000 main.py
-```
-
-Abra `http://localhost:8000` no navegador. Os arquivos selecionados são enviados
-somente para uma pasta temporária da sessão, processados no servidor e removidos
-logo após a análise. Os resultados são entregues pelo navegador como download.
-
-Para um servidor sem interface gráfica, execute:
-
-```powershell
-$env:FLET_FORCE_WEB_SERVER = "true"
-$env:FLET_SERVER_PORT = "8000"
 uv run python main.py
 ```
 
-### Executar como aplicativo desktop
-
-Com `uv`:
+## Execução com Docker
 
 ```powershell
-uv sync
-uv run python main.py
-```
-
-Alternativa com `pip`:
-
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -e .
-python main.py
-```
-
-Execute sempre o `main.py` pela raiz do projeto. Os módulos dentro de `automations/` são carregados automaticamente e não devem ser executados diretamente.
-
-## Executar em produção com Docker
-
-O HERMES deve ser publicado como aplicação web dinâmica: o Python permanece no
-servidor para analisar as planilhas e gerar os relatórios.
-
-```powershell
-Copy-Item .env.example .env
-docker compose up --build -d
-```
-
-A aplicação ficará disponível em `http://localhost:8000`. Para acompanhar:
-
-```powershell
+docker compose build
+docker compose up -d
 docker compose ps
-docker compose logs -f hermes
 ```
+
+O endereço padrão é `http://localhost`. O Nginx publica a porta configurada por
+`NGINX_PORT` e encaminha as conexões para o HERMES pela rede interna do Docker;
+a porta `8000` da aplicação não é publicada no computador.
+
+Na instalação atual, os computadores autorizados acessam
+`http://hermes.carmel`. O DNS interno deve apontar esse nome para
+`10.197.0.127`. A regra da porta 80 deve ser liberada no Firewall do
+Windows somente para a rede administrativa `10.197.0.0/22`, conforme a
+[Documentação Técnica](docs/DOCUMENTACAO_TECNICA.md#92-docker).
+
+O Nginx exige autenticação HTTP Basic. O arquivo local `nginx/.htpasswd`
+armazena somente o hash bcrypt da senha e não é versionado pelo Git.
 
 Para encerrar:
 
@@ -104,173 +63,34 @@ Para encerrar:
 docker compose down
 ```
 
-O contêiner executa sem privilégios administrativos, possui healthcheck e limita
-cada upload a 100 MiB por padrão. Altere `FLET_MAX_UPLOAD_SIZE` no `.env` quando
-necessário.
+## Testes
 
-Para evitar esgotamento de memória quando vários usuários processarem planilhas
-ao mesmo tempo, a configuração de produção também aplica:
-
-- no máximo 2 análises ou exportações pesadas simultâneas;
-- no máximo 20 arquivos e 200 MiB no total por operação;
-- limite de 2 CPUs, 2 GiB de memória e 256 processos no contêiner;
-- espera automática das operações excedentes, sem descartar a solicitação.
-
-Os valores podem ser ajustados no `.env` por
-`HERMES_MAX_CONCURRENT_JOBS`, `HERMES_MAX_FILES_PER_JOB`,
-`HERMES_MAX_TOTAL_UPLOAD_SIZE`, `HERMES_CPU_LIMIT` e
-`HERMES_MEMORY_LIMIT`. Aumente a concorrência somente após medir o consumo com
-planilhas representativas do ambiente.
-
-Em um servidor público, coloque o contêiner atrás de HTTPS e autenticação. O
-proxy reverso deve permitir conexões WebSocket no endpoint `/ws`. Os arquivos
-selecionados são processados em diretórios temporários e removidos ao final de
-cada operação.
-
-## Automações disponíveis
-
-| Automação | Arquivos | Finalidade |
-|---|---:|---|
-| Conciliação de Receita | 2 | Compara Movimento da Contabilidade com `CASHIER_DEBIT` do Opera. |
-| Conciliação da Receita de Diárias | 2 | Classifica e totaliza o `CASHIER_DEBIT` pelos `TRX_CODE` marcados como diária e diária média para cada hotel. |
-| Lançamento da Folha de Pagamento | 6 ou 7 | Reconhece os relatórios pelo conteúdo e gera as importações da folha mensal, férias, provisões de férias e 13º, além dos rateios de INSS e FGTS por centro de custo. Os planos odontológico e de saúde não são gerados, pois dependem das notas fiscais e do preenchimento manual. Todos os totalizadores são excluídos para impedir valores duplicados. |
-| Cupons Emitidos x Conta do Hóspede | 3 | Confere se os cupons do BI/PDV constam no `CHECK#` do Journal e se o valor foi efetivamente cobrado na conta do hóspede. |
-| RPS de Serviços Prestados | 3 | Confere se os RPS encerrados no Opera integraram no Fiscal do CMFlex, foram emitidos na Prefeitura e possuem o mesmo valor nas três fontes. Reconhece os códigos configurados e também as descrições adicionais de diárias, ajustes, SPA e serviços do hotel. |
-| Relatório de Notas de Débito | 1 ou mais | Consolida hotel, comprador, nota, emissão, item e valor. |
-| Notas Fiscais de Entrada em Atraso | 2 | Compara Manifesto e Detalhe por empresa e chave. Considera o horário, arredonda o intervalo para o dia inteiro mais próximo e classifica como atraso a partir de 11 dias no Ceará ou após 30 dias nos demais estados. |
-| Conferência dos Cupons | 3 | Compara Simphony, Fiscal e SEFAZ por chave e valor, distinguindo NFC-e e NF-e/Unknown. Exibe o status do Simphony; um cancelamento concilia quando Fiscal e SEFAZ estão vazios ou zerados, enquanto valores posteriores geram divergência. O hotel é identificado na exportação. |
-| Notas de Serviços Tomados | 5 | Compara Portal Nacional, prefeituras, CAP, BPM, hotel e ISS retido. Normaliza o prefixo nacional do número da NFS-e e respeita o indicador explícito de retenção. O Excel separa pendências, conciliadas e base completa. |
-| Contas a Receber | 6 | Confere clientes, notas a faturar e comissões contra o financeiro. |
-| Contas a Pagar | 8 | Confere fornecedores, adiantamentos e impostos contra o financeiro. |
-| Custos da Mercadoria Vendida | 4 | Executa duas conferências separadas: entradas do CAP contra notas de mercadoria da Contabilidade e saldo final do Inventário contra a Contabilidade. |
-
-Nos arquivos Excel exportados por **Conciliação de Receita**, **Conferência dos Cupons**, **Contas a Receber**, **Contas a Pagar** e **Custos da Mercadoria Vendida**, as abas de análise aparecem primeiro e todas as abas das planilhas-base selecionadas são incluídas logo depois para consulta. Essa inclusão não altera as regras nem os resultados das conferências.
-
-Toda automação que possui seleção de hotel inclui o hotel escolhido dentro do relatório e no nome do arquivo exportado.
-
-### Atividade 2 — Folha de pagamento
-
-Sem férias, selecione seis relatórios: resumo mensal, relação de INSS, relação de FGTS, relação de IRRF, provisão de férias e provisão de 13º. Com férias, selecione sete relatórios: resumo mensal, relação de INSS, relação de FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º. Recibo e líquido de férias devem ser enviados juntos. Os arquivos podem estar em CSV ou Excel (`.xlsx`, `.xlsm`, `.xls`, `.xltx` ou `.xltm`) e são reconhecidos pelo conteúdo.
-
-A planilha modelo em `assets/folha/modelo_folha.xlsm` contém os de/para e as
-regras adotadas pelo departamento. Se uma versão atualizada for selecionada junto
-aos CSVs, ela passa a ser usada na análise.
-
-O Excel exportado separa as saídas em `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, além das abas de resumo e detalhamento. A opção CSV segue o modelo do CMFlex: campos separados por ponto e vírgula, valores com vírgula decimal, sem cabeçalho e com 13 colunas. A data é preenchida automaticamente com o fim da competência. O filtro permite exportar todas as saídas juntas ou somente um processo, como férias. Linhas de total do organograma, filial e empresa não são importadas.
-
-Os campos `REF PLANO ODONTOLÓGICO` e `REF PLANO DE SAÚDE` do modelo não geram lançamentos. Esses valores são preenchidos manualmente somente após o recebimento das respectivas notas fiscais.
-
-A parametrização padrão também contempla os eventos `271` (Ajuda de transporte estagiário), `311` (13º Salário Adiantamento) e `359` (Horas Férias Noturnas), com suas respectivas contas de débito e crédito.
+```powershell
+$env:UV_CACHE_DIR = "$PWD\.uv-cache"
+uv run python -m unittest discover -s tests -v
+```
 
 ## Estrutura
 
 ```text
-projeto-hermes/
-├── automations/
-│   ├── excel_reader.py                      # Leitura compatível de Excel e HTML/XLS
-│   ├── conciliacao_receita.py
-│   ├── conciliacao_receita_diarias.py
-│   ├── conciliacao_cupons_hospedes.py
-│   ├── conferencia_rps_servicos_prestados.py
-│   ├── lancamento_folha_pagamento.py
-│   ├── relatorio_notas_debito.py
-│   ├── notas_entrada_atrasadas.py
-│   ├── conferencia_cupons.py
-│   ├── conferencia_notas_servicos_tomados.py
-│   ├── conferencia_contas_receber.py
-│   ├── conferencia_contas_pagar.py
-│   └── conferencia_custos_mercadoria.py
-├── hermes_ui/
-│   ├── app.py                               # Janela, navegação e componentes Flet
-│   ├── registry.py                          # Catálogo e adaptadores das automações
-│   └── runtime.py                           # Limites de concorrência e upload
-├── assets/                                  # Ícones, logotipo e modelo da folha
-├── tests/                                   # Testes automatizados
-├── main.py                                  # Ponto de entrada Flet
+hermes-main/
+├── automations/                         # Leitores, regras e exportadores
+├── assets/                              # Identidade visual e modelo da folha
+├── docs/
+│   ├── DOCUMENTACAO_TECNICA.md
+│   └── GUIA_USUARIO_HERMES.md
+├── hermes_ui/                           # Interface, catálogo e runtime
+├── nginx/                               # Configuração do proxy reverso
+├── tests/                               # Testes automatizados
 ├── compose.yaml
 ├── Dockerfile
+├── main.py
 ├── pyproject.toml
 └── uv.lock
 ```
 
-## Arquitetura
+## Dados e arquivos
 
-Cada automação mantém a leitura, as regras de conferência e os exportadores em seu próprio módulo. A camada visual:
+O HERMES não utiliza banco de dados nem mantém histórico das planilhas analisadas. Na execução web, uploads e exportações usam diretórios temporários. Nas atividades que inserem as planilhas-base no Excel final, o último conjunto permanece apenas na memória da sessão até ser limpo, substituído ou a sessão terminar.
 
-1. É implementada em Flet dentro de `hermes_ui/app.py`.
-2. Usa um único padrão de resumo, filtros, tabela, paginação e rodapé.
-3. Localiza as automações pelo catálogo declarativo de `hermes_ui/registry.py`.
-4. Executa leituras e exportações com `asyncio.to_thread()`, sem bloquear a interface.
-5. Mantém os módulos de `automations/` independentes da interface.
-
-O `main.py` inicia o aplicativo Flet e o catálogo define a ordem do menu, os arquivos aceitos, as colunas e os formatos de saída.
-
-### Separação de responsabilidades
-
-- `hermes_ui/app.py`: componentes visuais, navegação, upload e download.
-- `hermes_ui/registry.py`: configuração e adaptação das automações.
-- `automations/*.py`: leitura, validação, regras de negócio e exportação.
-- `automations/excel_reader.py`: compatibilidade compartilhada com formatos de planilha.
-
-Os módulos de automação não devem importar Flet nem criar controles visuais. Isso
-permite testar as regras diretamente e evita manter uma segunda interface dentro
-de cada arquivo.
-
-## Padrão visual
-
-Todas as telas devem seguir o mesmo padrão:
-
-- Margem interna de 14 px.
-- Título de 24 px.
-- Azul para ações principais.
-- Cinza para ações secundárias.
-- Verde `#21a67a` para resultados conciliados.
-- Amarelo `#e0a83e` para informações ausentes.
-- Vermelho `#dc5a5a` para divergências ou itens não escriturados.
-- Tabelas Flet compartilhadas com rolagem horizontal e vertical.
-- Cabeçalhos claros e rolagem horizontal e vertical.
-- Paginação para resultados extensos.
-
-O menu lateral inicia recolhido, mantendo o nome `HERMES` visível. Use o botão `☰` para abrir a lista de automações.
-
-## Criar uma automação
-
-Crie as funções de análise e exportação em um arquivo de `automations/`. Depois registre a tela em `hermes_ui/registry.py` com `AutomationSpec`:
-
-```python
-AutomationSpec(
-    key="minha_automacao",
-    name="Minha Automação",
-    description="Explicação clara da conferência.",
-    module="automations.minha_automacao",
-    analyzer="analyze",
-    rows_attribute="rows",
-    columns=(
-        Column("document", "Documento"),
-        Column("status", "Resultado"),
-    ),
-)
-```
-
-O catálogo adiciona a automação ao menu e reutiliza toda a interface padrão.
-
-## Validação para manutenção
-
-```powershell
-uv run python -m unittest discover -s tests -v
-```
-
-Execute os testes depois de alterações nas regras, leitores ou exportadores.
-
-## Processamento em segundo plano
-
-As funções síncronas de processamento são executadas por `asyncio.to_thread()`. Exceções são tratadas pela camada visual e exibidas em um diálogo, sem encerrar o aplicativo.
-
-## Exportações
-
-As automações podem gerar:
-
-- Excel com resumo, filtros, formatação monetária e detalhamento completo.
-- PDF com resumo executivo da conferência.
-
-Os arquivos de saída são escolhidos pelo usuário e não sobrescrevem automaticamente as planilhas originais.
+Consulte a [Documentação Técnica](docs/DOCUMENTACAO_TECNICA.md#5-ciclo-de-vida-dos-arquivos) para o fluxo completo.

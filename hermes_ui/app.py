@@ -552,7 +552,7 @@ class AutomationView:
                 ft.Text(
                     f"{not_posted} nota(s) ainda não lançada(s)  •  "
                     "CE: alerta de 6 a 10 dias e atraso a partir de 11 dias  •  "
-                    "Demais estados: alerta de 20 a 29 dias e atraso a partir de 30 dias",
+                    "Demais estados: alerta de 20 a 30 dias e atraso acima de 30 dias",
                     color=MUTED,
                     size=12,
                 )
