@@ -39,6 +39,7 @@ Os hotéis disponíveis no seletor são `Cumbuco`, `Magna`, `Taiba` e `Charme`. 
 | OpenPyXL 3.1.5+ | Leitura e geração de arquivos Excel modernos |
 | xlrd 2.0.2+ | Leitura de arquivos `.xls` binários |
 | ReportLab 4.4.2+ | Geração dos relatórios PDF |
+| Logfire 4.41+ | Eventos operacionais, falhas, duração e métricas básicas do processo |
 | `xml.etree.ElementTree` | Leitura dos XMLs do Opera |
 | `asyncio` | Coordenação da interface e limitação de trabalhos simultâneos |
 | Docker Compose | Empacotamento e execução web em contêiner |
@@ -68,6 +69,7 @@ Usuário
 - `hermes_ui/app.py`: navegação, seleção de hotel, upload, filtros, paginação, resumo, exportação e mensagens de erro.
 - `hermes_ui/registry.py`: catálogo declarativo das automações, colunas da interface, formatos, extensões, adaptação dos resultados e nomes de saída.
 - `hermes_ui/runtime.py`: validação de quantidade/tamanho e semáforo de concorrência.
+- `hermes_ui/telemetry.py`: configuração opcional do Logfire e seleção dos atributos operacionais enviados.
 - `automations/*.py`: reconhecimento de arquivos, leitura, regras de negócio e exportadores.
 - `automations/common.py`: normalização, conversão monetária, leitura comum e inclusão das planilhas-base no Excel.
 - `automations/excel_reader.py`: compatibilidade com `.xlsx`, `.xlsm`, `.xltx`, `.xltm`, `.xls` binário, HTML com extensão `.xls` e arquivos modernos renomeados como `.xls`.
@@ -334,6 +336,10 @@ docker compose logs -f hermes
 | `HERMES_CPU_LIMIT` | `2.0` | CPUs do contêiner |
 | `HERMES_MEMORY_LIMIT` | `2g` | Memória do contêiner |
 | `HERMES_LOG_LEVEL` | `INFO` | Nível dos logs |
+| `HERMES_TELEMETRY_ENABLED` | `true` | Permite desativar integralmente a integração Logfire |
+| `HERMES_LOGFIRE_SYSTEM_METRICS` | `true` | Coleta métricas básicas de CPU e memória |
+| `LOGFIRE_ENVIRONMENT` | `production` | Ambiente exibido nos filtros do Logfire |
+| `LOGFIRE_TOKEN` | vazio | Write Token opcional; a credencial do CLI é usada por padrão |
 
 Exemplo de `.env` para rede local:
 
@@ -342,7 +348,35 @@ NGINX_BIND_ADDRESS=0.0.0.0
 NGINX_PORT=80
 HERMES_MEMORY_LIMIT=2g
 HERMES_CPU_LIMIT=2.0
+HERMES_TELEMETRY_ENABLED=true
+HERMES_LOGFIRE_SYSTEM_METRICS=true
+LOGFIRE_ENVIRONMENT=production
+LOGFIRE_TOKEN=
 ```
+
+### 9.4 Telemetria Logfire
+
+O SDK é configurado uma única vez em `main.py`. A credencial é gerada por
+`uv run logfire auth` e `uv run logfire projects use --org
+'alvesmagnocavalcante' 'carmel'` na pasta `.logfire`. No Docker, essa pasta é
+montada em `/app/.logfire` somente para leitura. Ela está excluída do Git e da
+imagem Docker. `LOGFIRE_TOKEN` permanece disponível como configuração opcional.
+
+São enviados apenas metadados operacionais:
+
+- resultado de autenticação: autorizado, recusado, bloqueado ou erro de configuração;
+- chave da automação, hotel, sucesso, quantidade e volume total dos arquivos;
+- quantidade de registros processados, duração e tipo da exceção em falhas;
+- totais conciliados, pendentes e informativos, percentual de qualidade e modo
+  de execução web/desktop;
+- mensagem operacional da falha limitada a 500 caracteres, com caminhos,
+  segredos e identificadores fiscais extensos removidos;
+- formato e duração das exportações;
+- métricas básicas de CPU e memória do processo/servidor.
+
+Não são enviados usuário, senha, endereço IP, nome ou conteúdo dos arquivos,
+chaves fiscais, CNPJ, valores financeiros ou mensagens de exceção. Falhas no
+Logfire são isoladas e não interrompem a execução das automações.
 
 O firewall do Windows deve permitir a porta 80 somente para a rede administrativa
 `10.197.0.0/22`. Em um PowerShell executado **como administrador**:

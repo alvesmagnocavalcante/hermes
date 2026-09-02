@@ -64,6 +64,37 @@ Para encerrar:
 docker compose down
 ```
 
+## Telemetria com Logfire
+
+O HERMES envia telemetria para o projeto
+[Carmel no Logfire](https://logfire-us.pydantic.dev/alvesmagnocavalcante/carmel)
+por meio da credencial local criada pelo CLI. São registrados eventos de
+autenticação sem identificação do usuário, execuções e exportações, além de
+métricas básicas de CPU e memória. Nomes de arquivos, credenciais, chaves
+fiscais e valores financeiros não são enviados.
+
+Cada evento mostra na própria linha o nome da atividade, hotel, resultado e
+duração. Nos detalhes ficam quantidades de arquivos e registros, conciliados,
+pendências, informativos, qualidade e o motivo sanitizado de eventuais falhas.
+
+1. Autentique e selecione o projeto:
+
+```powershell
+uv run logfire auth
+uv run logfire projects use --org 'alvesmagnocavalcante' 'carmel'
+```
+
+2. Reconstrua e reinicie o serviço. A pasta `.logfire` é montada no contêiner
+   somente para leitura e está excluída do Git e da imagem Docker:
+
+```powershell
+docker compose up -d --build
+docker compose logs -f hermes
+```
+
+Também é possível definir `LOGFIRE_TOKEN` no `.env`. Se a telemetria falhar,
+o HERMES continua funcionando normalmente.
+
 ## Testes
 
 ```powershell

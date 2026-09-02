@@ -21,8 +21,13 @@ services:
       HERMES_MAX_FILES_PER_JOB: "${HERMES_MAX_FILES_PER_JOB:-20}"
       HERMES_MAX_TOTAL_UPLOAD_SIZE: "${HERMES_MAX_TOTAL_UPLOAD_SIZE:-209715200}"
       HERMES_LOG_LEVEL: "${HERMES_LOG_LEVEL:-INFO}"
+      HERMES_TELEMETRY_ENABLED: "${HERMES_TELEMETRY_ENABLED:-true}"
+      HERMES_LOGFIRE_SYSTEM_METRICS: "${HERMES_LOGFIRE_SYSTEM_METRICS:-true}"
+      LOGFIRE_ENVIRONMENT: "${LOGFIRE_ENVIRONMENT:-production}"
+      LOGFIRE_TOKEN: "${LOGFIRE_TOKEN:-}"
     volumes:
       - ./nginx/.htpasswd:/run/secrets/hermes_htpasswd:ro
+      - ./.logfire:/app/.logfire:ro
     security_opt:
       - no-new-privileges:true
     cap_drop:

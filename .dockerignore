@@ -3,6 +3,7 @@
 .flet/
 .git/
 .env
+.logfire/
 .ruff_cache/
 .uv-cache/
 .venv/

@@ -30,6 +30,11 @@ from hermes_ui.registry import (
     searchable,
 )
 from hermes_ui.runtime import JOB_LIMITER, validate_upload
+from hermes_ui.telemetry import (
+    authentication_event,
+    automation_event,
+    export_event,
+)
 
 BLUE = "#2383C4"
 SURFACE = "#171A1F"
@@ -373,16 +378,50 @@ class AutomationView:
             self.records = self.spec.rows(self.result)
         except Exception as error:
             LOGGER.exception("Falha na automação %s", self.spec.key)
+            automation_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel=self.selected_hotel if self.spec.hotel_option else "Não se aplica",
+                success=False,
+                file_count=len(files),
+                duration_seconds=time.monotonic() - started_at,
+                execution_mode="web" if self.page.web else "desktop",
+                error_type=type(error).__name__,
+                error=error,
+            )
             self._show_error(error)
             self.set_status("Falha no processamento", 0)
         else:
+            duration = time.monotonic() - started_at
+            kinds = [status_kind(record_status(record)) for record in self.records]
+            reconciled = kinds.count("ok")
+            informational = kinds.count("info")
+            pending = len(kinds) - reconciled - informational
+            if self.spec.key == "folha":
+                reconciled = self.result.ready
+                pending = len(self.records) - self.result.ready
+                informational = self.result.ignored_rows + self.result.excluded_rows
             LOGGER.info(
                 "Automação concluída: key=%s files=%d bytes=%d records=%d duration=%.3fs",
                 self.spec.key,
                 len(files),
                 total_size,
                 len(self.records),
-                time.monotonic() - started_at,
+                duration,
+            )
+            automation_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel=self.selected_hotel if self.spec.hotel_option else "Não se aplica",
+                success=True,
+                file_count=len(files),
+                total_bytes=total_size,
+                record_count=len(self.records),
+                reconciled_count=reconciled,
+                pending_count=pending,
+                informational_count=informational,
+                duration_seconds=duration,
+                execution_mode="web" if self.page.web else "desktop",
             )
             self.current_page = 0
             self.export_button.disabled = False
@@ -496,14 +535,33 @@ class AutomationView:
                     )
         except Exception as error:
             LOGGER.exception("Falha na exportação %s", self.spec.key)
+            export_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel=self.selected_hotel if self.spec.hotel_option else "Não se aplica",
+                output_format=self.output_format.value,
+                success=False,
+                duration_seconds=time.monotonic() - started_at,
+                error_type=type(error).__name__,
+                error=error,
+            )
             self._show_error(error)
             self.set_status("Falha na exportação", 0)
         else:
+            duration = time.monotonic() - started_at
             LOGGER.info(
                 "Exportação concluída: key=%s format=%s duration=%.3fs",
                 self.spec.key,
                 self.output_format.value,
-                time.monotonic() - started_at,
+                duration,
+            )
+            export_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel=self.selected_hotel if self.spec.hotel_option else "Não se aplica",
+                output_format=self.output_format.value,
+                success=True,
+                duration_seconds=duration,
             )
             action = "baixado" if self.page.web else "exportado"
             self.set_status(f"Resultado {action}: {file_name}", 1)
@@ -1400,6 +1458,7 @@ class AuthenticatedHermesSession:
         client_key = self._client_key()
         retry_after = LOGIN_ATTEMPT_LIMITER.retry_after(client_key)
         if retry_after:
+            authentication_event("blocked")
             self._show_login_error(
                 f"Muitas tentativas. Tente novamente em {retry_after} segundos."
             )
@@ -1415,6 +1474,7 @@ class AuthenticatedHermesSession:
             authenticated = verify_credentials(HTPASSWD_PATH, username, password)
         except AuthenticationConfigurationError as error:
             LOGGER.exception("Falha na configuração da autenticação")
+            authentication_event("configuration_error")
             self._show_login_error(str(error))
             return
 
@@ -1422,6 +1482,7 @@ class AuthenticatedHermesSession:
         if not authenticated:
             retry_after = LOGIN_ATTEMPT_LIMITER.record_failure(client_key)
             LOGGER.warning("Login recusado para %s a partir de %s", username, client_key)
+            authentication_event("rejected")
             message = "Usuário ou senha inválidos."
             if retry_after:
                 message = (
@@ -1433,6 +1494,7 @@ class AuthenticatedHermesSession:
         LOGIN_ATTEMPT_LIMITER.record_success(client_key)
         self.page.session.store.set(AUTHENTICATED_KEY, True)
         LOGGER.info("Login autorizado para %s a partir de %s", username, client_key)
+        authentication_event("authorized")
         self._render_application()
 
     def _show_login_error(self, message: str) -> None:
