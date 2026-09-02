@@ -152,7 +152,7 @@ Módulo: `automations/conciliacao_receita_diarias.py`.
 - Classifica cada `TRX_CODE` como diária e/ou diária média.
 - Totaliza quantidade e `CASHIER_DEBIT` por código.
 - Código sem lançamento recebe `Sem movimento`.
-- O código `1011` é desconsiderado somente no `Charme`.
+- O código `1011` é exclusivo do `Taíba`; em `Cumbuco`, `Magna` e `Charme` ele é desconsiderado mesmo que esteja marcado na planilha.
 - Exporta `Resumo` e `Detalhamento`.
 
 ### 7.3 Folha de Pagamento

@@ -18,7 +18,7 @@ from automations.common import identifier as trx_code
 from automations.common import money, normalize_key as normalize, nullable_decimal as decimal_value
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
-CHARME_IGNORED_CODES = {"1011"}
+TAIBA_EXCLUSIVE_CODES = {"1011"}
 
 
 # Estruturas do resultado diário apresentado na tela e nas exportações.
@@ -118,13 +118,13 @@ def read_rules(path: Path, hotel: str) -> dict[str, tuple[str, bool, bool]]:
             if code_index >= len(row):
                 continue
             code = trx_code(row[code_index])
-            is_charme = normalize(hotel) == "CHARME"
-            if not code or is_charme and code in CHARME_IGNORED_CODES:
+            is_taiba = normalize(hotel) == "TAIBA"
+            if not code or code in TAIBA_EXCLUSIVE_CODES and not is_taiba:
                 continue
             daily = (
                 indexes["DIARIA"] < len(row)
                 and normalize(row[indexes["DIARIA"]]) == "SIM"
-            ) or code == "1011"
+            ) or is_taiba and code in TAIBA_EXCLUSIVE_CODES
             average = (
                 indexes["DIARIAMEDIA"] < len(row)
                 and normalize(row[indexes["DIARIAMEDIA"]]) == "SIM"
