@@ -101,6 +101,33 @@ def read(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]]]:
         workbook.close()
 
 
+def column_text(
+    header: tuple[Any, ...], rows: list[tuple[Any, ...]], *columns: str
+) -> str:
+    """Agrupa valores normalizados de colunas usadas para identificar o relatório."""
+    indexes = [header.index(column) for column in columns if column in header]
+    return " ".join(
+        normalize(row[index])
+        for row in rows
+        for index in indexes
+        if index < len(row) and row[index] not in (None, "", "NULL")
+    )
+
+
+def identify_tax(
+    header: tuple[Any, ...], rows: list[tuple[Any, ...]], filename: str
+) -> str | None:
+    """Identifica o imposto pelo conteúdo e mantém o nome apenas como fallback."""
+    content = column_text(header, rows, "Descricao", "Historico")
+    if "IRRF" in content:
+        return "IRRF"
+    if any(label in content for label in ("PISCOFINSCSLL", "CSRF")):
+        return "CSRF"
+    if "ISS" in content:
+        return "ISS"
+    return next((tax for tax in ("IRRF", "CSRF", "ISS") if tax in filename), None)
+
+
 def identify(
     paths: list[Path],
 ) -> dict[str, tuple[tuple[Any, ...], list[tuple[Any, ...]]]]:
@@ -110,16 +137,22 @@ def identify(
         headers = set(header)
         name = normalize(path.name)
         if {"DescricaoSubconta", "Saldo"}.issubset(headers):
-            key = "balancete_adto" if "ADTO" in name else "balancete_fornecedor"
+            accounts = column_text(
+                header, rows, "DescricaoConta", "DescricaoContaIdentada"
+            )
+            is_advance = (
+                "ADIANTAMENTO" in accounts and "FORNECEDOR" in accounts
+            ) or "ADTO" in name
+            key = "balancete_adto" if is_advance else "balancete_fornecedor"
         elif {"Fornecedor", "Saldo", "DescContaContabil"}.issubset(headers):
             key = "posicao_fornecedor"
         elif {"NomeFornecedor", "Saldo", "ValorTotalAdiantado"}.issubset(headers):
             key = "adiantamentos"
         elif {"IdAgregado", "Valor", "TratamentoFiscal"}.issubset(headers):
-            tax = next((tax for tax in ("IRRF", "CSRF", "ISS") if tax in name), None)
+            tax = identify_tax(header, rows, name)
             if tax is None:
                 raise ValueError(
-                    f"{path.name}: informe IRRF, CSRF ou ISS no nome do arquivo."
+                    f"{path.name}: não foi possível identificar IRRF, CSRF ou ISS pelo conteúdo."
                 )
             key = f"agregado_{tax.lower()}"
         elif {"DescricaoConta", "Movimento", "Historico"}.issubset(headers):

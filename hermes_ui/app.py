@@ -36,15 +36,22 @@ from hermes_ui.telemetry import (
     export_event,
 )
 
-BLUE = "#2383C4"
-SURFACE = "#171A1F"
-CARD = "#20242B"
-BORDER = "#303640"
-TEXT = "#F4F7FB"
-MUTED = "#AAB4C3"
-GREEN = "#21A67A"
-YELLOW = "#E0A83E"
-RED = "#DC5A5A"
+THEME_SEED = "#2383C4"
+BLUE = ft.Colors.PRIMARY
+SURFACE = ft.Colors.SURFACE_CONTAINER_LOW
+CARD = ft.Colors.SURFACE_CONTAINER
+BORDER = ft.Colors.OUTLINE_VARIANT
+TEXT = ft.Colors.ON_SURFACE
+MUTED = ft.Colors.ON_SURFACE_VARIANT
+GREEN = ft.Colors.GREEN_600
+YELLOW = ft.Colors.AMBER_600
+RED = ft.Colors.ERROR
+PAGE_BACKGROUND = ft.Colors.SURFACE
+SIDEBAR_BACKGROUND = ft.Colors.SURFACE_CONTAINER_LOW
+FOOTER_BACKGROUND = ft.Colors.SURFACE_CONTAINER
+PROGRESS_BACKGROUND = ft.Colors.SURFACE_CONTAINER_HIGHEST
+SELECTED_BACKGROUND = ft.Colors.PRIMARY_CONTAINER
+SELECTED_FOREGROUND = ft.Colors.ON_PRIMARY_CONTAINER
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", ROOT_DIR / "assets")).resolve()
 LOGO_PATH = ASSETS_DIR / "deus.png"
@@ -57,6 +64,18 @@ HTPASSWD_PATH = Path(
     os.environ.get("HERMES_HTPASSWD_PATH", ROOT_DIR / "nginx" / ".htpasswd")
 ).resolve()
 AUTHENTICATED_KEY = "hermes_authenticated"
+
+
+def next_theme_mode(current: ft.ThemeMode) -> ft.ThemeMode:
+    return ft.ThemeMode.LIGHT if current == ft.ThemeMode.DARK else ft.ThemeMode.DARK
+
+
+def configure_page_appearance(page: ft.Page) -> None:
+    """Aplica a base visual compartilhada sem sobrescrever o tema escolhido."""
+    page.bgcolor = PAGE_BACKGROUND
+    page.padding = 0
+    page.theme = ft.Theme(color_scheme_seed=THEME_SEED, font_family="Segoe UI")
+    page.dark_theme = ft.Theme(color_scheme_seed=THEME_SEED, font_family="Segoe UI")
 
 
 def normalized(value: str) -> str:
@@ -168,14 +187,14 @@ class AutomationView:
         self.export_button = ft.Button(
             "Exportar",
             icon=ft.Icons.DOWNLOAD,
-            color="#80C8FA",
+            color=BLUE,
             disabled=True,
             on_click=self._export,
         )
         self.details_button = ft.Button(
             "Resumo",
             icon=ft.Icons.SUMMARIZE_OUTLINED,
-            color="#B7C7D9",
+            color=MUTED,
             visible=False,
             on_click=self._show_summary,
         )
@@ -185,8 +204,8 @@ class AutomationView:
             content=ft.Row(
                 [
                     ft.Container(
-                        ft.Icon(ft.Icons.FOLDER_OPEN, color="#80C8FA", size=18),
-                        bgcolor="#173E59",
+                        ft.Icon(ft.Icons.FOLDER_OPEN, color=BLUE, size=18),
+                        bgcolor=SELECTED_BACKGROUND,
                         border_radius=8,
                         padding=6,
                     ),
@@ -194,7 +213,7 @@ class AutomationView:
                 ],
                 spacing=10,
             ),
-            bgcolor="#141920",
+            bgcolor=SURFACE,
             border=ft.Border.all(1, BORDER),
             border_radius=10,
             padding=6,
@@ -316,7 +335,7 @@ class AutomationView:
             "cupons": "Selecione 3 arquivos: relatório do Simphony, relatório Fiscal do CMFlex e consulta da SEFAZ.",
             "servicos": "Selecione 5 arquivos: CAP, Portal Nacional, Prefeitura, ISS e BPM referentes ao mesmo hotel e período.",
             "receber": "Selecione 6 arquivos: balancete de clientes, posição por cliente, borderô, razão de notas a faturar, agregados e razão de comissões.",
-            "pagar": "Selecione 8 arquivos: balancetes de fornecedores e adiantamentos, posições financeiras, agregados IRRF/CSRF/ISS e razão dos impostos.",
+            "pagar": "Selecione 8 arquivos: balancetes de fornecedores e adiantamentos, posições financeiras, alteradores IRRF/CSRF/ISS e razão dos impostos. Não é necessário renomear.",
             "custos": "Selecione 4 arquivos: documentos por tipo de desembolso, razão de entradas, inventário e razão de estoques.",
         }[self.spec.key]
 
@@ -924,7 +943,11 @@ class AutomationView:
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     height=38,
-                    bgcolor="#15191E" if index % 2 == 0 else "#121519",
+                    bgcolor=(
+                        ft.Colors.SURFACE_CONTAINER_LOW
+                        if index % 2 == 0
+                        else PAGE_BACKGROUND
+                    ),
                     border=ft.Border(bottom=ft.BorderSide(1, BORDER)),
                 )
             )
@@ -936,7 +959,9 @@ class AutomationView:
                         header,
                         height=42,
                         bgcolor=CARD,
-                        border=ft.Border(bottom=ft.BorderSide(1, "#46505D")),
+                        border=ft.Border(
+                            bottom=ft.BorderSide(1, ft.Colors.OUTLINE)
+                        ),
                     ),
                     *rows,
                 ],
@@ -1164,7 +1189,7 @@ class HermesApp:
         self.content = ft.Container(expand=True)
         self.status_text = ft.Text("Pronto", color=MUTED, size=12)
         self.progress = ft.ProgressBar(
-            value=0, color=BLUE, bgcolor="#343A45", bar_height=4
+            value=0, color=BLUE, bgcolor=PROGRESS_BACKGROUND, bar_height=4
         )
         self.navigation_icons = (
             ft.Icons.COMPARE_ARROWS,
@@ -1190,7 +1215,7 @@ class HermesApp:
         self.sidebar = ft.Container(
             content=self.sidebar_body,
             width=126,
-            bgcolor="#101318",
+            bgcolor=SIDEBAR_BACKGROUND,
             border=ft.Border(right=ft.BorderSide(1, BORDER)),
             animate_size=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT_CUBIC),
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
@@ -1201,17 +1226,14 @@ class HermesApp:
         self.page.title = "HERMES" \
         ""
         self.page.window.icon = str(WINDOW_ICON_PATH)
-        self.page.theme_mode = ft.ThemeMode.DARK
-        self.page.bgcolor = "#0D1014"
-        self.page.padding = 0
+        configure_page_appearance(self.page)
         self.page.window.width = 1500
         self.page.window.height = 900
         self.page.window.min_width = 1000
         self.page.window.min_height = 680
-        self.page.theme = ft.Theme(color_scheme_seed=BLUE, font_family="Segoe UI")
         footer = ft.Container(
             content=ft.Column([self.status_text, self.progress], spacing=6),
-            bgcolor="#111419",
+            bgcolor=FOOTER_BACKGROUND,
             padding=ft.Padding(left=18, top=9, right=18, bottom=11),
         )
         body = ft.Row(
@@ -1256,6 +1278,11 @@ class HermesApp:
         self.page.update()
         await asyncio.sleep(0.14)
         self.sidebar_animating = False
+
+    def _toggle_theme(self, _event=None) -> None:
+        self.page.theme_mode = next_theme_mode(self.page.theme_mode)
+        self._render_sidebar()
+        self.page.update()
 
     def _show_about(self, _event=None) -> None:
         dialog = ft.AlertDialog(
@@ -1319,7 +1346,7 @@ class HermesApp:
         for index, (spec, icon) in enumerate(zip(SPECS, self.navigation_icons)):
             selected = index == self.selected_index
             icon_control = ft.Icon(
-                icon, size=20, color="#9BD5FA" if selected else MUTED
+                icon, size=20, color=SELECTED_FOREGROUND if selected else MUTED
             )
             content = (
                 ft.Row(
@@ -1348,7 +1375,9 @@ class HermesApp:
                     alignment=ft.Alignment.CENTER_LEFT
                     if self.sidebar_expanded
                     else ft.Alignment.CENTER,
-                    bgcolor="#174B6D" if selected else ft.Colors.TRANSPARENT,
+                    bgcolor=(
+                        SELECTED_BACKGROUND if selected else ft.Colors.TRANSPARENT
+                    ),
                     border_radius=10,
                     tooltip=None if self.sidebar_expanded else spec.name,
                     on_click=lambda _event, current=index: self._show(current),
@@ -1383,6 +1412,40 @@ class HermesApp:
             tooltip=None if self.sidebar_expanded else "Sobre o HERMES",
             on_click=self._show_about,
         )
+        dark_mode = self.page.theme_mode == ft.ThemeMode.DARK
+        theme_label = "Modo claro" if dark_mode else "Modo escuro"
+        theme_icon = ft.Icon(
+            ft.Icons.LIGHT_MODE if dark_mode else ft.Icons.DARK_MODE,
+            size=19,
+            color=MUTED,
+        )
+        theme_content = (
+            ft.Row(
+                [theme_icon, ft.Text(theme_label, size=12, color=MUTED)],
+                spacing=12,
+                tight=True,
+            )
+            if self.sidebar_expanded
+            else theme_icon
+        )
+        theme_toggle = ft.Container(
+            content=theme_content,
+            height=38,
+            padding=ft.Padding(
+                left=18 if self.sidebar_expanded else 0,
+                top=0,
+                right=12 if self.sidebar_expanded else 0,
+                bottom=0,
+            ),
+            alignment=(
+                ft.Alignment.CENTER_LEFT
+                if self.sidebar_expanded
+                else ft.Alignment.CENTER
+            ),
+            border_radius=9,
+            tooltip=None if self.sidebar_expanded else theme_label,
+            on_click=self._toggle_theme,
+        )
         self.sidebar_body.content = ft.Column(
             [
                 ft.Container(
@@ -1392,7 +1455,8 @@ class HermesApp:
                 ft.Column(buttons, spacing=5, scroll=ft.ScrollMode.AUTO, expand=True),
                 ft.Divider(height=1, color=BORDER),
                 ft.Container(
-                    about, padding=ft.Padding(left=8, top=0, right=8, bottom=10)
+                    ft.Column([theme_toggle, about], spacing=2),
+                    padding=ft.Padding(left=8, top=0, right=8, bottom=10),
                 ),
             ],
             spacing=10,
@@ -1433,19 +1497,32 @@ class AuthenticatedHermesSession:
             width=360,
             on_click=self._login,
         )
+        self.theme_button = ft.IconButton(on_click=self._toggle_theme)
 
     # Configuração visual compartilhada pela tela de login e pelo painel.
     def start(self) -> None:
         self.page.title = "HERMES"
         self.page.window.icon = str(WINDOW_ICON_PATH)
         self.page.theme_mode = ft.ThemeMode.DARK
-        self.page.bgcolor = "#0D1014"
-        self.page.padding = 0
-        self.page.theme = ft.Theme(color_scheme_seed=BLUE, font_family="Segoe UI")
+        configure_page_appearance(self.page)
         self.page.on_connect = self._on_connect
         self.page.on_disconnect = self._on_disconnect
         self.page.on_close = self._on_close
         self._render_login()
+
+    def _sync_theme_button(self) -> None:
+        dark_mode = self.page.theme_mode == ft.ThemeMode.DARK
+        self.theme_button.icon = (
+            ft.Icons.LIGHT_MODE if dark_mode else ft.Icons.DARK_MODE
+        )
+        self.theme_button.tooltip = (
+            "Usar modo claro" if dark_mode else "Usar modo escuro"
+        )
+
+    def _toggle_theme(self, _event=None) -> None:
+        self.page.theme_mode = next_theme_mode(self.page.theme_mode)
+        self._sync_theme_button()
+        self.page.update()
 
     def _client_key(self) -> str:
         return self.page.client_ip or f"session:{self.page.session.id}"
@@ -1505,12 +1582,17 @@ class AuthenticatedHermesSession:
 
     def _render_login(self) -> None:
         self.page.clean()
+        self._sync_theme_button()
         self.message.value = ""
         self.message.visible = False
         self.page.add(
             ft.Container(
                 content=ft.Column(
                     [
+                        ft.Row(
+                            [self.theme_button],
+                            alignment=ft.MainAxisAlignment.END,
+                        ),
                         ft.Image(
                             src=LOGO_SOURCE,
                             width=72,

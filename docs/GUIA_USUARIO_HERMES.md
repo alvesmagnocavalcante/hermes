@@ -67,18 +67,19 @@ Use **Cumbuco** para relatórios anteriormente identificados como Wind. Wind e C
 
 1. Abra o HERMES.
 2. Use o menu lateral para escolher a atividade.
-3. Leia a orientação abaixo de **Arquivos necessários**.
-4. Se houver o campo **Hotel**, selecione o hotel antes de carregar os arquivos.
-5. Clique em **Arquivos**.
-6. Selecione todos os relatórios solicitados na mesma operação.
-7. Aguarde **Conferência concluída**.
-8. Leia os indicadores e clique em **Resumo** quando precisar dos totais comparados.
-9. Use **Exibir** para separar conciliados e pendências.
-10. Use **Buscar nos resultados** para localizar um registro.
-11. Analise as pendências e confirme os dados nas fontes de origem.
-12. Escolha o formato no campo **Formato**.
-13. Clique em **Exportar** e salve o resultado.
-14. Clique em **Limpar** antes de iniciar outra conferência.
+3. Para alterar a aparência, selecione **Modo claro** ou **Modo escuro** na parte inferior do menu. A troca não limpa a atividade nem os resultados abertos. O mesmo controle está disponível na tela de login.
+4. Leia a orientação abaixo de **Arquivos necessários**.
+5. Se houver o campo **Hotel**, selecione o hotel antes de carregar os arquivos.
+6. Clique em **Arquivos**.
+7. Selecione todos os relatórios solicitados na mesma operação.
+8. Aguarde **Conferência concluída**.
+9. Leia os indicadores e clique em **Resumo** quando precisar dos totais comparados.
+10. Use **Exibir** para separar conciliados e pendências.
+11. Use **Buscar nos resultados** para localizar um registro.
+12. Analise as pendências e confirme os dados nas fontes de origem.
+13. Escolha o formato no campo **Formato**.
+14. Clique em **Exportar** e salve o resultado.
+15. Clique em **Limpar** antes de iniciar outra conferência.
 
 Os arquivos podem ser selecionados em qualquer ordem, salvo quando uma regra específica depender do nome do relatório. O HERMES normalmente identifica cada arquivo pelos cabeçalhos e pelo conteúdo.
 
@@ -582,7 +583,7 @@ Conferir fornecedores, adiantamentos e impostos entre Financeiro e Contabilidade
 7. Agregado ISS.
 8. Razão Analítico de impostos.
 
-Os nomes dos três arquivos agregados precisam conter `IRRF`, `CSRF` ou `ISS`, pois os layouts são iguais e o nome identifica o imposto.
+Os três arquivos de alteradores podem manter o nome original do CMFlex. O HERMES identifica automaticamente `IRRF`, `CSRF` e `ISS` pela coluna `Descrição`. Os dois balancetes também são separados pelo conteúdo da coluna `Descrição da Conta`; não é necessário renomear os arquivos.
 
 ### Conferências
 

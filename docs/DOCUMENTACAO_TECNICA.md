@@ -68,6 +68,7 @@ Usuário
 - `main.py`: configura logging, assets e inicia o Flet.
 - `hermes_ui/app.py`: navegação, seleção de hotel, upload, filtros, paginação, resumo, exportação e mensagens de erro.
 - `hermes_ui/registry.py`: catálogo declarativo das automações, colunas da interface, formatos, extensões, adaptação dos resultados e nomes de saída.
+- `hermes_ui/app.py`: usa tokens semânticos do tema Material do Flet e permite alternância em tempo de execução entre os modos claro e escuro sem recriar a automação aberta.
 - `hermes_ui/runtime.py`: validação de quantidade/tamanho e semáforo de concorrência.
 - `hermes_ui/telemetry.py`: configuração opcional do Logfire e seleção dos atributos operacionais enviados.
 - `automations/*.py`: reconhecimento de arquivos, leitura, regras de negócio e exportadores.
@@ -248,7 +249,8 @@ Módulo: `automations/conferencia_contas_pagar.py`.
 - Fornecedores: Balancete x Posição por fornecedor.
 - Adiantamentos: Balancete de adiantamentos x adiantamentos em aberto.
 - Impostos: agregados IRRF/CSRF/ISS x movimentos credores do Razão de impostos.
-- Os nomes dos três arquivos agregados precisam conter `IRRF`, `CSRF` ou `ISS`.
+- Identifica os alteradores `IRRF`, `CSRF` e `ISS` pelo conteúdo de `Descricao`/`Historico`, usando o nome apenas como compatibilidade para relatórios antigos ou vazios.
+- Distingue o balancete de adiantamentos do balancete de fornecedores pelo conteúdo de `DescricaoConta`; os arquivos podem manter os nomes originais do CMFlex.
 - Consolida grupos comerciais, incluindo CVC; BRT e BWT permanecem separados.
 - Exporta `Resumo`, `Fornecedores e Adiantamentos` e abas-base.
 
