@@ -1,11 +1,19 @@
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
+from unittest.mock import patch
 
 from openpyxl import Workbook
 
-from automations.conciliacao_cupons_hospedes import _read_journal, parse_date
+from automations.conciliacao_cupons_hospedes import (
+    _Coupon,
+    _JournalRow,
+    _read_journal,
+    analyze,
+    parse_date,
+)
 
 
 class JournalDateParsingTest(TestCase):
@@ -42,3 +50,53 @@ class JournalDateParsingTest(TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].posting_date, date(2026, 8, 1))
         self.assertEqual(rows[0].check, "440003175")
+
+
+class MappingSelectionTest(TestCase):
+    def test_prioritizes_mapping_named_for_identified_company(self):
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        coupon = _Coupon(
+            "CHARME HOSPEDAGEM",
+            "PDV",
+            date(2026, 8, 1),
+            "1",
+            "440003175",
+            "0100",
+            "Hóspede",
+            "Cupom",
+            Decimal("13.00"),
+        )
+        journal = [
+            _JournalRow(
+                "2028", "440003175", date(2026, 8, 1), Decimal("13.00"), "0100"
+            )
+        ]
+        mappings = {
+            "CHARME": {"2028"},
+            "WIND": {"2028", "2050"},
+        }
+
+        with (
+            patch(
+                "automations.conciliacao_cupons_hospedes.identify_file",
+                side_effect=("pdv", "journal", "mapping"),
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_pdv",
+                return_value={
+                    (coupon.company, coupon.account, coupon.issue_date, coupon.document): coupon
+                },
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_journal",
+                return_value=journal,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_mappings",
+                return_value=mappings,
+            ),
+        ):
+            result = analyze(paths)
+
+        self.assertEqual(result.company, "CHARME HOSPEDAGEM")
+        self.assertEqual(result.mapping, "CHARME")

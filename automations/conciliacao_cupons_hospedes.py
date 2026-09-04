@@ -298,6 +298,17 @@ def _match_account(check: str, accounts: set[str]) -> str | None:
     return max(matches, key=len) if matches else None
 
 
+def _mapping_matches_company(mapping_name: str, company: str) -> bool:
+    """Indica se a aba do de/para pertence explicitamente à empresa do BI/PDV."""
+    mapping = normalize(mapping_name)
+    company_name = normalize(company)
+    if mapping and mapping in company_name:
+        return True
+    return (mapping == "WIND" and "CUMBUCO" in company_name) or (
+        mapping == "CUMBUCO" and "WIND" in company_name
+    )
+
+
 # Relaciona cupom, check e conta do hóspede e classifica cada ocorrência.
 def analyze(paths: list[Path]) -> ReconciliationResult:
     if len(paths) != 3:
@@ -329,21 +340,26 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     companies: dict[str, set[str]] = defaultdict(set)
     for coupon in pdv.values():
         companies[coupon.company].add(coupon.account)
-    best: tuple[int, str, str] | None = None
+    best: tuple[int, int, str, str] | None = None
     for mapping_name, codes in mappings.items():
         checks = [row.check for row in journal if row.code in codes]
         for company, accounts in companies.items():
             matched = len(
                 {_match_account(check, accounts) for check in checks} - {None}
             )
-            candidate = (matched, mapping_name, company)
+            candidate = (
+                int(_mapping_matches_company(mapping_name, company)),
+                matched,
+                mapping_name,
+                company,
+            )
             if best is None or candidate > best:
                 best = candidate
-    if not best or best[0] == 0:
+    if not best or best[1] == 0:
         raise ValueError(
             "Não foi encontrada relação entre as contas do BI/PDV e os CHECK# do Journal."
         )
-    _, mapping_name, company = best
+    _, _, mapping_name, company = best
     accounts = companies[company]
     selected_journal = [row for row in journal if row.code in mappings[mapping_name]]
     journal_start = min(row.posting_date for row in selected_journal)
