@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
@@ -15,9 +14,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.common import decimal_value, money as currency
+from automations.common import active_sheet_rows, decimal_value, money as currency
 from automations.common import normalize_key as normalize
-from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
@@ -89,16 +87,7 @@ def entity_group(value: Any) -> tuple[str, str]:
 
 # Lê e identifica cada relatório contábil ou financeiro pelos cabeçalhos.
 def read(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]]]:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        workbook = load_workbook(path, data_only=True, read_only=True)
-    try:
-        sheet = workbook.active
-        sheet.reset_dimensions()
-        rows = list(sheet.iter_rows(values_only=True))
-        return rows[0], rows[1:]
-    finally:
-        workbook.close()
+    return active_sheet_rows(path)
 
 
 def column_text(

@@ -7,7 +7,6 @@ import math
 import os
 import tempfile
 import time
-import unicodedata
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,7 @@ from hermes_ui.auth import (
     AuthenticationConfigurationError,
     verify_credentials,
 )
+from hermes_ui.presentation import normalized, status_kind
 from hermes_ui.registry import (
     SPECS,
     SOURCE_TABS_AUTOMATIONS,
@@ -35,23 +35,25 @@ from hermes_ui.telemetry import (
     automation_event,
     export_event,
 )
-
-THEME_SEED = "#2383C4"
-BLUE = ft.Colors.PRIMARY
-SURFACE = ft.Colors.SURFACE_CONTAINER_LOW
-CARD = ft.Colors.SURFACE_CONTAINER
-BORDER = ft.Colors.OUTLINE_VARIANT
-TEXT = ft.Colors.ON_SURFACE
-MUTED = ft.Colors.ON_SURFACE_VARIANT
-GREEN = ft.Colors.GREEN_600
-YELLOW = ft.Colors.AMBER_600
-RED = ft.Colors.ERROR
-PAGE_BACKGROUND = ft.Colors.SURFACE
-SIDEBAR_BACKGROUND = ft.Colors.SURFACE_CONTAINER_LOW
-FOOTER_BACKGROUND = ft.Colors.SURFACE_CONTAINER
-PROGRESS_BACKGROUND = ft.Colors.SURFACE_CONTAINER_HIGHEST
-SELECTED_BACKGROUND = ft.Colors.PRIMARY_CONTAINER
-SELECTED_FOREGROUND = ft.Colors.ON_PRIMARY_CONTAINER
+from hermes_ui.theme import (
+    BLUE,
+    BORDER,
+    CARD,
+    FOOTER_BACKGROUND,
+    GREEN,
+    MUTED,
+    PAGE_BACKGROUND,
+    PROGRESS_BACKGROUND,
+    RED,
+    SELECTED_BACKGROUND,
+    SELECTED_FOREGROUND,
+    SIDEBAR_BACKGROUND,
+    SURFACE,
+    TEXT,
+    YELLOW,
+    configure_page_appearance,
+    next_theme_mode,
+)
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", ROOT_DIR / "assets")).resolve()
 LOGO_PATH = ASSETS_DIR / "deus.png"
@@ -64,53 +66,6 @@ HTPASSWD_PATH = Path(
     os.environ.get("HERMES_HTPASSWD_PATH", ROOT_DIR / "nginx" / ".htpasswd")
 ).resolve()
 AUTHENTICATED_KEY = "hermes_authenticated"
-
-
-def next_theme_mode(current: ft.ThemeMode) -> ft.ThemeMode:
-    return ft.ThemeMode.LIGHT if current == ft.ThemeMode.DARK else ft.ThemeMode.DARK
-
-
-def configure_page_appearance(page: ft.Page) -> None:
-    """Aplica a base visual compartilhada sem sobrescrever o tema escolhido."""
-    page.bgcolor = PAGE_BACKGROUND
-    page.padding = 0
-    page.theme = ft.Theme(color_scheme_seed=THEME_SEED, font_family="Segoe UI")
-    page.dark_theme = ft.Theme(color_scheme_seed=THEME_SEED, font_family="Segoe UI")
-
-
-def normalized(value: str) -> str:
-    text = unicodedata.normalize("NFKD", value)
-    return "".join(char for char in text if not unicodedata.combining(char)).casefold()
-
-
-def status_kind(status: str) -> str:
-    value = normalized(status)
-    if any(
-        word in value
-        for word in (
-            "conciliad",
-            "no prazo",
-            "em dia",
-            "com movimento",
-            "pronto",
-            "processado",
-            "cobrado",
-            "dados completos",
-        )
-    ):
-        return "ok"
-    if any(
-        word in value
-        for word in (
-            "cancelad",
-            "fora do periodo",
-            "sem movimento",
-            "informativ",
-            "alerta",
-        )
-    ):
-        return "info"
-    return "error"
 
 
 class AutomationView:

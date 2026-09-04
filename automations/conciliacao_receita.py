@@ -4,7 +4,7 @@ import warnings
 from calendar import monthrange
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from itertools import combinations
 from pathlib import Path
@@ -18,7 +18,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.common import decimal_value, integer, money as currency
+from automations.common import decimal_value, integer, money as currency, parse_date
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
@@ -68,25 +68,8 @@ def normalize(value: Any) -> str:
 
 
 def date_value(value: Any) -> date | None:
-    if isinstance(value, datetime):
-        value = value.date()
-    if isinstance(value, date):
-        return value if value.year >= 1900 else None
-    text = str(value or "").strip()
-    for pattern in (
-        "%d/%m/%Y",
-        "%d/%m/%y",
-        "%d-%m-%Y",
-        "%d-%m-%y",
-        "%d-%b-%y",
-        "%Y-%m-%d",
-    ):
-        try:
-            parsed = datetime.strptime(text, pattern).date()
-            return parsed if parsed.year >= 1900 else None
-        except ValueError:
-            continue
-    return None
+    parsed = parse_date(value)
+    return parsed if parsed is not None and parsed.year >= 1900 else None
 
 
 def ignored_opera_transaction(description: Any, hotel: str) -> bool:

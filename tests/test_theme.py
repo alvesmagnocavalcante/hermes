@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import flet as ft
 
-from hermes_ui.app import (
+from hermes_ui.theme import (
     BORDER,
     CARD,
     PAGE_BACKGROUND,

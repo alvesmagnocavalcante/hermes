@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
@@ -14,9 +13,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.common import decimal_value, money as currency
+from automations.common import active_sheet_rows, decimal_value, money as currency
 from automations.common import normalize_key as normalize_name
-from automations.excel_reader import load_workbook_compatible as load_workbook
 
 TOLERANCE = Decimal("0.01")
 
@@ -88,18 +86,7 @@ def client_group(value: Any) -> tuple[str, str]:
 
 # Lê e identifica cada razão contábil e relatório financeiro pelos cabeçalhos.
 def load_rows(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]]]:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        workbook = load_workbook(path, data_only=True, read_only=True)
-    try:
-        sheet = workbook.active
-        sheet.reset_dimensions()
-        rows = list(sheet.iter_rows(values_only=True))
-        if not rows:
-            raise ValueError(f"{path.name}: planilha vazia.")
-        return rows[0], rows[1:]
-    finally:
-        workbook.close()
+    return active_sheet_rows(path)
 
 
 def identify_ledger(

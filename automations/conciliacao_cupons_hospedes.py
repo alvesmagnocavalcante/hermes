@@ -4,7 +4,7 @@ import re
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -16,7 +16,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.common import normalize_key as normalize, optional_money as money
+from automations.common import (
+    normalize_key as normalize,
+    optional_money as money,
+    parse_date,
+)
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 
@@ -110,26 +114,6 @@ def decimal_value(value: Any) -> Decimal:
         return Decimal(text)
     except InvalidOperation:
         return Decimal()
-
-
-def parse_date(value: Any) -> date | None:
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    text = str(value or "").strip()
-    for pattern in (
-        "%d/%m/%Y",
-        "%d/%m/%y",
-        "%d-%m-%y",
-        "%d-%m-%Y",
-        "%Y-%m-%d",
-    ):
-        try:
-            return datetime.strptime(text, pattern).date()
-        except ValueError:
-            continue
-    return None
 
 
 def _header_map(values: tuple[Any, ...]) -> dict[str, int]:
@@ -291,11 +275,17 @@ def _read_mappings(path: Path) -> dict[str, set[str]]:
         workbook.close()
 
 
-def _match_account(check: str, accounts: set[str]) -> str | None:
+def _match_account(check: str, accounts: set[str], company: str = "") -> str | None:
     if check in accounts:
         return check
     matches = [account for account in accounts if check.endswith(account)]
-    return max(matches, key=len) if matches else None
+    if matches:
+        return max(matches, key=len)
+    if "MAGNA" not in normalize(company) or len(check) < 4:
+        return None
+    suffix = check[-4:]
+    magna_matches = [account for account in accounts if account.endswith(suffix)]
+    return magna_matches[0] if len(magna_matches) == 1 else None
 
 
 def _mapping_matches_company(mapping_name: str, company: str) -> bool:
@@ -345,7 +335,7 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
         checks = [row.check for row in journal if row.code in codes]
         for company, accounts in companies.items():
             matched = len(
-                {_match_account(check, accounts) for check in checks} - {None}
+                {_match_account(check, accounts, company) for check in checks} - {None}
             )
             candidate = (
                 int(_mapping_matches_company(mapping_name, company)),
@@ -366,7 +356,7 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     journal_end = max(row.posting_date for row in selected_journal)
     postings: dict[str, dict[date, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
     for row in selected_journal:
-        account = _match_account(row.check, accounts)
+        account = _match_account(row.check, accounts, company)
         if account:
             postings[account][row.posting_date] += row.value
 

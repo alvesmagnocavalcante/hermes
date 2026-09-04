@@ -10,6 +10,7 @@ from openpyxl import Workbook
 from automations.conciliacao_cupons_hospedes import (
     _Coupon,
     _JournalRow,
+    _match_account,
     _read_journal,
     analyze,
     parse_date,
@@ -53,6 +54,19 @@ class JournalDateParsingTest(TestCase):
 
 
 class MappingSelectionTest(TestCase):
+    def test_matches_magna_account_by_unique_four_digit_suffix(self):
+        accounts = {"10008370", "10008371"}
+
+        self.assertEqual(
+            _match_account("0018370", accounts, "MAGNA PRAIA"), "10008370"
+        )
+        self.assertIsNone(_match_account("0018370", accounts, "CHARME HOSPEDAGEM"))
+
+    def test_rejects_ambiguous_magna_suffix(self):
+        accounts = {"10008370", "20008370"}
+
+        self.assertIsNone(_match_account("0018370", accounts, "MAGNA PRAIA"))
+
     def test_prioritizes_mapping_named_for_identified_company(self):
         paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
         coupon = _Coupon(

@@ -68,11 +68,12 @@ Usuário
 - `main.py`: configura logging, assets e inicia o Flet.
 - `hermes_ui/app.py`: navegação, seleção de hotel, upload, filtros, paginação, resumo, exportação e mensagens de erro.
 - `hermes_ui/registry.py`: catálogo declarativo das automações, colunas da interface, formatos, extensões, adaptação dos resultados e nomes de saída.
-- `hermes_ui/app.py`: usa tokens semânticos do tema Material do Flet e permite alternância em tempo de execução entre os modos claro e escuro sem recriar a automação aberta.
+- `hermes_ui/theme.py`: tokens semânticos do tema Material e alternância entre os modos claro e escuro.
+- `hermes_ui/presentation.py`: normalização e classificação visual dos status retornados pelas automações.
 - `hermes_ui/runtime.py`: validação de quantidade/tamanho e semáforo de concorrência.
 - `hermes_ui/telemetry.py`: configuração opcional do Logfire e seleção dos atributos operacionais enviados.
 - `automations/*.py`: reconhecimento de arquivos, leitura, regras de negócio e exportadores.
-- `automations/common.py`: normalização, conversão monetária, leitura comum e inclusão das planilhas-base no Excel.
+- `automations/common.py`: normalização, conversão monetária, parsing de datas, leitura comum e inclusão das planilhas-base no Excel.
 - `automations/excel_reader.py`: compatibilidade com `.xlsx`, `.xlsm`, `.xltx`, `.xltm`, `.xls` binário, HTML com extensão `.xls` e arquivos modernos renomeados como `.xls`.
 - `assets/folha/modelo_folha.xlsm`: parametrização padrão da folha de pagamento.
 - `tests/`: testes unitários e de regressão.

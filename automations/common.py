@@ -4,6 +4,7 @@ import re
 import unicodedata
 import warnings
 from collections.abc import Iterable
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,16 @@ from typing import Any
 from openpyxl import load_workbook as load_openpyxl_workbook
 
 from automations.excel_reader import load_workbook_compatible as load_workbook
+
+DATE_FORMATS = (
+    "%d/%m/%Y",
+    "%d/%m/%y",
+    "%d/%m/%Y %H:%M",
+    "%d-%m-%Y",
+    "%d-%m-%y",
+    "%d-%b-%y",
+    "%Y-%m-%d",
+)
 
 
 # Normaliza chaves textuais usadas para relacionar registros entre relatórios.
@@ -72,15 +83,34 @@ def integer(value: int) -> str:
     return f"{value:,}".replace(",", ".")
 
 
+def parse_date(value: Any) -> date | None:
+    """Converte as representações de data encontradas nos relatórios do HERMES."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    text = str(value or "").strip().upper()
+    for pattern in DATE_FORMATS:
+        try:
+            return datetime.strptime(text, pattern).date()
+        except ValueError:
+            continue
+    return None
+
+
 # Abre a primeira aba e devolve cabeçalho e linhas em um formato comum.
 def active_sheet_rows(path: Path) -> tuple[tuple[Any, ...], list[tuple[Any, ...]]]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         workbook = load_workbook(path, data_only=True, read_only=True)
-    sheet = workbook.active
-    sheet.reset_dimensions()
-    rows = list(sheet.iter_rows(values_only=True))
-    workbook.close()
+    try:
+        sheet = workbook.active
+        sheet.reset_dimensions()
+        rows = list(sheet.iter_rows(values_only=True))
+    finally:
+        workbook.close()
+    if not rows:
+        raise ValueError(f"{path.name}: planilha vazia.")
     return rows[0], rows[1:]
 
 

@@ -4,7 +4,7 @@ import re
 import warnings
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
@@ -17,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.common import normalize_key as normalize
+from automations.common import normalize_key as normalize, parse_date
 from automations.common import optional_money as money, report_decimal as decimal_value
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
@@ -261,28 +261,6 @@ def identifier(value: Any) -> str:
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
     return str(value or "").strip()
-
-
-def parse_date(value: Any) -> date | None:
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    text = str(value or "").strip()
-    for pattern in (
-        "%d/%m/%Y",
-        "%d/%m/%y",
-        "%d/%m/%Y %H:%M",
-        "%d-%m-%Y",
-        "%d-%m-%y",
-        "%d-%b-%y",
-        "%Y-%m-%d",
-    ):
-        try:
-            return datetime.strptime(text.upper(), pattern).date()
-        except ValueError:
-            continue
-    return None
 
 
 class _HtmlTableParser(HTMLParser):
