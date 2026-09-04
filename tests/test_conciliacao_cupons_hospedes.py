@@ -54,7 +54,7 @@ class JournalDateParsingTest(TestCase):
 
 
 class MappingSelectionTest(TestCase):
-    def test_matches_magna_account_by_unique_four_digit_suffix(self):
+    def test_matches_magna_account_using_check_prefix(self):
         accounts = {"10008370", "10008371"}
 
         self.assertEqual(
@@ -62,10 +62,30 @@ class MappingSelectionTest(TestCase):
         )
         self.assertIsNone(_match_account("0018370", accounts, "CHARME HOSPEDAGEM"))
 
-    def test_rejects_ambiguous_magna_suffix(self):
-        accounts = {"10008370", "20008370"}
+    def test_rejects_ambiguous_transformed_magna_account(self):
+        accounts = {"10008370", "19998370"}
 
         self.assertIsNone(_match_account("0018370", accounts, "MAGNA PRAIA"))
+
+    def test_matches_taiba_accounts_using_outlet_prefix(self):
+        accounts = {
+            "20008487",
+            "30002960",
+            "60006811",
+            "70002991",
+            "80026015",
+        }
+
+        expected = {
+            "0048487": "20008487",
+            "0032960": "30002960",
+            "0066811": "60006811",
+            "0012991": "70002991",
+            "0026015": "80026015",
+        }
+        for check, account in expected.items():
+            with self.subTest(check=check):
+                self.assertEqual(_match_account(check, accounts, "CARMEL TAÍBA"), account)
 
     def test_prioritizes_mapping_named_for_identified_company(self):
         paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]

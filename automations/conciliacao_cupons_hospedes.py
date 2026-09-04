@@ -23,6 +23,17 @@ from automations.common import (
 )
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
+ACCOUNT_CHECK_PREFIXES = {
+    "MAGNA": {"1": "001"},
+    "TAIBA": {
+        "2": "004",  # Bar da Piscina
+        "3": "003",  # Bar das Artes
+        "6": "006",  # Frigobar
+        "7": "001",  # Restaurante Pau a Pique
+        "8": "002",  # Restaurante Cipó
+    },
+}
+
 
 # Modelos das fontes e do resultado da conciliação de cupons por hóspede.
 @dataclass(frozen=True)
@@ -281,11 +292,26 @@ def _match_account(check: str, accounts: set[str], company: str = "") -> str | N
     matches = [account for account in accounts if check.endswith(account)]
     if matches:
         return max(matches, key=len)
-    if "MAGNA" not in normalize(company) or len(check) < 4:
+
+    company_name = normalize(company)
+    prefixes = next(
+        (
+            mapping
+            for hotel, mapping in ACCOUNT_CHECK_PREFIXES.items()
+            if hotel in company_name
+        ),
+        None,
+    )
+    if prefixes is None or len(check) < 4:
         return None
-    suffix = check[-4:]
-    magna_matches = [account for account in accounts if account.endswith(suffix)]
-    return magna_matches[0] if len(magna_matches) == 1 else None
+
+    transformed_matches = [
+        account
+        for account in accounts
+        if len(account) >= 5
+        and prefixes.get(account[0], "") + account[-4:] == check
+    ]
+    return transformed_matches[0] if len(transformed_matches) == 1 else None
 
 
 def _mapping_matches_company(mapping_name: str, company: str) -> bool:
