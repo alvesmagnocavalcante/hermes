@@ -34,6 +34,14 @@ ACCOUNT_CHECK_PREFIXES = {
     },
 }
 
+STATUS_RECONCILED = "Conciliado"
+STATUS_RECONCILED_OTHER_DATE = "Conciliado em data diferente"
+STATUS_CHECK_WITHOUT_VALUE = "CHECK# localizado sem valor cobrado"
+STATUS_VALUE_MISMATCH = "Valor divergente entre BI/PDV e Journal"
+STATUS_OUTSIDE_PERIOD = "Data do cupom fora do período do Journal"
+STATUS_OTHER_DATE = "CHECK# localizado somente em outra data"
+STATUS_MISSING = "Cupom não localizado no Journal"
+
 
 # Modelos das fontes e do resultado da conciliação de cupons por hóspede.
 @dataclass(frozen=True)
@@ -64,7 +72,7 @@ class CouponResult:
 
     @property
     def incomplete_period(self) -> bool:
-        return self.status == "Journal não cobre a data"
+        return self.status == STATUS_OUTSIDE_PERIOD
 
 
 @dataclass(frozen=True)
@@ -406,33 +414,33 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
             difference = coupon.value - journal_value
             if journal_value == 0 and coupon.value != 0:
                 status, detail = (
-                    "Não cobrado",
-                    "O CHECK# existe, mas o valor líquido lançado no Journal é zero.",
+                    STATUS_CHECK_WITHOUT_VALUE,
+                    "O CHECK# foi localizado no Journal, mas o valor líquido cobrado é zero.",
                 )
             elif abs(difference) > Decimal("0.01"):
                 status, detail = (
-                    "Valor divergente",
+                    STATUS_VALUE_MISMATCH,
                     f"Diferença de {money(difference)} entre o cupom e a conta.",
                 )
             elif posting_date != coupon.issue_date:
-                status = "Conciliado - data diferente"
+                status = STATUS_RECONCILED_OTHER_DATE
                 detail = f"Cobrado no Journal em {posting_date:%d/%m/%Y}."
             else:
-                status = "Conciliado"
+                status = STATUS_RECONCILED
         elif coupon.issue_date < journal_start or coupon.issue_date > journal_end:
             journal_value = None
-            status = "Journal não cobre a data"
+            status = STATUS_OUTSIDE_PERIOD
             detail = f"O Journal selecionado cobre {journal_start:%d/%m/%Y} a {journal_end:%d/%m/%Y}."
         elif by_date:
             nearest = min(by_date, key=lambda day: abs((day - coupon.issue_date).days))
             journal_value = by_date[nearest].quantize(Decimal("0.01"))
             posting_date = nearest
-            status = "Lançado em outra data"
-            detail = f"CHECK# localizado em {nearest:%d/%m/%Y}, mas sem correspondência segura de valor."
+            status = STATUS_OTHER_DATE
+            detail = f"O CHECK# foi localizado em {nearest:%d/%m/%Y}, mas sem correspondência segura de valor."
         else:
             journal_value = None
-            status = "Ausente na conta"
-            detail = "Cupom emitido no BI/PDV sem CHECK# correspondente no Journal."
+            status = STATUS_MISSING
+            detail = "O cupom consta no BI/PDV, mas nenhum CHECK# correspondente foi localizado no Journal do Opera."
         results.append(
             CouponResult(
                 company,

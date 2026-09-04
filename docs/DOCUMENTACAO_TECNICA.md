@@ -177,7 +177,7 @@ Módulo: `automations/conciliacao_cupons_hospedes.py`.
 
 - Identifica hotel e mapeamento pela melhor relação entre contas do BI/PDV e `CHECK#` do Journal.
 - Compara conta, data e valor.
-- Pode retornar `Conciliado`, `Conciliado - data diferente`, `Não cobrado`, `Valor divergente`, `Lançado em outra data`, `Ausente na conta` ou `Journal não cobre a data`.
+- Pode retornar `Conciliado`, `Conciliado em data diferente`, `CHECK# localizado sem valor cobrado`, `Valor divergente entre BI/PDV e Journal`, `CHECK# localizado somente em outra data`, `Cupom não localizado no Journal` ou `Data do cupom fora do período do Journal`.
 - A situação de período incompleto deve ser corrigida com novo Journal antes de ser tratada como divergência definitiva.
 
 ### 7.5 RPS de Serviços Prestados

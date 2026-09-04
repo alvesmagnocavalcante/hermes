@@ -12,6 +12,7 @@ from automations.conciliacao_cupons_hospedes import (
     _JournalRow,
     _match_account,
     _read_journal,
+    STATUS_MISSING,
     analyze,
     parse_date,
 )
@@ -134,3 +135,61 @@ class MappingSelectionTest(TestCase):
 
         self.assertEqual(result.company, "CHARME HOSPEDAGEM")
         self.assertEqual(result.mapping, "CHARME")
+
+    def test_missing_coupon_status_identifies_the_missing_source(self):
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        matched = _Coupon(
+            "CHARME HOSPEDAGEM",
+            "PDV",
+            date(2026, 8, 1),
+            "1",
+            "440003175",
+            "0100",
+            "Hóspede 1",
+            "Cupom",
+            Decimal("13.00"),
+        )
+        missing = _Coupon(
+            "CHARME HOSPEDAGEM",
+            "PDV",
+            date(2026, 8, 1),
+            "2",
+            "440003176",
+            "0101",
+            "Hóspede 2",
+            "Cupom",
+            Decimal("20.00"),
+        )
+        coupons = {
+            (item.company, item.account, item.issue_date, item.document): item
+            for item in (matched, missing)
+        }
+        journal = [
+            _JournalRow(
+                "2028", "440003175", date(2026, 8, 1), Decimal("13.00"), "0100"
+            )
+        ]
+
+        with (
+            patch(
+                "automations.conciliacao_cupons_hospedes.identify_file",
+                side_effect=("pdv", "journal", "mapping"),
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_pdv",
+                return_value=coupons,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_journal",
+                return_value=journal,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_mappings",
+                return_value={"CHARME": {"2028"}},
+            ),
+        ):
+            result = analyze(paths)
+
+        missing_result = next(item for item in result.coupons if item.document == "2")
+        self.assertEqual(missing_result.status, STATUS_MISSING)
+        self.assertIn("não localizado no Journal", missing_result.status)

@@ -296,12 +296,12 @@ Confirmar se os cupons emitidos no BI/PDV foram lançados e efetivamente cobrado
 ### Resultados
 
 - **Conciliado:** conta, data e valor localizados.
-- **Conciliado - data diferente:** valor localizado em outra data.
-- **Não cobrado:** o `CHECK#` existe, mas o valor líquido é zero.
-- **Valor divergente:** cupom e Journal têm valores diferentes.
-- **Lançado em outra data:** conta localizada, mas sem correspondência segura de valor.
-- **Ausente na conta:** não existe `CHECK#` correspondente.
-- **Journal não cobre a data:** o período selecionado não contém a emissão; gere outro Journal antes de concluir que existe erro.
+- **Conciliado em data diferente:** valor localizado em outra data.
+- **CHECK# localizado sem valor cobrado:** o `CHECK#` existe no Journal, mas o valor líquido é zero.
+- **Valor divergente entre BI/PDV e Journal:** as duas fontes apresentam valores diferentes.
+- **CHECK# localizado somente em outra data:** existe lançamento para a conta, mas sem correspondência segura de data e valor.
+- **Cupom não localizado no Journal:** o cupom consta no BI/PDV, mas não existe `CHECK#` correspondente no Journal.
+- **Data do cupom fora do período do Journal:** o período selecionado não contém a emissão; gere outro Journal antes de concluir que existe erro.
 
 ### Exportação
 
