@@ -32,6 +32,7 @@ INVENTORY_CODES = {
     "Mimos Hospedes": ("06", "0706"),
     "Amenitees": ("0701",),
     "Material de Higiene e Limpeza": ("0702",),
+    "Material de Cama, Mesa e Banho": ("0803",),
     "Material de Escritório/Informatica": ("0704", "0711"),
     "Decoracao": ("0708",),
     "Eletroeletronicos": ("0709",),
@@ -178,6 +179,26 @@ def final_balances(data) -> dict[str, Decimal]:
     return result
 
 
+def unmapped_analytic_accounts(data) -> list[str]:
+    """Retorna contas analíticas do balancete ausentes na parametrização."""
+    header, rows = data
+    if "DescricaoConta" not in header or "TipoContaDescricao" not in header:
+        return []
+    name_i = header.index("DescricaoConta")
+    type_i = header.index("TipoContaDescricao")
+    configured = {normalize(account) for account in INVENTORY_CODES}
+    return sorted(
+        {
+            str(row[name_i]).strip()
+            for row in rows
+            if len(row) > max(name_i, type_i)
+            and normalize(row[type_i]) == "ANALITICO"
+            and row[name_i] not in (None, "", "NULL")
+            and normalize(row[name_i]) not in configured
+        }
+    )
+
+
 # Compara os custos das fontes e classifica diferenças por conta.
 def analyze(paths: list[Path]) -> list[Row]:
     if len(paths) != 4:
@@ -198,6 +219,12 @@ def analyze(paths: list[Path]) -> list[Row]:
     ]
 
     inventory = grouped(files["inventory"], "GrupoCodigo", "SaldoValor")
+    unmapped = unmapped_analytic_accounts(files["stock_ledger"])
+    if unmapped:
+        raise ValueError(
+            "Contas analíticas do estoque sem parametrização: "
+            + ", ".join(unmapped)
+        )
     accounting_balances = final_balances(files["stock_ledger"])
     for account, codes in INVENTORY_CODES.items():
         inventory_value = sum(
