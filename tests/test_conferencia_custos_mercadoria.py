@@ -10,6 +10,7 @@ from automations.conferencia_custos_mercadoria import (
     entry_postings,
     export_excel,
     final_balances,
+    identify,
 )
 
 
@@ -23,6 +24,59 @@ def create_workbook(path: Path, header: list[str], rows: list[list[object]]) -> 
 
 
 class MerchandiseCostsTest(TestCase):
+    def test_identifies_current_reports_by_content_with_generic_names(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            documents = root / "configuracao.xlsx"
+            entries = root / "balancete 1.xlsx"
+            inventory = root / "inventario.xlsx"
+            stock = root / "balancete 2.xlsx"
+
+            create_workbook(
+                documents,
+                ["DESCRICAOTDESEMB", "VALORLANÇADO"],
+                [["Alimentos", Decimal("100")]],
+            )
+            create_workbook(
+                entries,
+                ["DescricaoConta", "Debito", "SaldoAtual"],
+                [
+                    ["Alimentos", Decimal("100"), Decimal("150")],
+                    ["Vinhos & Champanhe", 0, 0],
+                    ["Bebidas Alcoolicas", 0, 0],
+                    ["Bebidas Nao Alcoolicas", 0, 0],
+                    ["Frigobar", 0, 0],
+                ],
+            )
+            create_workbook(
+                inventory,
+                ["GrupoCodigo", "SaldoValor"],
+                [["01", Decimal("150")]],
+            )
+            create_workbook(
+                stock,
+                ["DescricaoConta", "Debito", "SaldoAtual"],
+                [
+                    ["ESTOQUES", 0, Decimal("150")],
+                    ["Alimentos", 0, Decimal("150")],
+                    ["Material de Copa e Cozinha", 0, 0],
+                ],
+            )
+
+            files = identify([documents, entries, inventory, stock])
+            rows = analyze([documents, entries, inventory, stock])
+
+        self.assertEqual(
+            set(files), {"documents", "entry_ledger", "inventory", "stock_ledger"}
+        )
+        alimentos_entry = next(
+            row
+            for row in rows
+            if row.analysis == "Entradas" and row.account == "Alimentos"
+        )
+        self.assertEqual(alimentos_entry.source, Decimal("100"))
+        self.assertEqual(alimentos_entry.accounting, Decimal("100"))
+
     def test_entry_comparison_ignores_cost_and_stock_movements(self):
         data = (
             ("DescricaoConta", "Debito", "Historico"),

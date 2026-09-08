@@ -70,21 +70,60 @@ class Row:
 
 
 # Identifica CAP, Inventário e Contabilidade e agrupa seus valores.
+def _account_names(data) -> set[str]:
+    header, rows = data
+    if "DescricaoConta" not in header:
+        return set()
+    index = header.index("DescricaoConta")
+    return {
+        normalize(row[index])
+        for row in rows
+        if len(row) > index and row[index] not in (None, "", "NULL")
+    }
+
+
+def _identify_by_content(data) -> str | None:
+    header, _ = data
+    columns = set(header)
+    if {"DESCRICAOTDESEMB", "VALORLANÇADO"}.issubset(columns):
+        return "documents"
+    if {"GrupoCodigo", "SaldoValor"}.issubset(columns):
+        return "inventory"
+    if {"DescricaoConta", "Debito", "Historico"}.issubset(columns):
+        return "entry_ledger"
+    if {"DescricaoConta", "Debito", "SaldoAtual"}.issubset(columns):
+        accounts = _account_names(data)
+        entry_accounts = {normalize(account) for account in ENTRY_ACCOUNTS.values()}
+        if (
+            0 < len(accounts) <= len(ENTRY_ACCOUNTS)
+            and len(accounts & entry_accounts) >= 3
+        ):
+            return "entry_ledger"
+        inventory_accounts = {normalize(account) for account in INVENTORY_CODES}
+        if accounts & inventory_accounts:
+            return "stock_ledger"
+    return None
+
+
 def identify(paths: list[Path]):
     files = {}
     for path in paths:
+        data = read(path)
+        key = _identify_by_content(data)
         name = normalize(path.name)
-        if "DOCUMENTOSLANCADOS" in name:
+        if key is None and "DOCUMENTOSLANCADOS" in name:
             key = "documents"
-        elif "RAZAOANALITICOESTOQUEAB" in name:
+        elif key is None and "RAZAOANALITICOESTOQUEAB" in name:
             key = "entry_ledger"
-        elif "INVENTARIOFISICO" in name:
+        elif key is None and "INVENTARIOFISICO" in name:
             key = "inventory"
-        elif "RAZAOANALITICOESTOQUES" in name:
+        elif key is None and "RAZAOANALITICOESTOQUES" in name:
             key = "stock_ledger"
-        else:
+        if key is None:
             raise ValueError(f"Arquivo não reconhecido: {path.name}")
-        files[key] = read(path)
+        if key in files:
+            raise ValueError(f"Dois arquivos foram identificados como {key}.")
+        files[key] = data
     if set(files) != {"documents", "entry_ledger", "inventory", "stock_ledger"}:
         raise ValueError("Selecione os quatro arquivos da Atividade 10.")
     return files
@@ -104,6 +143,8 @@ def entry_postings(data) -> dict[str, Decimal]:
     header, rows = data
     name_i = header.index("DescricaoConta")
     debit_i = header.index("Debito")
+    if "Historico" not in header:
+        return grouped(data, "DescricaoConta", "Debito")
     history_i = header.index("Historico")
     result = defaultdict(Decimal)
     required_terms = ("NOTAFISCAL", "MERCADORIA", "TERCEIROS")
