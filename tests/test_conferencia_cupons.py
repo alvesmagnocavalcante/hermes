@@ -9,6 +9,20 @@ from automations.conferencia_cupons import read_file, reconcile, save_excel
 
 
 class CouponReconciliationTest(TestCase):
+    def test_fiscal_null_value_is_read_as_zero(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "fiscal.xlsx"
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.append(["Chave", "ValorContabil", "DataDocumento", "Cancelado"])
+            sheet.append(["CHAVE-NULL", "NULL", "11/09/2026", False])
+            workbook.save(path)
+
+            source, values, _ = read_file(path)
+
+            self.assertEqual(source, "Fiscal")
+            self.assertEqual(values["CHAVE-NULL"].value, Decimal())
+
     def test_aprovado_c_is_included_as_simphony(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "simphony.xlsx"

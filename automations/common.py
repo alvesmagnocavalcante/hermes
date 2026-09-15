@@ -42,7 +42,7 @@ def identifier(value: Any) -> str:
 
 # Converte números de diferentes formatos e padroniza a apresentação brasileira.
 def decimal_value(value: Any) -> Decimal:
-    if value in (None, ""):
+    if value is None or str(value).strip().upper() in {"", "NULL"}:
         return Decimal()
     try:
         return Decimal(str(value))

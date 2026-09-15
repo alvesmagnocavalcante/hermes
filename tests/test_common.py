@@ -1,11 +1,18 @@
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from openpyxl import Workbook
 
-from automations.common import active_sheet_rows, parse_date
+from automations.common import active_sheet_rows, decimal_value, parse_date
+
+
+class CommonDecimalParsingTest(TestCase):
+    def test_treats_database_null_marker_as_zero(self):
+        self.assertEqual(decimal_value("NULL"), Decimal())
+        self.assertEqual(decimal_value(" null "), Decimal())
 
 
 class CommonDateParsingTest(TestCase):
