@@ -46,6 +46,10 @@ DEFAULT_TEMPLATE = ASSETS_DIR / "folha" / "modelo_folha.xlsm"
 MANUAL_INVOICE_EVENTS = frozenset(
     {"REFPLANOODONTOLOGICO", "REFPLANODESAUDE"}
 )
+VACATION_EVENT_MAPPINGS = {
+    "359": ("Horas Férias Noturnas", "201010601", "201010103"),
+    "392": ("Med.Eve.Var.Abono Pecuniário", "201010601", "201010103"),
+}
 
 
 # Modelos dos lançamentos contábeis, resultado e tabelas de relacionamento.
@@ -273,12 +277,13 @@ def read_mappings(path: Path) -> Mappings:
                     _account(sheet.cell(row, 28).value),
                     _account(sheet.cell(row, 29).value),
                 )
+        vacations.update(VACATION_EVENT_MAPPINGS)
 
         excluded_events = frozenset(
             _account(sheet.cell(row, 16).value)
             for row in range(3, sheet.max_row + 1)
             if sheet.cell(row, 16).value is not None
-        )
+        ) | frozenset(VACATION_EVENT_MAPPINGS)
 
         rate_events = (
             ("REF INSS MENSAL", 16),

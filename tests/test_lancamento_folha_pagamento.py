@@ -10,6 +10,7 @@ from automations.lancamento_folha_pagamento import (
     PostingRow,
     build_rates,
     identify_file,
+    parse_vacation_receipts,
     read_mappings,
     required_sources,
 )
@@ -22,7 +23,39 @@ class PayrollSourceSelectionTest(TestCase):
         self.assertEqual(mappings.events["271"], ("302020101", "201010101"))
         self.assertEqual(mappings.events["311"], ("101020104", "201010101"))
         self.assertEqual(mappings.events["359"], ("201010601", "201010103"))
+        self.assertEqual(
+            mappings.vacations["359"],
+            ("Horas Férias Noturnas", "201010601", "201010103"),
+        )
+        self.assertEqual(
+            mappings.vacations["392"],
+            ("Med.Eve.Var.Abono Pecuniário", "201010601", "201010103"),
+        )
+        self.assertTrue({"359", "392"}.issubset(mappings.excluded_events))
         self.assertIn("AJUDADETRANSPORTEESTAGIARIO", mappings.descriptions)
+
+    def test_generates_additional_vacation_events(self):
+        mappings = read_mappings(DEFAULT_TEMPLATE)
+        employees = {"MARIA": ("101", "Governança", "0101 - Governança")}
+        rows = [
+            ["Funcionário", "", "", "Maria"],
+            ["359", "", "", "", "125,50"],
+            ["392", "", "", "", "300,00"],
+        ]
+
+        result = parse_vacation_receipts(rows, employees, mappings)
+
+        self.assertEqual([row.event for row in result], ["359", "392"])
+        self.assertEqual(
+            [row.value for row in result],
+            [Decimal("125.50"), Decimal("300.00")],
+        )
+        self.assertTrue(
+            all(
+                (row.debit, row.credit) == ("201010601", "201010103")
+                for row in result
+            )
+        )
 
     def test_does_not_generate_health_and_dental_plan_rates(self):
         monthly = [
