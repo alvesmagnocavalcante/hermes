@@ -81,13 +81,18 @@ class MerchandiseCostsTest(TestCase):
             )
             create_workbook(
                 entries,
-                ["DescricaoConta", "Debito", "SaldoAtual"],
+                ["DescricaoConta", "Debito", "SaldoAtual", "Historico"],
                 [
-                    ["Alimentos", Decimal("100"), Decimal("150")],
-                    ["Vinhos & Champanhe", 0, 0],
-                    ["Bebidas Alcoolicas", 0, 0],
-                    ["Bebidas Nao Alcoolicas", 0, 0],
-                    ["Frigobar", 0, 0],
+                    [
+                        "Alimentos",
+                        Decimal("100"),
+                        Decimal("150"),
+                        "Lançamento Nota Fiscal Eletrônica de Mercadoria (Terceiros)",
+                    ],
+                    ["Vinhos & Champanhe", 0, 0, ""],
+                    ["Bebidas Alcoolicas", 0, 0, ""],
+                    ["Bebidas Nao Alcoolicas", 0, 0, ""],
+                    ["Frigobar", 0, 0, ""],
                 ],
             )
             create_workbook(
@@ -97,11 +102,11 @@ class MerchandiseCostsTest(TestCase):
             )
             create_workbook(
                 stock,
-                ["DescricaoConta", "Debito", "SaldoAtual"],
+                ["DescricaoConta", "Debito", "SaldoAtual", "Historico"],
                 [
-                    ["ESTOQUES", 0, Decimal("150")],
-                    ["Alimentos", 0, Decimal("150")],
-                    ["Material de Copa e Cozinha", 0, 0],
+                    ["ESTOQUES", 0, Decimal("150"), ""],
+                    ["Alimentos", 0, Decimal("150"), ""],
+                    ["Material de Copa e Cozinha", 0, 0, ""],
                 ],
             )
 

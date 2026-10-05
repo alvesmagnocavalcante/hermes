@@ -90,9 +90,7 @@ def _identify_by_content(data) -> str | None:
         return "documents"
     if {"GrupoCodigo", "SaldoValor"}.issubset(columns):
         return "inventory"
-    if {"DescricaoConta", "Debito", "Historico"}.issubset(columns):
-        return "entry_ledger"
-    if {"DescricaoConta", "Debito", "SaldoAtual"}.issubset(columns):
+    if {"DescricaoConta", "Debito"}.issubset(columns):
         accounts = _account_names(data)
         entry_accounts = {normalize(account) for account in ENTRY_ACCOUNTS.values()}
         if (
@@ -103,6 +101,8 @@ def _identify_by_content(data) -> str | None:
         inventory_accounts = {normalize(account) for account in INVENTORY_CODES}
         if accounts & inventory_accounts:
             return "stock_ledger"
+        if "Historico" in columns:
+            return "entry_ledger"
     return None
 
 
