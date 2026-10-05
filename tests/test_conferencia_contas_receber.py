@@ -1,8 +1,19 @@
 from decimal import Decimal
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from automations.conferencia_contas_receber import grouped, identify_ledger
+from openpyxl import load_workbook
+
+from automations.conferencia_contas_receber import (
+    BillingRow,
+    ReceivablesResult,
+    TotalCheck,
+    billing_comparison,
+    grouped,
+    identify_ledger,
+    save_excel,
+)
 
 
 class IdentifyLedgerTest(TestCase):
@@ -83,3 +94,67 @@ class ClientGroupingTest(TestCase):
         )
 
         self.assertEqual(result["DECOLARDESPEGAR"][1], Decimal("106324.89"))
+
+
+class BillingDetailsTest(TestCase):
+    def test_compares_bordero_transaction_with_ledger_sheet_number(self):
+        bordero = (
+            ("NumeroDaTransacao", "Valor", "Status"),
+            [
+                (101, Decimal("60"), "Baixado"),
+                (101, Decimal("40"), "Baixado"),
+                (202, Decimal("20"), "Baixado"),
+            ],
+        )
+        ledger = (
+            ("NumeroPlanilha", "Debito"),
+            [("101", Decimal("100")), (303, Decimal("30"))],
+        )
+
+        rows = billing_comparison(bordero, ledger)
+
+        by_identification = {row.identification: row for row in rows}
+        self.assertEqual(by_identification["101"].status, "Conciliado")
+        self.assertEqual(by_identification["202"].difference, Decimal("20"))
+        self.assertEqual(by_identification["303"].difference, Decimal("-30"))
+        self.assertEqual(
+            sum((row.source_value for row in rows), Decimal()), Decimal("120")
+        )
+        self.assertEqual(
+            sum((row.accounting_value for row in rows), Decimal()), Decimal("130")
+        )
+
+    def test_excel_contains_billing_details_sheet(self):
+        billing_rows = [
+            BillingRow("101", Decimal("100"), Decimal("100")),
+            BillingRow("202", Decimal("20"), Decimal()),
+        ]
+        result = ReceivablesResult(
+            clients=[],
+            client_accounting_total=Decimal(),
+            client_financial_total=Decimal(),
+            billing=TotalCheck("Notas a faturar", Decimal("120"), Decimal("100")),
+            commissions=TotalCheck(
+                "Comissões de cartão", Decimal(), Decimal()
+            ),
+            billing_rows=billing_rows,
+            hotel="Cumbuco",
+        )
+
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "resultado.xlsx"
+            save_excel(result, output)
+            workbook = load_workbook(output, data_only=True)
+            try:
+                self.assertEqual(
+                    workbook.sheetnames, ["Resumo", "Clientes", "Notas a faturar"]
+                )
+                sheet = workbook["Notas a faturar"]
+                self.assertEqual(sheet["A4"].value, "Identificação (Transação / Nº planilha)")
+                self.assertEqual(sheet["A5"].value, "101")
+                self.assertEqual(sheet["E5"].value, "Conciliado")
+                self.assertEqual(sheet["A6"].value, "202")
+                self.assertEqual(sheet["D6"].value, 20)
+                self.assertEqual(sheet["E6"].value, "Divergente")
+            finally:
+                workbook.close()

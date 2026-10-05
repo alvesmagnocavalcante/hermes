@@ -13,7 +13,12 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from automations.common import active_sheet_rows, decimal_value, money as currency
+from automations.common import (
+    active_sheet_rows,
+    decimal_value,
+    identifier,
+    money as currency,
+)
 from automations.common import normalize_key as normalize_name
 
 TOLERANCE = Decimal("0.01")
@@ -67,12 +72,28 @@ class TotalCheck:
 
 
 @dataclass(frozen=True)
+class BillingRow:
+    identification: str
+    source_value: Decimal
+    accounting_value: Decimal
+
+    @property
+    def difference(self) -> Decimal:
+        return self.source_value - self.accounting_value
+
+    @property
+    def status(self) -> str:
+        return "Conciliado" if abs(self.difference) <= TOLERANCE else "Divergente"
+
+
+@dataclass(frozen=True)
 class ReceivablesResult:
     clients: list[ClientRow]
     client_accounting_total: Decimal
     client_financial_total: Decimal
     billing: TotalCheck
     commissions: TotalCheck
+    billing_rows: list[BillingRow]
     hotel: str = "Cumbuco"
 
 
@@ -190,6 +211,85 @@ def column_total(
     return total
 
 
+def grouped_by_identifier(
+    header: tuple[Any, ...],
+    rows: list[tuple[Any, ...]],
+    identification_column: str,
+    value_column: str,
+    source_label: str,
+    absolute: bool = False,
+) -> dict[str, tuple[str, Decimal]]:
+    identification_i = header.index(identification_column)
+    value_i = header.index(value_column)
+    sums: defaultdict[str, Decimal] = defaultdict(Decimal)
+    labels: dict[str, str] = {}
+    for line_number, row in enumerate(rows, 2):
+        value = decimal_value(row[value_i] if len(row) > value_i else None)
+        value = abs(value) if absolute else value
+        if not value:
+            continue
+        raw_identification = (
+            row[identification_i] if len(row) > identification_i else None
+        )
+        key = identifier(raw_identification)
+        if key:
+            label = str(raw_identification).strip()
+            if label.endswith(".0") and label[:-2].isdigit():
+                label = label[:-2]
+        else:
+            key = f"SEMIDENTIFICACAO{source_label}{line_number}"
+            label = f"Sem identificação ({source_label}, linha {line_number})"
+        labels.setdefault(key, label)
+        sums[key] += value
+    return {key: (labels[key], value) for key, value in sums.items()}
+
+
+def billing_comparison(
+    bordero: tuple[tuple[Any, ...], list[tuple[Any, ...]]],
+    ledger: tuple[tuple[Any, ...], list[tuple[Any, ...]]],
+) -> list[BillingRow]:
+    source = grouped_by_identifier(
+        *bordero, "NumeroDaTransacao", "Valor", "Borderô", absolute=True
+    )
+    ledger_header, ledger_rows = ledger
+    identification_column = next(
+        (
+            column
+            for column in ("NumeroPlanilha", "NumeroLancamento", "Documento")
+            if column in ledger_header
+        ),
+        None,
+    )
+    if identification_column is None:
+        raise ValueError(
+            "O razão de notas a faturar não possui Número da Planilha, "
+            "Número do Lançamento ou Documento para detalhamento."
+        )
+    accounting = grouped_by_identifier(
+        ledger_header,
+        ledger_rows,
+        identification_column,
+        "Debito",
+        "Razão",
+    )
+    result = [
+        BillingRow(
+            source.get(key, accounting.get(key))[0],
+            source.get(key, ("", Decimal()))[1],
+            accounting.get(key, ("", Decimal()))[1],
+        )
+        for key in set(source) | set(accounting)
+    ]
+    result.sort(
+        key=lambda row: (
+            row.status == "Conciliado",
+            -abs(row.difference),
+            row.identification,
+        )
+    )
+    return result
+
+
 # Consolida clientes e compara Contabilidade e Financeiro por categoria.
 def analyze(paths: list[Path], hotel: str = "Cumbuco") -> ReceivablesResult:
     if len(paths) != 6:
@@ -210,19 +310,27 @@ def analyze(paths: list[Path], hotel: str = "Cumbuco") -> ReceivablesResult:
         key=lambda row: (row.status == "Conciliado", -abs(row.difference), row.client)
     )
 
-    bordero_total = column_total(*files["bordero"], "Valor", absolute=True)
-    billing_debit = column_total(*files["razao_faturar"], "Debito")
+    billing_rows = billing_comparison(files["bordero"], files["razao_faturar"])
+    bordero_total = sum((row.source_value for row in billing_rows), Decimal())
+    billing_debit = sum((row.accounting_value for row in billing_rows), Decimal())
     aggregate_total = column_total(*files["agregados"], "Valor", absolute=True)
     commission_movement = column_total(
         *files["razao_comissao"], "Movimento", absolute=True
     )
     return ReceivablesResult(
-        clients,
-        sum((value for _, value in accounting.values()), Decimal()),
-        sum((value for _, value in financial.values()), Decimal()),
-        TotalCheck("Notas a faturar", bordero_total, billing_debit),
-        TotalCheck("Comissões de cartão", aggregate_total, commission_movement),
-        hotel,
+        clients=clients,
+        client_accounting_total=sum(
+            (value for _, value in accounting.values()), Decimal()
+        ),
+        client_financial_total=sum(
+            (value for _, value in financial.values()), Decimal()
+        ),
+        billing=TotalCheck("Notas a faturar", bordero_total, billing_debit),
+        commissions=TotalCheck(
+            "Comissões de cartão", aggregate_total, commission_movement
+        ),
+        billing_rows=billing_rows,
+        hotel=hotel,
     )
 
 
@@ -301,6 +409,47 @@ def save_excel(result: ReceivablesResult, path: Path) -> None:
         details.column_dimensions[column].width = width
     details.freeze_panes = "A5"
     details.auto_filter.ref = f"A4:E{details.max_row}"
+
+    billing = workbook.create_sheet("Notas a faturar")
+    billing.append(["Conferência do Contas a Receber"])
+    billing.append(["Hotel", result.hotel])
+    billing.append([])
+    billing.append(
+        [
+            "Identificação (Transação / Nº planilha)",
+            "Borderô",
+            "Contabilidade",
+            "Diferença",
+            "Status",
+        ]
+    )
+    for row in result.billing_rows:
+        billing.append(
+            [
+                row.identification,
+                float(row.source_value),
+                float(row.accounting_value),
+                float(row.difference),
+                row.status,
+            ]
+        )
+    billing["A1"].style = "Title"
+    billing["A2"].style = "Headline 4"
+    for cell in billing[4]:
+        cell.style = "Headline 4"
+    for column in ("B", "C", "D"):
+        for cell in billing[column][4:]:
+            cell.number_format = "R$ #,##0.00"
+    for column, width in {
+        "A": 44,
+        "B": 20,
+        "C": 20,
+        "D": 18,
+        "E": 16,
+    }.items():
+        billing.column_dimensions[column].width = width
+    billing.freeze_panes = "A5"
+    billing.auto_filter.ref = f"A4:E{billing.max_row}"
     workbook.save(path)
 
 
