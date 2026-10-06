@@ -13,6 +13,7 @@ from automations.conciliacao_cupons_hospedes import (
     _match_account,
     _read_journal,
     STATUS_MISSING,
+    STATUS_RECONCILED,
     analyze,
     parse_date,
 )
@@ -61,7 +62,26 @@ class MappingSelectionTest(TestCase):
         self.assertEqual(
             _match_account("0018370", accounts, "MAGNA PRAIA"), "10008370"
         )
-        self.assertIsNone(_match_account("0018370", accounts, "CHARME HOSPEDAGEM"))
+
+    def test_matches_charme_accounts_using_outlet_prefix(self):
+        accounts = {
+            "10016419",
+            "20006868",
+            "40003550",
+            "60004631",
+        }
+
+        expected = {
+            "0016419": "10016419",
+            "0026868": "20006868",
+            "0043550": "40003550",
+            "0064631": "60004631",
+        }
+        for check, account in expected.items():
+            with self.subTest(check=check):
+                self.assertEqual(
+                    _match_account(check, accounts, "CHARME HOSPEDAGEM"), account
+                )
 
     def test_rejects_ambiguous_transformed_magna_account(self):
         accounts = {"10008370", "19998370"}
@@ -193,3 +213,97 @@ class MappingSelectionTest(TestCase):
         missing_result = next(item for item in result.coupons if item.document == "2")
         self.assertEqual(missing_result.status, STATUS_MISSING)
         self.assertIn("não localizado no Journal", missing_result.status)
+
+    def test_reconciles_multiple_coupons_by_account_and_date_total(self):
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        coupons = [
+            _Coupon(
+                "CHARME HOSPEDAGEM",
+                "Frigobar",
+                date(2026, 9, 28),
+                document,
+                "60005005",
+                "0304",
+                "Hóspede",
+                "Cupom",
+                Decimal("57.00"),
+            )
+            for document in ("22585", "22586")
+        ]
+        journal = [
+            _JournalRow(
+                "2001", "0065005", date(2026, 9, 28), Decimal("57.00"), "0304"
+            )
+            for _ in range(2)
+        ]
+
+        with (
+            patch(
+                "automations.conciliacao_cupons_hospedes.identify_file",
+                side_effect=("pdv", "journal", "mapping"),
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_pdv",
+                return_value={
+                    (item.company, item.account, item.issue_date, item.document): item
+                    for item in coupons
+                },
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_journal",
+                return_value=journal,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_mappings",
+                return_value={"CHARME": {"2001"}},
+            ),
+        ):
+            result = analyze(paths)
+
+        self.assertTrue(all(item.status == STATUS_RECONCILED for item in result.coupons))
+        self.assertTrue(
+            all(item.journal_value == Decimal("57.00") for item in result.coupons)
+        )
+
+    def test_reconciles_positive_reposting_after_reversal(self):
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        coupon = _Coupon(
+            "CHARME HOSPEDAGEM",
+            "Restaurante",
+            date(2026, 9, 2),
+            "20243",
+            "10016493",
+            "0309",
+            "Hóspede",
+            "Cupom",
+            Decimal("6195.00"),
+        )
+        journal = [
+            _JournalRow("2004", "0016493", date(2026, 9, 2), value, "0309")
+            for value in (Decimal("-11065.00"), Decimal("6195.00"))
+        ]
+
+        with (
+            patch(
+                "automations.conciliacao_cupons_hospedes.identify_file",
+                side_effect=("pdv", "journal", "mapping"),
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_pdv",
+                return_value={
+                    (coupon.company, coupon.account, coupon.issue_date, coupon.document): coupon
+                },
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_journal",
+                return_value=journal,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_mappings",
+                return_value={"CHARME": {"2004"}},
+            ),
+        ):
+            result = analyze(paths)
+
+        self.assertEqual(result.coupons[0].status, STATUS_RECONCILED)
+        self.assertEqual(result.coupons[0].journal_value, Decimal("6195.00"))

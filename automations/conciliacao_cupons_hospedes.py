@@ -25,6 +25,14 @@ from automations.excel_reader import load_workbook_compatible as load_workbook
 
 ACCOUNT_CHECK_PREFIXES = {
     "MAGNA": {"1": "001"},
+    # No Charme, a conta do BI/PDV usa o primeiro dígito para identificar
+    # o ponto de venda, enquanto o Journal registra esse ponto com 3 dígitos.
+    "CHARME": {
+        "1": "001",  # Restaurante
+        "2": "002",  # Bar da Piscina
+        "4": "004",  # Bar da Praia
+        "6": "006",  # Frigobar
+    },
     "TAIBA": {
         "2": "004",  # Bar da Piscina
         "3": "003",  # Bar das Artes
@@ -389,38 +397,88 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     journal_start = min(row.posting_date for row in selected_journal)
     journal_end = max(row.posting_date for row in selected_journal)
     postings: dict[str, dict[date, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
+    positive_postings: dict[str, dict[date, Decimal]] = defaultdict(
+        lambda: defaultdict(Decimal)
+    )
     for row in selected_journal:
         account = _match_account(row.check, accounts, company)
         if account:
             postings[account][row.posting_date] += row.value
+            if row.value > 0:
+                positive_postings[account][row.posting_date] += row.value
+
+    # O Journal consolida a cobrança por conta/data. O BI pode dividir essa mesma
+    # cobrança em mais de um cupom; por isso a comparação usa o total do grupo.
+    company_coupons = [item for item in pdv.values() if item.company == company]
+    coupon_totals: dict[tuple[str, date], Decimal] = defaultdict(Decimal)
+    coupon_counts: dict[tuple[str, date], int] = defaultdict(int)
+    for coupon in company_coupons:
+        key = (coupon.account, coupon.issue_date)
+        coupon_totals[key] += coupon.value
+        coupon_counts[key] += 1
 
     results = []
-    for coupon in (item for item in pdv.values() if item.company == company):
+    for coupon in company_coupons:
+        coupon_key = (coupon.account, coupon.issue_date)
+        expected_total = coupon_totals[coupon_key].quantize(Decimal("0.01"))
         by_date = postings.get(coupon.account, {})
+        positive_by_date = positive_postings.get(coupon.account, {})
         posting_date = coupon.issue_date if coupon.issue_date in by_date else None
+        matched_total: Decimal | None = None
+
+        def exact_total(day: date) -> Decimal | None:
+            candidates = (by_date.get(day, Decimal()), positive_by_date.get(day))
+            return next(
+                (
+                    value.quantize(Decimal("0.01"))
+                    for value in candidates
+                    if value is not None
+                    and abs(value - expected_total) <= Decimal("0.01")
+                ),
+                None,
+            )
+
+        if posting_date is not None:
+            matched_total = exact_total(posting_date)
         detail = "Conta e valor localizados no Journal."
         if posting_date is None and by_date:
-            exact = [
-                day
-                for day, value in by_date.items()
-                if abs(value - coupon.value) <= Decimal("0.01")
-            ]
+            exact = [day for day in by_date if exact_total(day) is not None]
             if exact:
                 posting_date = min(
                     exact, key=lambda day: (abs((day - coupon.issue_date).days), day)
                 )
+                matched_total = exact_total(posting_date)
         if posting_date is not None:
             journal_value = by_date[posting_date].quantize(Decimal("0.01"))
-            difference = coupon.value - journal_value
-            if journal_value == 0 and coupon.value != 0:
+            if matched_total is not None:
+                journal_value = (
+                    coupon.value
+                    if coupon_counts[coupon_key] > 1
+                    else matched_total
+                )
+                status = (
+                    STATUS_RECONCILED_OTHER_DATE
+                    if posting_date != coupon.issue_date
+                    else STATUS_RECONCILED
+                )
+                if coupon_counts[coupon_key] > 1:
+                    detail = (
+                        f"Conta conciliada pelo total de {money(expected_total)} "
+                        f"de {coupon_counts[coupon_key]} cupons."
+                    )
+                elif matched_total != by_date[posting_date].quantize(Decimal("0.01")):
+                    detail = "Valor conciliado pelo relançamento positivo no Journal."
+                elif posting_date != coupon.issue_date:
+                    detail = f"Cobrado no Journal em {posting_date:%d/%m/%Y}."
+            elif journal_value == 0 and expected_total != 0:
                 status, detail = (
                     STATUS_CHECK_WITHOUT_VALUE,
                     "O CHECK# foi localizado no Journal, mas o valor líquido cobrado é zero.",
                 )
-            elif abs(difference) > Decimal("0.01"):
+            elif abs(expected_total - journal_value) > Decimal("0.01"):
                 status, detail = (
                     STATUS_VALUE_MISMATCH,
-                    f"Diferença de {money(difference)} entre o cupom e a conta.",
+                    f"Diferença de {money(expected_total - journal_value)} entre o cupom e a conta.",
                 )
             elif posting_date != coupon.issue_date:
                 status = STATUS_RECONCILED_OTHER_DATE
