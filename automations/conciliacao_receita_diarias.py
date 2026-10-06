@@ -18,7 +18,7 @@ from automations.common import identifier as trx_code
 from automations.common import money, normalize_key as normalize, nullable_decimal as decimal_value
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
-TAIBA_EXCLUSIVE_CODES = {"1011"}
+TAIBA_EXCLUSIVE_CODES = {"1011", "1111"}
 
 
 # Estruturas do resultado diário apresentado na tela e nas exportações.

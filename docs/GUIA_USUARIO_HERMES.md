@@ -195,7 +195,7 @@ Totalizar os códigos do Journal definidos como diária e diária média para o 
 - identifica os `TRX_CODE` marcados como diária e/ou diária média;
 - conta os lançamentos e soma `CASHIER_DEBIT` por código;
 - mostra também códigos configurados sem movimento;
-- considera o código `1011` somente no Taíba; em Cumbuco, Magna e Charme ele é desconsiderado.
+- considera os códigos `1011` e `1111` somente no Taíba; em Cumbuco (antigo Wind), Magna e Charme eles são desconsiderados.
 
 ### Resultados
 

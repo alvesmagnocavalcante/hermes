@@ -8,7 +8,7 @@ from automations.conciliacao_receita_diarias import read_rules
 
 
 class DailyRevenueRulesTest(TestCase):
-    def test_includes_code_1011_only_for_taiba(self):
+    def test_includes_codes_1011_and_1111_only_for_taiba(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "codigos.xlsx"
             workbook = Workbook()
@@ -18,13 +18,17 @@ class DailyRevenueRulesTest(TestCase):
                 sheet.append(["TRX_CODE", "D3", "DIÁRIA", "DIÁRIA MÉDIA"])
                 sheet.append(["1000", "Diária", "SIM", "SIM"])
                 sheet.append(["1011", "Código especial", None, None])
+                sheet.append(["1111", "Ajuste especial", "SIM", None])
             workbook.save(path)
 
             for hotel in ("Cumbuco", "Magna", "Charme"):
                 rules = read_rules(path, hotel)
                 self.assertNotIn("1011", rules)
+                self.assertNotIn("1111", rules)
                 self.assertIn("1000", rules)
 
             taiba = read_rules(path, "Taiba")
             self.assertIn("1011", taiba)
+            self.assertIn("1111", taiba)
             self.assertTrue(taiba["1011"][1])
+            self.assertTrue(taiba["1111"][1])
