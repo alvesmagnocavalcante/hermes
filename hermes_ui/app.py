@@ -283,7 +283,7 @@ class AutomationView:
             "receita": "Selecione 2 arquivos: Razão Analítico da Contabilidade e Journal de Receita do Opera.",
             "diarias": "Selecione 2 arquivos: planilha de Códigos de Transação e Journal de Receita do Opera.",
             "folha": "Sem férias: selecione 6 arquivos (folha, INSS, FGTS, IRRF e provisões). Com férias: selecione 7 arquivos, substituindo IRRF por recibo e líquido de férias.",
-            "cupons_hospede": "Selecione 3 arquivos: relatório BI/PDV, Journal do Opera e planilha de correspondência (de/para).",
+            "cupons_hospede": "Selecione 2 arquivos: relatório BI/PDV e Journal do Opera. A correspondência de transações já está configurada no HERMES.",
             "rps": "Selecione 3 arquivos: encerramentos do Opera (XML), relatório Fiscal do CMFlex e relatório da Prefeitura.",
             "debito": "Selecione uma ou mais planilhas do Relatório de Notas de Débito.",
             "entrada": "Selecione 2 arquivos: Manifesto de Notas completo e Detalhe das Notas Recebidas já lançadas.",

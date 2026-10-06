@@ -49,7 +49,14 @@ class SourceWorkbookTabsTest(TestCase):
     def test_scope_is_limited_to_requested_automations(self):
         self.assertEqual(
             SOURCE_TABS_AUTOMATIONS,
-            {"receita", "cupons", "receber", "pagar", "custos"},
+            {
+                "receita",
+                "cupons_hospede",
+                "cupons",
+                "receber",
+                "pagar",
+                "custos",
+            },
         )
 
     def test_every_hotel_automation_includes_hotel_in_filename(self):

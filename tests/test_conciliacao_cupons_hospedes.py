@@ -17,6 +17,10 @@ from automations.conciliacao_cupons_hospedes import (
     analyze,
     parse_date,
 )
+from automations.cupons_hospedes_config import (
+    TRANSACTION_CODES_BY_HOTEL,
+    transaction_codes_by_hotel,
+)
 
 
 class JournalDateParsingTest(TestCase):
@@ -56,12 +60,43 @@ class JournalDateParsingTest(TestCase):
 
 
 class MappingSelectionTest(TestCase):
+    def test_internal_mapping_matches_the_homologated_workbook(self):
+        self.assertEqual(
+            {hotel: len(codes) for hotel, codes in TRANSACTION_CODES_BY_HOTEL.items()},
+            {"TAIBA": 22, "CHARME": 19, "MAGNA": 6, "CUMBUCO": 27},
+        )
+        self.assertIn("2111", TRANSACTION_CODES_BY_HOTEL["TAIBA"])
+        self.assertIn("2028", TRANSACTION_CODES_BY_HOTEL["CHARME"])
+        self.assertIn("2002", TRANSACTION_CODES_BY_HOTEL["MAGNA"])
+        self.assertIn("2051", TRANSACTION_CODES_BY_HOTEL["CUMBUCO"])
+
+    def test_internal_mapping_returns_an_isolated_copy(self):
+        mappings = transaction_codes_by_hotel()
+        mappings["CHARME"].add("9999")
+
+        self.assertNotIn("9999", TRANSACTION_CODES_BY_HOTEL["CHARME"])
+
     def test_matches_magna_account_using_check_prefix(self):
         accounts = {"10008370", "10008371"}
 
         self.assertEqual(
             _match_account("0018370", accounts, "MAGNA PRAIA"), "10008370"
         )
+
+    def test_matches_magna_frigobar_account_using_check_prefix(self):
+        accounts = {"60011071", "60011072"}
+
+        self.assertEqual(
+            _match_account("0061071", accounts, "MAGNA PRAIA"), "60011071"
+        )
+
+    def test_short_account_does_not_capture_larger_check_by_suffix(self):
+        accounts = {"30", "10009330"}
+
+        self.assertEqual(
+            _match_account("0019330", accounts, "MAGNA PRAIA"), "10009330"
+        )
+        self.assertEqual(_match_account("30", accounts, "MAGNA PRAIA"), "30")
 
     def test_matches_charme_accounts_using_outlet_prefix(self):
         accounts = {
@@ -109,7 +144,7 @@ class MappingSelectionTest(TestCase):
                 self.assertEqual(_match_account(check, accounts, "CARMEL TAÍBA"), account)
 
     def test_prioritizes_mapping_named_for_identified_company(self):
-        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
         coupon = _Coupon(
             "CHARME HOSPEDAGEM",
             "PDV",
@@ -134,7 +169,7 @@ class MappingSelectionTest(TestCase):
         with (
             patch(
                 "automations.conciliacao_cupons_hospedes.identify_file",
-                side_effect=("pdv", "journal", "mapping"),
+                side_effect=("pdv", "journal"),
             ),
             patch(
                 "automations.conciliacao_cupons_hospedes._read_pdv",
@@ -147,7 +182,7 @@ class MappingSelectionTest(TestCase):
                 return_value=journal,
             ),
             patch(
-                "automations.conciliacao_cupons_hospedes._read_mappings",
+                "automations.conciliacao_cupons_hospedes.transaction_codes_by_hotel",
                 return_value=mappings,
             ),
         ):
@@ -157,7 +192,7 @@ class MappingSelectionTest(TestCase):
         self.assertEqual(result.mapping, "CHARME")
 
     def test_missing_coupon_status_identifies_the_missing_source(self):
-        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
         matched = _Coupon(
             "CHARME HOSPEDAGEM",
             "PDV",
@@ -193,7 +228,7 @@ class MappingSelectionTest(TestCase):
         with (
             patch(
                 "automations.conciliacao_cupons_hospedes.identify_file",
-                side_effect=("pdv", "journal", "mapping"),
+                side_effect=("pdv", "journal"),
             ),
             patch(
                 "automations.conciliacao_cupons_hospedes._read_pdv",
@@ -204,7 +239,7 @@ class MappingSelectionTest(TestCase):
                 return_value=journal,
             ),
             patch(
-                "automations.conciliacao_cupons_hospedes._read_mappings",
+                "automations.conciliacao_cupons_hospedes.transaction_codes_by_hotel",
                 return_value={"CHARME": {"2028"}},
             ),
         ):
@@ -215,7 +250,7 @@ class MappingSelectionTest(TestCase):
         self.assertIn("não localizado no Journal", missing_result.status)
 
     def test_reconciles_multiple_coupons_by_account_and_date_total(self):
-        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
         coupons = [
             _Coupon(
                 "CHARME HOSPEDAGEM",
@@ -240,7 +275,7 @@ class MappingSelectionTest(TestCase):
         with (
             patch(
                 "automations.conciliacao_cupons_hospedes.identify_file",
-                side_effect=("pdv", "journal", "mapping"),
+                side_effect=("pdv", "journal"),
             ),
             patch(
                 "automations.conciliacao_cupons_hospedes._read_pdv",
@@ -254,7 +289,7 @@ class MappingSelectionTest(TestCase):
                 return_value=journal,
             ),
             patch(
-                "automations.conciliacao_cupons_hospedes._read_mappings",
+                "automations.conciliacao_cupons_hospedes.transaction_codes_by_hotel",
                 return_value={"CHARME": {"2001"}},
             ),
         ):
@@ -266,7 +301,7 @@ class MappingSelectionTest(TestCase):
         )
 
     def test_reconciles_positive_reposting_after_reversal(self):
-        paths = [Path("pdv.xlsx"), Path("journal.xlsx"), Path("mapping.xlsx")]
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
         coupon = _Coupon(
             "CHARME HOSPEDAGEM",
             "Restaurante",
@@ -286,7 +321,7 @@ class MappingSelectionTest(TestCase):
         with (
             patch(
                 "automations.conciliacao_cupons_hospedes.identify_file",
-                side_effect=("pdv", "journal", "mapping"),
+                side_effect=("pdv", "journal"),
             ),
             patch(
                 "automations.conciliacao_cupons_hospedes._read_pdv",
@@ -299,7 +334,7 @@ class MappingSelectionTest(TestCase):
                 return_value=journal,
             ),
             patch(
-                "automations.conciliacao_cupons_hospedes._read_mappings",
+                "automations.conciliacao_cupons_hospedes.transaction_codes_by_hotel",
                 return_value={"CHARME": {"2004"}},
             ),
         ):
@@ -307,3 +342,55 @@ class MappingSelectionTest(TestCase):
 
         self.assertEqual(result.coupons[0].status, STATUS_RECONCILED)
         self.assertEqual(result.coupons[0].journal_value, Decimal("6195.00"))
+
+    def test_reconciles_one_exact_occurrence_among_repeated_postings(self):
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
+        coupon = _Coupon(
+            "CARMEL TAÍBA",
+            "Restaurante Cipó",
+            date(2026, 9, 1),
+            "25809",
+            "80028710",
+            "",
+            "Hóspede",
+            "Cupom",
+            Decimal("63.00"),
+        )
+        journal = [
+            _JournalRow("2111", "0028710", date(2026, 9, 1), value, "")
+            for value in (
+                Decimal("37.00"),
+                Decimal("26.00"),
+                Decimal("37.00"),
+                Decimal("26.00"),
+                Decimal("-37.00"),
+                Decimal("-26.00"),
+                Decimal("37.00"),
+                Decimal("26.00"),
+            )
+        ]
+
+        with (
+            patch(
+                "automations.conciliacao_cupons_hospedes.identify_file",
+                side_effect=("pdv", "journal"),
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_pdv",
+                return_value={
+                    (coupon.company, coupon.account, coupon.issue_date, coupon.document): coupon
+                },
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_journal",
+                return_value=journal,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes.transaction_codes_by_hotel",
+                return_value={"TAIBA": {"2111"}},
+            ),
+        ):
+            result = analyze(paths)
+
+        self.assertEqual(result.coupons[0].status, STATUS_RECONCILED)
+        self.assertEqual(result.coupons[0].journal_value, Decimal("63.00"))

@@ -284,11 +284,12 @@ Confirmar se os cupons emitidos no BI/PDV foram lançados e efetivamente cobrado
 
 1. Relatório BI/PDV.
 2. Journal do Opera.
-3. Planilha de correspondência/de-para dos `TRX_CODE`.
+
+O de/para dos `TRX_CODE` de Taíba, Charme, Magna e Cumbuco já está configurado no HERMES e não deve ser enviado pelo usuário.
 
 ### Conferência executada
 
-- identifica automaticamente hotel e de/para com maior correspondência;
+- identifica automaticamente o hotel e aplica sua parametrização interna de `TRX_CODE`;
 - relaciona conta do PDV com `CHECK#` do Journal;
 - compara data e valor líquido;
 - procura cobrança em outra data quando há correspondência segura de valor.
@@ -305,7 +306,7 @@ Confirmar se os cupons emitidos no BI/PDV foram lançados e efetivamente cobrado
 
 ### Exportação
 
-- Excel: `Resumo` e `Conferencia`.
+- Excel: `Resumo`, `Conferencia` e cópias consultáveis das abas do BI/PDV e do Journal utilizados.
 - PDF: resumo da conferência.
 
 ## 5.5 RPS de Serviços Prestados
@@ -656,6 +657,7 @@ Use para auditoria detalhada, filtros, pesquisas e consulta das linhas.
 Nas atividades abaixo, o Excel também inclui cópias consultáveis das planilhas analisadas:
 
 - Conciliação de Receita;
+- Cupons Emitidos x Conta do Hóspede;
 - Conferência dos Cupons;
 - Contas a Receber;
 - Contas a Pagar;

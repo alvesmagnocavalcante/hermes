@@ -11,7 +11,14 @@ from typing import Any
 from automations.common import append_source_workbooks
 
 
-SOURCE_TABS_AUTOMATIONS = {"receita", "cupons", "receber", "pagar", "custos"}
+SOURCE_TABS_AUTOMATIONS = {
+    "receita",
+    "cupons_hospede",
+    "cupons",
+    "receber",
+    "pagar",
+    "custos",
+}
 
 
 @dataclass(frozen=True)

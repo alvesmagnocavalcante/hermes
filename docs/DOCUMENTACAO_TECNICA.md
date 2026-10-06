@@ -18,7 +18,7 @@ O catálogo atual contém 12 automações:
 | `receita` | Conciliação de Receita | 2 | Excel e PDF | Sim | Sim |
 | `diarias` | Conciliação da Receita de Diárias | 2 | Excel e PDF | Sim | Não |
 | `folha` | Lançamento da Folha de Pagamento | 6 ou 7 | Excel, CSV e PDF | Não | Não |
-| `cupons_hospede` | Cupons Emitidos x Conta do Hóspede | 3 | Excel e PDF | Não; identificação automática | Não |
+| `cupons_hospede` | Cupons Emitidos x Conta do Hóspede | 2 | Excel e PDF | Não; identificação automática | Sim |
 | `rps` | RPS de Serviços Prestados | 3 | Excel e PDF | Não; perfil automático | Não |
 | `debito` | Relatório de Notas de Débito | 1 ou mais | Excel e PDF | Não | Não |
 | `entrada` | Notas Fiscais de Entrada em Atraso | 2 | Excel e PDF | Não | Não |
@@ -175,8 +175,11 @@ Módulo: `automations/lancamento_folha_pagamento.py`.
 
 Módulo: `automations/conciliacao_cupons_hospedes.py`.
 
-- Identifica hotel e mapeamento pela melhor relação entre contas do BI/PDV e `CHECK#` do Journal.
+- Recebe somente o BI/PDV e o Journal do Opera.
+- Usa a parametrização versionada em `automations/cupons_hospedes_config.py`, sem exigir o envio da planilha de de/para.
+- Identifica o hotel e o mapeamento pela melhor relação entre contas do BI/PDV e `CHECK#` do Journal.
 - Compara conta, data e valor.
+- Na exportação Excel, acrescenta cópias consultáveis das abas do BI/PDV e do Journal após as abas de análise.
 - Pode retornar `Conciliado`, `Conciliado em data diferente`, `CHECK# localizado sem valor cobrado`, `Valor divergente entre BI/PDV e Journal`, `CHECK# localizado somente em outra data`, `Cupom não localizado no Journal` ou `Data do cupom fora do período do Journal`.
 - A situação de período incompleto deve ser corrigida com novo Journal antes de ser tratada como divergência definitiva.
 

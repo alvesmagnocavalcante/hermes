@@ -22,9 +22,13 @@ from automations.common import (
     parse_date,
 )
 from automations.excel_reader import load_workbook_compatible as load_workbook
+from automations.cupons_hospedes_config import transaction_codes_by_hotel
 
 ACCOUNT_CHECK_PREFIXES = {
-    "MAGNA": {"1": "001"},
+    "MAGNA": {
+        "1": "001",  # Restaurante
+        "6": "006",  # Frigobar
+    },
     # No Charme, a conta do BI/PDV usa o primeiro dígito para identificar
     # o ponto de venda, enquanto o Journal registra esse ponto com 3 dígitos.
     "CHARME": {
@@ -90,7 +94,7 @@ class ReconciliationResult:
     journal_start: date
     journal_end: date
     coupons: list[CouponResult]
-    files: tuple[str, str, str]
+    files: tuple[str, str]
 
     @property
     def reconciled(self) -> int:
@@ -143,6 +147,22 @@ def decimal_value(value: Any) -> Decimal:
         return Decimal()
 
 
+def _contains_exact_total(values: list[Decimal], target: Decimal) -> bool:
+    """Verifica se alguma combinação positiva reproduz exatamente o total esperado."""
+    target_cents = int((target * 100).quantize(Decimal("1")))
+    if target_cents <= 0:
+        return False
+    reachable = 1
+    limit = (1 << (target_cents + 1)) - 1
+    for value in values:
+        value_cents = int((value * 100).quantize(Decimal("1")))
+        if 0 < value_cents <= target_cents:
+            reachable = (reachable | (reachable << value_cents)) & limit
+            if (reachable >> target_cents) & 1:
+                return True
+    return False
+
+
 def _header_map(values: tuple[Any, ...]) -> dict[str, int]:
     result = {}
     for index, value in enumerate(values):
@@ -152,7 +172,7 @@ def _header_map(values: tuple[Any, ...]) -> dict[str, int]:
     return result
 
 
-# Identifica e lê PDV, Journal e tabela de relacionamento de contas.
+# Identifica e lê os relatórios BI/PDV e Journal.
 def identify_file(path: Path) -> str:
     if path.suffix.lower() not in {".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
         return "unknown"
@@ -182,11 +202,6 @@ def identify_file(path: Path) -> str:
             "ROOM",
         }.issubset(keys):
             return "journal"
-        if workbook.sheetnames and all(
-            normalize(next(sheet.iter_rows(values_only=True))[0]) == "TRXCODE"
-            for sheet in workbook.worksheets
-        ):
-            return "mapping"
         return "unknown"
     finally:
         workbook.close()
@@ -281,31 +296,15 @@ def _read_journal(path: Path) -> list[_JournalRow]:
         workbook.close()
 
 
-def _read_mappings(path: Path) -> dict[str, set[str]]:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        workbook = load_workbook(path, data_only=True, read_only=True)
-    try:
-        result = {}
-        for sheet in workbook.worksheets:
-            codes = set()
-            for (value,) in sheet.iter_rows(min_row=2, max_col=1, values_only=True):
-                if value is not None:
-                    codes.add(
-                        str(int(value))
-                        if isinstance(value, float) and value.is_integer()
-                        else str(value).strip()
-                    )
-            result[sheet.title] = codes
-        return result
-    finally:
-        workbook.close()
-
-
 def _match_account(check: str, accounts: set[str], company: str = "") -> str | None:
     if check in accounts:
         return check
-    matches = [account for account in accounts if check.endswith(account)]
+    # Contas curtas (ex.: 30, 32, 43) não identificam um CHECK por sufixo e
+    # podem capturar indevidamente centenas de contas terminadas nesses dígitos.
+    # A igualdade exata continua válida pelo teste anterior.
+    matches = [
+        account for account in accounts if len(account) >= 5 and check.endswith(account)
+    ]
     if matches:
         return max(matches, key=len)
 
@@ -331,7 +330,7 @@ def _match_account(check: str, accounts: set[str], company: str = "") -> str | N
 
 
 def _mapping_matches_company(mapping_name: str, company: str) -> bool:
-    """Indica se a aba do de/para pertence explicitamente à empresa do BI/PDV."""
+    """Indica se a parametrização interna pertence à empresa do BI/PDV."""
     mapping = normalize(mapping_name)
     company_name = normalize(company)
     if mapping and mapping in company_name:
@@ -343,10 +342,8 @@ def _mapping_matches_company(mapping_name: str, company: str) -> bool:
 
 # Relaciona cupom, check e conta do hóspede e classifica cada ocorrência.
 def analyze(paths: list[Path]) -> ReconciliationResult:
-    if len(paths) != 3:
-        raise ValueError(
-            "Selecione o BI/PDV, o Journal e o arquivo de de/para dos TRX_CODE."
-        )
+    if len(paths) != 2:
+        raise ValueError("Selecione o relatório BI/PDV e o Journal do Opera.")
     identified = [(path, identify_file(path)) for path in paths]
     unknown = [path.name for path, kind in identified if kind == "unknown"]
     if unknown:
@@ -355,17 +352,15 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
         )
     grouped = {
         kind: [path for path, current in identified if current == kind]
-        for kind in ("pdv", "journal", "mapping")
+        for kind in ("pdv", "journal")
     }
     invalid = [kind for kind, items in grouped.items() if len(items) != 1]
     if invalid:
-        raise ValueError(
-            "Envie exatamente um BI/PDV, um Journal e um arquivo de de/para."
-        )
+        raise ValueError("Envie exatamente um BI/PDV e um Journal do Opera.")
 
     pdv = _read_pdv(grouped["pdv"][0])
     journal = _read_journal(grouped["journal"][0])
-    mappings = _read_mappings(grouped["mapping"][0])
+    mappings = transaction_codes_by_hotel()
     if not pdv or not journal or not mappings:
         raise ValueError("Um dos arquivos não contém registros utilizáveis.")
 
@@ -400,12 +395,16 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     positive_postings: dict[str, dict[date, Decimal]] = defaultdict(
         lambda: defaultdict(Decimal)
     )
+    positive_posting_values: dict[str, dict[date, list[Decimal]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for row in selected_journal:
         account = _match_account(row.check, accounts, company)
         if account:
             postings[account][row.posting_date] += row.value
             if row.value > 0:
                 positive_postings[account][row.posting_date] += row.value
+                positive_posting_values[account][row.posting_date].append(row.value)
 
     # O Journal consolida a cobrança por conta/data. O BI pode dividir essa mesma
     # cobrança em mais de um cupom; por isso a comparação usa o total do grupo.
@@ -423,12 +422,13 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
         expected_total = coupon_totals[coupon_key].quantize(Decimal("0.01"))
         by_date = postings.get(coupon.account, {})
         positive_by_date = positive_postings.get(coupon.account, {})
+        positive_values_by_date = positive_posting_values.get(coupon.account, {})
         posting_date = coupon.issue_date if coupon.issue_date in by_date else None
         matched_total: Decimal | None = None
 
         def exact_total(day: date) -> Decimal | None:
             candidates = (by_date.get(day, Decimal()), positive_by_date.get(day))
-            return next(
+            matched = next(
                 (
                     value.quantize(Decimal("0.01"))
                     for value in candidates
@@ -437,6 +437,13 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
                 ),
                 None,
             )
+            if matched is not None:
+                return matched
+            if _contains_exact_total(
+                positive_values_by_date.get(day, []), expected_total
+            ):
+                return expected_total
+            return None
 
         if posting_date is not None:
             matched_total = exact_total(posting_date)
@@ -542,7 +549,7 @@ def save_excel(result: ReconciliationResult, path: Path) -> None:
     summary.append(["Indicador", "Resultado"])
     for label, value in (
         ("Hotel", result.company),
-        ("De/para identificado", result.mapping),
+        ("Parametrização interna", result.mapping),
         (
             "Período do Journal",
             f"{result.journal_start:%d/%m/%Y} a {result.journal_end:%d/%m/%Y}",
