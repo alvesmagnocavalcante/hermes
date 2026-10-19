@@ -661,8 +661,8 @@ Documento Auxiliar da Nota Fiscal Eletrônica em PDF.
 
 1. Selecione **Individual**.
 2. Digite a chave numérica completa, com 44 dígitos.
-3. Clique em **Baixar DANFE**.
-4. Aguarde o navegador disponibilizar o arquivo PDF.
+3. Clique em **Consultar DANFE**.
+4. Após a consulta, clique em **Baixar resultado** para salvar o PDF.
 
 O HERMES valida o tamanho e o dígito verificador da chave antes de consultar o
 portal. A chave não precisa conter espaços, pontos ou hífens.
@@ -671,8 +671,9 @@ portal. A chave não precisa conter espaços, pontos ou hífens.
 
 1. Selecione **Em lote**.
 2. Carregue uma planilha `.xlsx` ou `.xls`.
-3. Clique em **Processar lote**.
-4. Ao concluir, baixe o arquivo ZIP.
+3. Clique em **Selecionar planilha e processar** e escolha o arquivo.
+4. Acompanhe o andamento apresentado na tela.
+5. Ao concluir, clique em **Baixar resultado** para salvar o arquivo ZIP.
 
 Durante o lote, a tela atualiza o andamento a cada chave concluída. São exibidos
 o número processado e o total, além das quantidades baixadas, com falha,
@@ -699,7 +700,10 @@ continua disponível com os PDFs concluídos e o relatório das falhas.
 - O HERMES não contorna CAPTCHA. Se o portal exigir validação humana, tente
   novamente mais tarde ou faça a consulta diretamente no portal.
 - Os PDFs e arquivos intermediários são temporários no servidor; somente o
-  arquivo baixado pelo usuário permanece.
+  arquivo baixado pelo usuário permanece. O resultado pronto fica apenas na
+  memória da sessão até ser baixado, limpo ou a página ser fechada.
+- Se o navegador não responder ao pedido de download, o processamento continua
+  concluído e o botão **Baixar resultado** permanece disponível para nova tentativa.
 - A chave fiscal não é enviada à telemetria nem gravada nos logs operacionais.
 
 ## 6. Exportações

@@ -127,7 +127,9 @@ Os arquivos são lidos diretamente dos caminhos escolhidos. O HERMES não duplic
 - O sistema não mantém histórico de análises.
 - Somente o arquivo salvo pelo usuário permanece como resultado.
 - Logs operacionais são enviados para `stdout`/`stderr` e ficam sob responsabilidade do mecanismo de logs do Docker.
-- PDFs de DANFE, planilhas recebidas e ZIPs são criados em diretórios temporários e removidos depois do envio ao navegador.
+- PDFs de DANFE, planilhas recebidas e ZIPs são criados em diretórios temporários
+  e removidos após o processamento. O resultado final é mantido somente em memória
+  na sessão Flet até o download, a limpeza da tela ou o encerramento da sessão.
 
 ## 6. Normalização e critérios comuns
 
@@ -295,6 +297,9 @@ Módulo: `automations/download_danfe.py`.
   temporário.
 - O modo individual entrega um PDF. O modo em lote entrega um ZIP com os PDFs
   concluídos e `resultados.csv`, inclusive em falhas parciais.
+- Processamento e entrega ao navegador são etapas independentes. Ao terminar, a
+  interface habilita **Baixar resultado**; falha ou cancelamento do diálogo do
+  navegador não altera uma execução já concluída para falha e permite nova tentativa.
 - `DanfeProgress` publica o andamento após cada chave. A thread de processamento
   envia os eventos para uma fila `asyncio`, e somente a thread da interface
   atualiza os controles Flet.

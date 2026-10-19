@@ -1167,6 +1167,9 @@ class DanfeView:
         self.spec = spec
         self.set_status = set_status
         self.result: DanfeResult | None = None
+        self._download_content: bytes | None = None
+        self._download_file_name = ""
+        self._download_extension = ""
         self.mode = ft.Dropdown(
             value="Individual",
             label="Modo",
@@ -1187,19 +1190,27 @@ class DanfeView:
             on_submit=self._download_individual,
         )
         self.individual_button = ft.FilledButton(
-            "Baixar DANFE",
+            "Consultar DANFE",
             icon=ft.Icons.PICTURE_AS_PDF,
             bgcolor=BLUE,
             color=ft.Colors.ON_PRIMARY,
             on_click=self._download_individual,
         )
         self.batch_button = ft.FilledButton(
-            "Selecionar planilha e baixar",
+            "Selecionar planilha e processar",
             icon=ft.Icons.FOLDER_ZIP,
             bgcolor=BLUE,
             color=ft.Colors.ON_PRIMARY,
             visible=False,
             on_click=self._download_batch,
+        )
+        self.result_download_button = ft.FilledButton(
+            "Baixar resultado",
+            icon=ft.Icons.DOWNLOAD,
+            bgcolor=BLUE,
+            color=ft.Colors.ON_PRIMARY,
+            visible=False,
+            on_click=self._download_result,
         )
         self.mode_hint = ft.Text(
             "Digite uma chave válida de 44 dígitos para baixar um único PDF.",
@@ -1238,7 +1249,12 @@ class DanfeView:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.input_row = ft.Row(
-            [self.key, self.individual_button, self.batch_button],
+            [
+                self.key,
+                self.individual_button,
+                self.batch_button,
+                self.result_download_button,
+            ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
@@ -1313,6 +1329,56 @@ class DanfeView:
         self.key.disabled = busy
         self.individual_button.disabled = busy
         self.batch_button.disabled = busy
+        self.result_download_button.disabled = busy
+
+    def _set_download(
+        self, content: bytes | None, file_name: str = "", extension: str = ""
+    ) -> None:
+        """Mantém o resultado apenas na memória da sessão até o usuário baixar."""
+        self._download_content = content
+        self._download_file_name = file_name
+        self._download_extension = extension
+        self.result_download_button.visible = content is not None
+        if content is not None:
+            self.result_download_button.text = f"Baixar {file_name}"
+
+    async def _download_result(self, _event=None) -> None:
+        if self._download_content is None:
+            self._show_error(ValueError("Não existe resultado disponível para baixar."))
+            return
+        self.result_download_button.disabled = True
+        self.set_status("Preparando o download...", None)
+        self.page.update()
+        try:
+            await self._save_bytes(
+                self._download_content,
+                self._download_file_name,
+                self._download_extension,
+            )
+        except TimeoutError:
+            LOGGER.warning("O navegador não respondeu ao pedido de download")
+            self.set_status(
+                "O navegador não iniciou o download. O resultado continua disponível.",
+                1,
+            )
+            self._show_error(
+                TimeoutError(
+                    "O navegador não respondeu ao pedido de download. "
+                    "Feche esta mensagem e clique novamente em Baixar resultado."
+                )
+            )
+        except Exception as error:
+            LOGGER.exception("Falha ao entregar o resultado de DANFE ao navegador")
+            self.set_status(
+                "Não foi possível iniciar o download. O resultado continua disponível.",
+                1,
+            )
+            self._show_error(error)
+        else:
+            self.set_status("Download enviado ao navegador", 1)
+        finally:
+            self.result_download_button.disabled = False
+            self.page.update()
 
     def _render_progress(self, progress: DanfeProgress) -> None:
         ratio = progress.processed / progress.total if progress.total else 0
@@ -1365,6 +1431,7 @@ class DanfeView:
             self._show_error(error)
             return
         started_at = time.monotonic()
+        self._set_download(None)
         self._set_busy(True)
         self.set_status("Consultando DANFE...", None)
         self.page.update()
@@ -1379,7 +1446,7 @@ class DanfeView:
                     )
                     content = await asyncio.to_thread(output.read_bytes)
             self._render_result()
-            await self._save_bytes(content, f"{key}.pdf", "pdf")
+            self._set_download(content, f"{key}.pdf", "pdf")
         except Exception as error:
             LOGGER.exception("Falha no download individual de DANFE")
             automation_event(
@@ -1409,7 +1476,9 @@ class DanfeView:
                 duration_seconds=time.monotonic() - started_at,
                 execution_mode="web" if self.page.web else "desktop",
             )
-            self.set_status("DANFE baixado com sucesso", 1)
+            self.set_status(
+                "DANFE localizado. Clique em Baixar resultado para salvar o PDF.", 1
+            )
         finally:
             self._set_busy(False)
             self.page.update()
@@ -1427,6 +1496,7 @@ class DanfeView:
         if not files:
             return
         started_at = time.monotonic()
+        self._set_download(None)
         self._set_busy(True)
         self.metrics.value = "Lendo e validando a planilha..."
         self.set_status("Consultando DANFEs do lote...", None)
@@ -1483,7 +1553,7 @@ class DanfeView:
                         self.page.update()
                     content = await asyncio.to_thread(output.read_bytes)
             self._render_result()
-            await self._save_bytes(content, "danfes_resultado.zip", "zip")
+            self._set_download(content, "danfes_resultado.zip", "zip")
         except Exception as error:
             LOGGER.exception("Falha no download de DANFEs em lote")
             self.metrics.value = f"Processamento interrompido: {error}"
@@ -1518,7 +1588,9 @@ class DanfeView:
                 execution_mode="web" if self.page.web else "desktop",
             )
             self.set_status(
-                f"Lote concluído: {self.result.downloaded} DANFE(s) baixado(s)", 1
+                f"Lote concluído: {self.result.downloaded} DANFE(s). "
+                "Clique em Baixar resultado para salvar o ZIP.",
+                1,
             )
         finally:
             self._set_busy(False)
@@ -1592,6 +1664,7 @@ class DanfeView:
 
     def _clear(self, _event=None) -> None:
         self.result = None
+        self._set_download(None)
         self.key.value = ""
         self.metrics.value = "Nenhuma consulta executada."
         self._render_result()
