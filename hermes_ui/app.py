@@ -1300,8 +1300,9 @@ class DanfeView:
         self.individual_button.visible = not batch
         self.batch_button.visible = batch
         self.mode_hint.value = (
-            "Selecione uma planilha Excel com a coluna CHAVE. O resultado será "
-            "um ZIP com os PDFs e o arquivo resultados.csv."
+            "Selecione uma planilha Excel. As chaves válidas serão localizadas "
+            "em qualquer coluna ou aba; os demais conteúdos serão ignorados. "
+            "O resultado será um ZIP com os PDFs e o arquivo resultados.csv."
             if batch
             else "Digite uma chave válida de 44 dígitos para baixar um único PDF."
         )

@@ -44,6 +44,7 @@ class DanfeDownloadTest(TestCase):
 
         self.assertEqual(normalize_access_key(key), key)
         self.assertEqual(normalize_access_key(f"{key[:4]}.{key[4:] }"), key)
+        self.assertEqual(normalize_access_key(f"'{key}"), key)
         with self.assertRaisesRegex(ValueError, "dígito verificador"):
             normalize_access_key(key[:-1] + str((int(key[-1]) + 1) % 10))
 
@@ -56,9 +57,10 @@ class DanfeDownloadTest(TestCase):
             sheet.append(["Nota", "Chave de acesso"])
             first = valid_key("1")
             second = valid_key("2")
+            invalid = first[:-1] + str((int(first[-1]) + 1) % 10)
             sheet.append([1, first])
             sheet.append([2, first])
-            sheet.append([3, "123"])
+            sheet.append([3, invalid])
             sheet.append([4, second])
             workbook.save(path)
 
@@ -68,6 +70,58 @@ class DanfeDownloadTest(TestCase):
         self.assertEqual(result.duplicates, 1)
         self.assertEqual(result.invalid[0].source_row, 5)
         self.assertEqual(result.column, "B")
+
+    def test_finds_keys_in_any_column_and_sheet_without_required_header(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "lote_livre.xlsx"
+            workbook = Workbook()
+            first_sheet = workbook.active
+            first_sheet.title = "Resumo"
+            first = valid_key("1")
+            second = valid_key("2")
+            first_sheet.append(["Documento", "Observação", "Valor"])
+            first_sheet.append(["NF-e", "texto que deve ser ignorado", first])
+            other_sheet = workbook.create_sheet("Dados")
+            other_sheet.append([second, 100, "sem cabeçalho de chave"])
+            other_sheet.append([first, "duplicada", None])
+            workbook.save(path)
+
+            result = read_spreadsheet_keys(path)
+
+        self.assertEqual([entry.key for entry in result.entries], [first, second])
+        self.assertEqual(result.duplicates, 1)
+        self.assertEqual(result.invalid, ())
+        self.assertEqual(result.sheet, "Várias abas")
+        self.assertEqual(result.column, "Várias colunas")
+
+    def test_ignores_non_key_values_in_other_columns(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "lote_completo.xlsx"
+            workbook = Workbook()
+            sheet = workbook.active
+            key = valid_key("3")
+            sheet.append(["CNPJ", "Nota", "Data", "Conteúdo qualquer"])
+            sheet.append(["12345678000199", 123, "01/10/2026", key])
+            workbook.save(path)
+
+            result = read_spreadsheet_keys(path)
+
+        self.assertEqual([entry.key for entry in result.entries], [key])
+        self.assertEqual(result.invalid, ())
+
+    def test_accepts_excel_text_marker_before_key(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "lote_legado.xlsx"
+            workbook = Workbook()
+            sheet = workbook.active
+            key = valid_key("4")
+            sheet.append(["CHAVE DE ACESSO"])
+            sheet.append([f"'{key}"])
+            workbook.save(path)
+
+            result = read_spreadsheet_keys(path)
+
+        self.assertEqual([entry.key for entry in result.entries], [key])
 
     def test_downloads_keys_with_injected_gateway(self):
         gateway = FakeGateway()

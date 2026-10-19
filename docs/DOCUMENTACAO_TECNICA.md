@@ -282,10 +282,11 @@ Módulo: `automations/conferencia_custos_mercadoria.py`.
 
 Módulo: `automations/download_danfe.py`.
 
-- Aceita uma chave digitada ou uma planilha Excel com coluna de chave.
+- Aceita uma chave digitada ou uma planilha Excel com chaves em qualquer coluna
+  ou aba, sem dependência de cabeçalho.
 - Valida 44 dígitos e o dígito verificador da NF-e antes da consulta externa.
-- Localiza o cabeçalho nas primeiras 20 linhas de todas as abas, elimina chaves
-  repetidas e registra linhas inválidas.
+- Varre somente as células com formato de chave completa, ignora os demais
+  conteúdos, elimina chaves repetidas e registra chaves com dígito inválido.
 - `BrowserDanfeGateway` isola a integração com Chromium e mantém uma única
   sessão por lote; a regra de processamento depende apenas do protocolo
   `DanfeGateway`, permitindo testes sem acesso ao portal.

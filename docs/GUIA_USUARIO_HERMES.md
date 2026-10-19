@@ -679,11 +679,11 @@ o número processado e o total, além das quantidades baixadas, com falha,
 inválidas e duplicadas. A última chave aparece mascarada pelos seis dígitos
 finais. Exemplo: `Processando DANFEs: 35 de 296`.
 
-A planilha deve ter uma coluna chamada `CHAVE`, `CHAVE DE ACESSO`, `CHAVE NF-E`
-ou `CHAVE FISCAL`. O HERMES procura o cabeçalho nas primeiras 20 linhas e pode
-usá-lo em qualquer coluna ou aba. Não é necessário renomear o arquivo nem mover
-a coluna. Chaves repetidas são processadas uma vez; linhas inválidas são
-informadas no resultado.
+O HERMES procura automaticamente chaves de NF-e com 44 dígitos em todas as
+colunas e abas. Não é necessário usar um cabeçalho específico, renomear o
+arquivo ou mover a coluna. Textos, datas, valores e demais células são ignorados.
+Chaves repetidas são processadas uma vez; chaves com dígito verificador inválido
+são informadas no resultado.
 
 O ZIP contém:
 

@@ -18,7 +18,6 @@ from typing import Protocol
 from DrissionPage import Chromium, ChromiumOptions
 from DrissionPage.errors import ElementLostError, NoRectError
 
-from automations.common import normalize_key
 from automations.excel_reader import load_workbook_compatible as load_workbook
 
 
@@ -30,13 +29,6 @@ BOTAO_IMPRIMIR = (
 BOTAO_VISUALIZAR = (
     "xpath:/html/body/div[3]/div[2]/div/div[2]/div[1]/div[2]/button[1]"
 )
-KEY_HEADERS = {
-    "CHAVE",
-    "CHAVEACESSO",
-    "CHAVEDEACESSO",
-    "CHAVENFE",
-    "CHAVEFISCAL",
-}
 LOG = logging.getLogger(__name__)
 
 
@@ -95,7 +87,9 @@ def normalize_access_key(value: object) -> str:
     if isinstance(value, int):
         raw = str(value)
     elif isinstance(value, str):
-        raw = re.sub(r"[\s.\-]", "", value)
+        # Relatórios legados .xls podem expor o apóstrofo usado pelo Excel
+        # para armazenar identificadores longos como texto.
+        raw = re.sub(r"[\s.\-]", "", value).lstrip("'")
     else:
         raw = ""
     if not re.fullmatch(r"[0-9]{44}", raw):
@@ -116,61 +110,75 @@ def _column_letter(index: int) -> str:
     return result
 
 
-def read_spreadsheet_keys(path: Path, header_scan_limit: int = 20) -> SpreadsheetKeys:
-    """Localiza automaticamente a coluna de chave e retorna valores únicos válidos."""
-    with closing(load_workbook(path, data_only=False, read_only=True)) as workbook:
-        selected = None
-        for sheet in workbook.worksheets:
-            for row_number, row in enumerate(
-                sheet.iter_rows(min_row=1, max_row=header_scan_limit, values_only=True),
-                start=1,
-            ):
-                for column_number, value in enumerate(row, start=1):
-                    if normalize_key(str(value or "")) in KEY_HEADERS:
-                        selected = (sheet, row_number, column_number)
-                        break
-                if selected:
-                    break
-            if selected:
-                break
-        if not selected:
-            raise ValueError(
-                "Não foi encontrada uma coluna CHAVE, CHAVE DE ACESSO ou CHAVE NF-E."
-            )
+def _access_key_candidate(value: object) -> str | None:
+    """Retorna somente células com formato completo de chave de acesso."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        raw = str(value)
+    elif isinstance(value, str):
+        raw = re.sub(r"[\s.\-]", "", value.strip()).lstrip("'")
+    else:
+        return None
+    return raw if re.fullmatch(r"[0-9]{44}", raw) else None
 
-        sheet, header_row, column_number = selected
+
+def read_spreadsheet_keys(
+    path: Path, header_scan_limit: int | None = None
+) -> SpreadsheetKeys:
+    """Busca chaves em qualquer coluna e aba e retorna valores únicos válidos.
+
+    ``header_scan_limit`` é mantido apenas para compatibilidade com integrações
+    anteriores. A leitura atual não depende de cabeçalho nem de posição.
+    """
+    del header_scan_limit
+    with closing(load_workbook(path, data_only=False, read_only=True)) as workbook:
         entries: list[KeyEntry] = []
         invalid: list[DanfeRecord] = []
         seen: set[str] = set()
+        locations: set[tuple[str, int]] = set()
         duplicates = 0
-        rows = sheet.iter_rows(
-            min_row=header_row + 1,
-            min_col=column_number,
-            max_col=column_number,
-            values_only=True,
+
+        for sheet in workbook.worksheets:
+            for row_number, row in enumerate(sheet.iter_rows(values_only=True), start=1):
+                for column_number, value in enumerate(row, start=1):
+                    candidate = _access_key_candidate(value)
+                    if candidate is None:
+                        continue
+                    locations.add((sheet.title, column_number))
+                    try:
+                        key = normalize_access_key(candidate)
+                    except ValueError as error:
+                        invalid.append(
+                            DanfeRecord(
+                                candidate,
+                                "Chave inválida",
+                                str(error),
+                                row_number,
+                            )
+                        )
+                        continue
+                    if key in seen:
+                        duplicates += 1
+                        continue
+                    seen.add(key)
+                    entries.append(KeyEntry(key, row_number))
+
+        sheets = {sheet_name for sheet_name, _ in locations}
+        columns = {column_number for _, column_number in locations}
+        sheet_label = next(iter(sheets)) if len(sheets) == 1 else "Várias abas"
+        column_label = (
+            _column_letter(next(iter(columns)))
+            if len(columns) == 1
+            else "Várias colunas"
         )
-        for row_number, (value,) in enumerate(rows, start=header_row + 1):
-            if value is None or str(value).strip() == "":
-                continue
-            try:
-                key = normalize_access_key(value)
-            except ValueError as error:
-                invalid.append(
-                    DanfeRecord("", "Chave inválida", str(error), row_number)
-                )
-                continue
-            if key in seen:
-                duplicates += 1
-                continue
-            seen.add(key)
-            entries.append(KeyEntry(key, row_number))
 
         return SpreadsheetKeys(
             tuple(entries),
             tuple(invalid),
             duplicates,
-            sheet.title,
-            _column_letter(column_number),
+            sheet_label,
+            column_label,
         )
 
 
