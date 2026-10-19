@@ -27,6 +27,7 @@ O catálogo atual contém 12 automações:
 | `receber` | Conferência do Contas a Receber | 6 | Excel e PDF | Sim | Sim |
 | `pagar` | Conferência do Contas a Pagar | 8 | Excel e PDF | Sim | Sim |
 | `custos` | Custos da Mercadoria Vendida — CMV | 4 | Excel e PDF | Não | Sim |
+| `danfe` | Download de DANFE | 1 no lote; chave no individual | PDF ou ZIP | Não | Não |
 
 Os hotéis disponíveis no seletor são `Cumbuco`, `Magna`, `Taiba` e `Charme`. Relatórios anteriormente associados ao Wind devem usar `Cumbuco`.
 
@@ -39,6 +40,7 @@ Os hotéis disponíveis no seletor são `Cumbuco`, `Magna`, `Taiba` e `Charme`. 
 | OpenPyXL 3.1.5+ | Leitura e geração de arquivos Excel modernos |
 | xlrd 2.0.2+ | Leitura de arquivos `.xls` binários |
 | ReportLab 4.4.2+ | Geração dos relatórios PDF |
+| DrissionPage 4.1+ e Chromium | Consulta e obtenção do PDF da DANFE |
 | Logfire 4.41+ | Eventos operacionais, falhas, duração e métricas básicas do processo |
 | `xml.etree.ElementTree` | Leitura dos XMLs do Opera |
 | `asyncio` | Coordenação da interface e limitação de trabalhos simultâneos |
@@ -68,7 +70,7 @@ Usuário
 - `main.py`: configura logging, assets e inicia o Flet.
 - `hermes_ui/app.py`: navegação, seleção de hotel, upload, filtros, paginação, resumo, exportação e mensagens de erro.
 - `hermes_ui/registry.py`: catálogo declarativo das automações, colunas da interface, formatos, extensões, adaptação dos resultados e nomes de saída.
-- `hermes_ui/theme.py`: tokens semânticos do tema Material e alternância entre os modos claro e escuro.
+- `hermes_ui/theme.py`: tokens semânticos, esquemas claro/escuro baseados na paleta oficial Carmel e alternância de aparência.
 - `hermes_ui/presentation.py`: normalização e classificação visual dos status retornados pelas automações.
 - `hermes_ui/runtime.py`: validação de quantidade/tamanho e semáforo de concorrência.
 - `hermes_ui/telemetry.py`: configuração opcional do Logfire e seleção dos atributos operacionais enviados.
@@ -76,6 +78,8 @@ Usuário
 - `automations/common.py`: normalização, conversão monetária, parsing de datas, leitura comum e inclusão das planilhas-base no Excel.
 - `automations/excel_reader.py`: compatibilidade com `.xlsx`, `.xlsm`, `.xltx`, `.xltm`, `.xls` binário, HTML com extensão `.xls` e arquivos modernos renomeados como `.xls`.
 - `assets/folha/modelo_folha.xlsm`: parametrização padrão da folha de pagamento.
+- `assets/brand/`: logotipo e símbolo oficiais da Carmel usados na interface.
+- `assets/fonts/`: Plus Jakarta Sans e Cormorant fornecidas pela identidade visual.
 - `tests/`: testes unitários e de regressão.
 
 ### 4.3 Contrato das automações
@@ -96,7 +100,7 @@ O analisador recebe `list[Path]`. Quando `hotel_option=True`, recebe também o h
 
 ### 4.4 Concorrência
 
-Análises e exportações pesadas são executadas por `asyncio.to_thread()`, evitando bloquear a interface. O semáforo `JOB_LIMITER` limita a quantidade global de operações simultâneas. Operações excedentes aguardam capacidade; não são descartadas.
+Análises e exportações pesadas são executadas por `asyncio.to_thread()`, evitando bloquear a interface. O semáforo `JOB_LIMITER` limita a quantidade global de operações simultâneas. O download de DANFE usa o semáforo independente `DANFE_JOB_LIMITER`, pois cada lote mantém uma instância do Chromium. Operações excedentes aguardam capacidade; não são descartadas.
 
 ## 5. Ciclo de vida dos arquivos
 
@@ -123,6 +127,7 @@ Os arquivos são lidos diretamente dos caminhos escolhidos. O HERMES não duplic
 - O sistema não mantém histórico de análises.
 - Somente o arquivo salvo pelo usuário permanece como resultado.
 - Logs operacionais são enviados para `stdout`/`stderr` e ficam sob responsabilidade do mecanismo de logs do Docker.
+- PDFs de DANFE, planilhas recebidas e ZIPs são criados em diretórios temporários e removidos depois do envio ao navegador.
 
 ## 6. Normalização e critérios comuns
 
@@ -178,9 +183,13 @@ Módulo: `automations/conciliacao_cupons_hospedes.py`.
 - Recebe somente o BI/PDV e o Journal do Opera.
 - Usa a parametrização versionada em `automations/cupons_hospedes_config.py`, sem exigir o envio da planilha de de/para.
 - Identifica o hotel e o mapeamento pela melhor relação entre contas do BI/PDV e `CHECK#` do Journal.
-- Compara conta, data e valor.
+- Compara conta, data e o valor líquido integral dos lançamentos do Journal.
+- Contas curtas são resolvidas por sufixo, data e valor quando existe ambiguidade com contas longas.
+- Zeros à esquerda do `CHECK#` são desconsiderados na igualdade numérica (`0032` corresponde à conta `32`), inclusive quando o Journal adiciona o prefixo do ponto de venda (`0060032` na Magna).
 - Na exportação Excel, acrescenta cópias consultáveis das abas do BI/PDV e do Journal após as abas de análise.
-- Pode retornar `Conciliado`, `Conciliado em data diferente`, `CHECK# localizado sem valor cobrado`, `Valor divergente entre BI/PDV e Journal`, `CHECK# localizado somente em outra data`, `Cupom não localizado no Journal` ou `Data do cupom fora do período do Journal`.
+- Pode retornar `Conciliado`, `Conciliado em data diferente`, `Conciliado com valor divergente`, `CHECK# localizado sem valor cobrado`, `Valor divergente entre BI/PDV e Journal`, `CHECK# localizado somente em outra data`, `Cupom não localizado no Journal` ou `Data do cupom fora do período do Journal`.
+- `Conciliado com valor divergente` indica que conta e data foram identificadas, mas o total líquido do Journal contém estornos ou lançamentos adicionais e difere do total BI/PDV; por isso, conta como pendência.
+- O resumo do Excel informa os totais BI/PDV, Journal e a diferença consolidada.
 - A situação de período incompleto deve ser corrigida com novo Journal antes de ser tratada como divergência definitiva.
 
 ### 7.5 RPS de Serviços Prestados
@@ -269,6 +278,29 @@ Módulo: `automations/conferencia_custos_mercadoria.py`.
 - Contas sem movimento continuam usando o saldo final encontrado nas linhas subsequentes do Razão.
 - Exporta `Entradas`, `Saldo final` e abas-base.
 
+### 7.13 Download de DANFE
+
+Módulo: `automations/download_danfe.py`.
+
+- Aceita uma chave digitada ou uma planilha Excel com coluna de chave.
+- Valida 44 dígitos e o dígito verificador da NF-e antes da consulta externa.
+- Localiza o cabeçalho nas primeiras 20 linhas de todas as abas, elimina chaves
+  repetidas e registra linhas inválidas.
+- `BrowserDanfeGateway` isola a integração com Chromium e mantém uma única
+  sessão por lote; a regra de processamento depende apenas do protocolo
+  `DanfeGateway`, permitindo testes sem acesso ao portal.
+- O portal gera o PDF em uma URL temporária `blob:`. O adaptador lê o conteúdo
+  na mesma sessão, valida a assinatura `%PDF-` e só então grava o arquivo
+  temporário.
+- O modo individual entrega um PDF. O modo em lote entrega um ZIP com os PDFs
+  concluídos e `resultados.csv`, inclusive em falhas parciais.
+- `DanfeProgress` publica o andamento após cada chave. A thread de processamento
+  envia os eventos para uma fila `asyncio`, e somente a thread da interface
+  atualiza os controles Flet.
+- Não existe resolução ou desvio automático de CAPTCHA.
+- Logs usam apenas os seis últimos dígitos mascarados; telemetria não recebe
+  chave fiscal, nome de arquivo ou conteúdo do documento.
+
 ## 8. Exportações
 
 ### 8.1 Nomes
@@ -337,6 +369,9 @@ docker compose logs -f hermes
 | `FLET_MAX_UPLOAD_SIZE` | `104857600` | Limite individual aceito pelo Flet, em bytes |
 | `FLET_SESSION_TIMEOUT` | `30` | Limite de retenção da sessão desconectada, em segundos |
 | `HERMES_MAX_CONCURRENT_JOBS` | `2` | Análises/exportações pesadas simultâneas |
+| `HERMES_MAX_CONCURRENT_DANFE_JOBS` | `1` | Lotes de DANFE simultâneos |
+| `HERMES_DANFE_BATCH_LIMIT` | `300` | Chaves únicas permitidas por lote |
+| `HERMES_CHROMIUM_PATH` | `/usr/bin/chromium` | Executável do navegador no contêiner |
 | `HERMES_MAX_FILES_PER_JOB` | `20` | Arquivos por operação |
 | `HERMES_MAX_TOTAL_UPLOAD_SIZE` | `209715200` | Soma máxima por operação, em bytes |
 | `HERMES_CPU_LIMIT` | `2.0` | CPUs do contêiner |

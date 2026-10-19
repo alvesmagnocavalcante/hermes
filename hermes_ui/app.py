@@ -13,6 +13,13 @@ from typing import Any
 
 import flet as ft
 
+from automations.download_danfe import (
+    DanfeProgress,
+    DanfeResult,
+    download_batch,
+    download_individual,
+    normalize_access_key,
+)
 from hermes_ui.auth import (
     LOGIN_ATTEMPT_LIMITER,
     AuthenticationConfigurationError,
@@ -29,7 +36,7 @@ from hermes_ui.registry import (
     result_details,
     searchable,
 )
-from hermes_ui.runtime import JOB_LIMITER, validate_upload
+from hermes_ui.runtime import DANFE_JOB_LIMITER, JOB_LIMITER, validate_upload
 from hermes_ui.telemetry import (
     authentication_event,
     automation_event,
@@ -56,11 +63,19 @@ from hermes_ui.theme import (
 )
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = Path(os.environ.get("FLET_ASSETS_DIR", ROOT_DIR / "assets")).resolve()
-LOGO_PATH = ASSETS_DIR / "deus.png"
+CARMEL_ICON_PATH = ASSETS_DIR / "brand" / "carmel_icone.png"
+CARMEL_ICON_WHITE_PATH = ASSETS_DIR / "brand" / "carmel_icone_branco.png"
+CARMEL_WORDMARK_PATH = ASSETS_DIR / "brand" / "carmel_hoteis.png"
 LOGO_SOURCE = "data:image/png;base64," + base64.b64encode(
-    LOGO_PATH.read_bytes()
+    CARMEL_ICON_PATH.read_bytes()
 ).decode("ascii")
-WINDOW_ICON_PATH = ASSETS_DIR / "icon_windows.ico"
+CARMEL_ICON_WHITE_SOURCE = "data:image/png;base64," + base64.b64encode(
+    CARMEL_ICON_WHITE_PATH.read_bytes()
+).decode("ascii")
+CARMEL_WORDMARK_SOURCE = "data:image/png;base64," + base64.b64encode(
+    CARMEL_WORDMARK_PATH.read_bytes()
+).decode("ascii")
+WINDOW_ICON_PATH = CARMEL_ICON_PATH
 LOGGER = logging.getLogger("hermes")
 HTPASSWD_PATH = Path(
     os.environ.get("HERMES_HTPASSWD_PATH", ROOT_DIR / "nginx" / ".htpasswd")
@@ -136,7 +151,7 @@ class AutomationView:
             "Arquivos",
             icon=ft.Icons.UPLOAD_FILE,
             bgcolor=BLUE,
-            color=ft.Colors.WHITE,
+            color=ft.Colors.ON_PRIMARY,
             on_click=self._select_files,
         )
         self.export_button = ft.Button(
@@ -227,10 +242,17 @@ class AutomationView:
             [
                 ft.Column(
                     [
-                        ft.Text(self.spec.name, size=24, weight=ft.FontWeight.BOLD),
+                        ft.Text(
+                            "CARMEL HOTÉIS  •  HERMES",
+                            size=10,
+                            color=BLUE,
+                            weight=ft.FontWeight.W_600,
+                            style=ft.TextStyle(letter_spacing=1.6),
+                        ),
+                        ft.Text(self.spec.name, size=26, weight=ft.FontWeight.W_600),
                         ft.Text(self.spec.description, color=MUTED, size=12),
                     ],
-                    spacing=3,
+                    spacing=2,
                     expand=True,
                 ),
                 actions,
@@ -245,8 +267,9 @@ class AutomationView:
         )
         return ft.Container(
             bgcolor=SURFACE,
-            border_radius=18,
-            padding=14,
+            border=ft.Border.all(1, BORDER),
+            border_radius=22,
+            padding=18,
             expand=True,
             content=ft.Column(
                 [
@@ -1134,10 +1157,463 @@ class AutomationView:
         self.page.show_dialog(dialog)
 
 
+class DanfeView:
+    """Tela especializada para download individual ou em lote de DANFEs."""
+
+    MAX_VISIBLE_ROWS = 100
+
+    def __init__(self, page: ft.Page, spec: AutomationSpec, set_status):
+        self.page = page
+        self.spec = spec
+        self.set_status = set_status
+        self.result: DanfeResult | None = None
+        self.mode = ft.Dropdown(
+            value="Individual",
+            label="Modo",
+            width=150,
+            dense=True,
+            options=[
+                ft.DropdownOption(key="Individual", text="Individual"),
+                ft.DropdownOption(key="Lote", text="Em lote"),
+            ],
+            on_select=self._mode_changed,
+        )
+        self.key = ft.TextField(
+            label="Chave de acesso da NF-e",
+            hint_text="Digite os 44 dígitos",
+            prefix_icon=ft.Icons.KEY,
+            max_length=54,
+            expand=True,
+            on_submit=self._download_individual,
+        )
+        self.individual_button = ft.FilledButton(
+            "Baixar DANFE",
+            icon=ft.Icons.PICTURE_AS_PDF,
+            bgcolor=BLUE,
+            color=ft.Colors.ON_PRIMARY,
+            on_click=self._download_individual,
+        )
+        self.batch_button = ft.FilledButton(
+            "Selecionar planilha e baixar",
+            icon=ft.Icons.FOLDER_ZIP,
+            bgcolor=BLUE,
+            color=ft.Colors.ON_PRIMARY,
+            visible=False,
+            on_click=self._download_batch,
+        )
+        self.mode_hint = ft.Text(
+            "Digite uma chave válida de 44 dígitos para baixar um único PDF.",
+            color=MUTED,
+            size=11,
+        )
+        self.metrics = ft.Text("Nenhuma consulta executada.", color=MUTED, size=12)
+        self.table_host = ft.Container(expand=True)
+        self.control = self._build()
+        self._render_result()
+
+    def _build(self) -> ft.Control:
+        header = ft.Row(
+            [
+                ft.Column(
+                    [
+                        ft.Text(
+                            "CARMEL HOTÉIS  •  HERMES",
+                            size=10,
+                            color=BLUE,
+                            weight=ft.FontWeight.W_600,
+                            style=ft.TextStyle(letter_spacing=1.6),
+                        ),
+                        ft.Text(self.spec.name, size=26, weight=ft.FontWeight.W_600),
+                        ft.Text(self.spec.description, color=MUTED, size=12),
+                    ],
+                    spacing=2,
+                    expand=True,
+                ),
+                self.mode,
+                ft.Button(
+                    "Limpar", icon=ft.Icons.DELETE_OUTLINE, on_click=self._clear
+                ),
+            ],
+            spacing=12,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        self.input_row = ft.Row(
+            [self.key, self.individual_button, self.batch_button],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        guidance = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        ft.Icon(ft.Icons.PICTURE_AS_PDF, color=BLUE, size=18),
+                        bgcolor=SELECTED_BACKGROUND,
+                        border_radius=8,
+                        padding=6,
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(
+                                "Consulta e download de DANFE",
+                                weight=ft.FontWeight.W_600,
+                            ),
+                            self.mode_hint,
+                        ],
+                        spacing=2,
+                    ),
+                ],
+                spacing=10,
+            ),
+            bgcolor=SURFACE,
+            border=ft.Border.all(1, BORDER),
+            border_radius=10,
+            padding=6,
+        )
+        return ft.Container(
+            bgcolor=SURFACE,
+            border=ft.Border.all(1, BORDER),
+            border_radius=22,
+            padding=18,
+            expand=True,
+            content=ft.Column(
+                [
+                    header,
+                    guidance,
+                    self.input_row,
+                    ft.Container(
+                        self.metrics,
+                        bgcolor=CARD,
+                        border=ft.Border.all(1, BORDER),
+                        border_radius=10,
+                        padding=10,
+                    ),
+                    self.table_host,
+                ],
+                spacing=10,
+                expand=True,
+            ),
+        )
+
+    def _mode_changed(self, event) -> None:
+        batch = str(event.control.value) == "Lote"
+        self.key.visible = not batch
+        self.individual_button.visible = not batch
+        self.batch_button.visible = batch
+        self.mode_hint.value = (
+            "Selecione uma planilha Excel com a coluna CHAVE. O resultado será "
+            "um ZIP com os PDFs e o arquivo resultados.csv."
+            if batch
+            else "Digite uma chave válida de 44 dígitos para baixar um único PDF."
+        )
+        self.page.update()
+
+    def _set_busy(self, busy: bool) -> None:
+        self.mode.disabled = busy
+        self.key.disabled = busy
+        self.individual_button.disabled = busy
+        self.batch_button.disabled = busy
+
+    def _render_progress(self, progress: DanfeProgress) -> None:
+        ratio = progress.processed / progress.total if progress.total else 0
+        last = ""
+        if progress.last_record and progress.last_record.key:
+            last = (
+                f"  •  Última chave: ***{progress.last_record.key[-6:]} "
+                f"({progress.last_record.status})"
+            )
+        self.metrics.value = (
+            f"Andamento: {progress.processed} de {progress.total}  •  "
+            f"Baixadas: {progress.downloaded}  •  Falhas: {progress.failed}  •  "
+            f"Inválidas: {progress.invalid}  •  "
+            f"Duplicadas ignoradas: {progress.duplicates}{last}"
+        )
+        self.set_status(
+            f"Processando DANFEs: {progress.processed} de {progress.total}", ratio
+        )
+
+    async def _save_bytes(
+        self, content: bytes, file_name: str, extension: str
+    ) -> None:
+        picker = ft.FilePicker()
+        if self.page.web:
+            await picker.save_file(
+                dialog_title="Baixar resultado",
+                file_name=file_name,
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=[extension],
+                src_bytes=content,
+            )
+            return
+        output = await picker.save_file(
+            dialog_title="Salvar resultado",
+            file_name=file_name,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=[extension],
+        )
+        if not output:
+            return
+        path = Path(output)
+        if path.suffix.casefold() != f".{extension}":
+            path = path.with_suffix(f".{extension}")
+        await asyncio.to_thread(path.write_bytes, content)
+
+    async def _download_individual(self, _event=None) -> None:
+        try:
+            key = normalize_access_key(self.key.value or "")
+        except ValueError as error:
+            self._show_error(error)
+            return
+        started_at = time.monotonic()
+        self._set_busy(True)
+        self.set_status("Consultando DANFE...", None)
+        self.page.update()
+        try:
+            async with DANFE_JOB_LIMITER:
+                with tempfile.TemporaryDirectory(
+                    prefix="hermes_danfe_individual_"
+                ) as directory:
+                    output = Path(directory) / f"{key}.pdf"
+                    self.result = await asyncio.to_thread(
+                        download_individual, key, output
+                    )
+                    content = await asyncio.to_thread(output.read_bytes)
+            self._render_result()
+            await self._save_bytes(content, f"{key}.pdf", "pdf")
+        except Exception as error:
+            LOGGER.exception("Falha no download individual de DANFE")
+            automation_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel="Não se aplica",
+                success=False,
+                file_count=0,
+                duration_seconds=time.monotonic() - started_at,
+                execution_mode="web" if self.page.web else "desktop",
+                error_type=type(error).__name__,
+                error=error,
+            )
+            self._show_error(error)
+            self.set_status("Falha no download do DANFE", 0)
+        else:
+            automation_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel="Não se aplica",
+                success=True,
+                file_count=0,
+                record_count=1,
+                reconciled_count=1,
+                pending_count=0,
+                informational_count=0,
+                duration_seconds=time.monotonic() - started_at,
+                execution_mode="web" if self.page.web else "desktop",
+            )
+            self.set_status("DANFE baixado com sucesso", 1)
+        finally:
+            self._set_busy(False)
+            self.page.update()
+
+    async def _download_batch(self, _event=None) -> None:
+        picker = ft.FilePicker()
+        files = await picker.pick_files(
+            dialog_title="Planilha com as chaves das NF-e",
+            allow_multiple=False,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=list(self.spec.extensions),
+            with_data=self.page.web,
+            cancel_upload_on_window_blur=False,
+        )
+        if not files:
+            return
+        started_at = time.monotonic()
+        self._set_busy(True)
+        self.metrics.value = "Lendo e validando a planilha..."
+        self.set_status("Consultando DANFEs do lote...", None)
+        self.page.update()
+        try:
+            total_size = validate_upload(files, self.page.web)
+            async with DANFE_JOB_LIMITER:
+                with tempfile.TemporaryDirectory(
+                    prefix="hermes_danfe_lote_"
+                ) as directory:
+                    temp = Path(directory)
+                    selected = files[0]
+                    if self.page.web:
+                        if selected.bytes is None:
+                            raise ValueError(
+                                "O navegador não enviou o conteúdo da planilha."
+                            )
+                        spreadsheet = temp / (Path(selected.name).name or "lote.xlsx")
+                        spreadsheet.write_bytes(selected.bytes)
+                    else:
+                        if not selected.path:
+                            raise ValueError("Não foi possível acessar a planilha.")
+                        spreadsheet = Path(selected.path)
+                    output = temp / "danfes_resultado.zip"
+                    progress_queue: asyncio.Queue[DanfeProgress] = asyncio.Queue()
+                    event_loop = asyncio.get_running_loop()
+
+                    def report_progress(progress: DanfeProgress) -> None:
+                        event_loop.call_soon_threadsafe(
+                            progress_queue.put_nowait, progress
+                        )
+
+                    worker = asyncio.create_task(
+                        asyncio.to_thread(
+                            download_batch,
+                            spreadsheet,
+                            output,
+                            progress_callback=report_progress,
+                        )
+                    )
+                    while not worker.done():
+                        try:
+                            progress = await asyncio.wait_for(
+                                progress_queue.get(), timeout=0.25
+                            )
+                        except TimeoutError:
+                            continue
+                        self._render_progress(progress)
+                        self.page.update()
+                    self.result = await worker
+                    await asyncio.sleep(0)
+                    while not progress_queue.empty():
+                        self._render_progress(progress_queue.get_nowait())
+                        self.page.update()
+                    content = await asyncio.to_thread(output.read_bytes)
+            self._render_result()
+            await self._save_bytes(content, "danfes_resultado.zip", "zip")
+        except Exception as error:
+            LOGGER.exception("Falha no download de DANFEs em lote")
+            self.metrics.value = f"Processamento interrompido: {error}"
+            automation_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel="Não se aplica",
+                success=False,
+                file_count=1,
+                total_bytes=total_size if "total_size" in locals() else 0,
+                duration_seconds=time.monotonic() - started_at,
+                execution_mode="web" if self.page.web else "desktop",
+                error_type=type(error).__name__,
+                error=error,
+            )
+            self._show_error(error)
+            self.set_status("Falha no lote de DANFEs", 0)
+        else:
+            assert self.result is not None
+            automation_event(
+                automation=self.spec.key,
+                automation_name=self.spec.name,
+                hotel="Não se aplica",
+                success=self.result.failed == 0 and self.result.invalid == 0,
+                file_count=1,
+                total_bytes=total_size,
+                record_count=self.result.requested + self.result.invalid,
+                reconciled_count=self.result.downloaded,
+                pending_count=self.result.failed + self.result.invalid,
+                informational_count=self.result.duplicates,
+                duration_seconds=time.monotonic() - started_at,
+                execution_mode="web" if self.page.web else "desktop",
+            )
+            self.set_status(
+                f"Lote concluído: {self.result.downloaded} DANFE(s) baixado(s)", 1
+            )
+        finally:
+            self._set_busy(False)
+            self.page.update()
+
+    def _render_result(self) -> None:
+        if self.result is None:
+            self.table_host.content = ft.Container(
+                ft.Text("O resultado da consulta será exibido aqui.", color=MUTED),
+                alignment=ft.Alignment.CENTER,
+                expand=True,
+            )
+            return
+        result = self.result
+        self.metrics.value = (
+            f"Solicitadas: {result.requested}  •  Baixadas: {result.downloaded}  •  "
+            f"Falhas: {result.failed}  •  Inválidas: {result.invalid}  •  "
+            f"Duplicadas ignoradas: {result.duplicates}"
+        )
+        ordered = sorted(result.rows, key=lambda row: row.status == "Baixado")
+        visible = ordered[: self.MAX_VISIBLE_ROWS]
+        header = ft.Container(
+            ft.Row(
+                [
+                    ft.Text("Linha", width=70, weight=ft.FontWeight.BOLD),
+                    ft.Text("Chave", width=360, weight=ft.FontWeight.BOLD),
+                    ft.Text("Resultado", width=120, weight=ft.FontWeight.BOLD),
+                    ft.Text("Detalhe", expand=True, weight=ft.FontWeight.BOLD),
+                ],
+                spacing=8,
+            ),
+            bgcolor=CARD,
+            padding=10,
+        )
+        rows = []
+        for index, record in enumerate(visible):
+            color = GREEN if record.status == "Baixado" else RED
+            rows.append(
+                ft.Container(
+                    ft.Row(
+                        [
+                            ft.Text(str(record.source_row or "—"), width=70),
+                            ft.Text(record.key or "—", width=360),
+                            ft.Text(record.status, width=120, color=color),
+                            ft.Text(record.detail, expand=True),
+                        ],
+                        spacing=8,
+                    ),
+                    bgcolor=(
+                        ft.Colors.SURFACE_CONTAINER_LOW
+                        if index % 2 == 0
+                        else PAGE_BACKGROUND
+                    ),
+                    border=ft.Border(bottom=ft.BorderSide(1, BORDER)),
+                    padding=8,
+                )
+            )
+        note = (
+            ft.Text(
+                f"Exibindo {len(visible)} de {len(result.rows)} registros. "
+                "O lote completo consta em resultados.csv.",
+                color=MUTED,
+                size=11,
+            )
+            if len(result.rows) > len(visible)
+            else ft.Container()
+        )
+        self.table_host.content = ft.Column(
+            [header, *rows, note], spacing=0, scroll=ft.ScrollMode.AUTO, expand=True
+        )
+
+    def _clear(self, _event=None) -> None:
+        self.result = None
+        self.key.value = ""
+        self.metrics.value = "Nenhuma consulta executada."
+        self._render_result()
+        self.set_status("Seleção limpa", 0)
+        self.page.update()
+
+    def _show_error(self, error: Exception) -> None:
+        self.page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                title="Não foi possível concluir",
+                content=ft.Text(str(error)),
+                actions=[
+                    ft.Button("Fechar", on_click=lambda _: self.page.pop_dialog())
+                ],
+            )
+        )
+
+
 class HermesApp:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.current: AutomationView | None = None
+        self.current: AutomationView | DanfeView | None = None
         self.selected_index = 0
         self.sidebar_expanded = False
         self.sidebar_animating = False
@@ -1159,6 +1635,7 @@ class HermesApp:
             ft.Icons.ACCOUNT_BALANCE_WALLET,
             ft.Icons.ACCOUNT_BALANCE,
             ft.Icons.INVENTORY_2,
+            ft.Icons.PICTURE_AS_PDF,
         )
         self.sidebar_body = ft.Container(
             expand=True,
@@ -1169,7 +1646,7 @@ class HermesApp:
         )
         self.sidebar = ft.Container(
             content=self.sidebar_body,
-            width=126,
+            width=96,
             bgcolor=SIDEBAR_BACKGROUND,
             border=ft.Border(right=ft.BorderSide(1, BORDER)),
             animate_size=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT_CUBIC),
@@ -1178,8 +1655,7 @@ class HermesApp:
         self._render_sidebar()
 
     def build(self) -> None:
-        self.page.title = "HERMES" \
-        ""
+        self.page.title = "HERMES | Carmel Hotéis"
         self.page.window.icon = str(WINDOW_ICON_PATH)
         configure_page_appearance(self.page)
         self.page.window.width = 1500
@@ -1189,6 +1665,7 @@ class HermesApp:
         footer = ft.Container(
             content=ft.Column([self.status_text, self.progress], spacing=6),
             bgcolor=FOOTER_BACKGROUND,
+            border=ft.Border(top=ft.BorderSide(1, BORDER)),
             padding=ft.Padding(left=18, top=9, right=18, bottom=11),
         )
         body = ft.Row(
@@ -1196,7 +1673,7 @@ class HermesApp:
                 self.sidebar,
                 ft.Container(
                     self.content,
-                    padding=ft.Padding(left=14, top=14, right=14, bottom=10),
+                    padding=ft.Padding(left=20, top=18, right=20, bottom=14),
                     expand=True,
                 ),
             ],
@@ -1208,7 +1685,8 @@ class HermesApp:
 
     def _show(self, index: int) -> None:
         self.selected_index = index
-        self.current = AutomationView(self.page, SPECS[index], self.set_status)
+        view = DanfeView if SPECS[index].key == "danfe" else AutomationView
+        self.current = view(self.page, SPECS[index], self.set_status)
         self.content.content = self.current.control
         self._render_sidebar()
         self.set_status(f"{SPECS[index].name} carregada", 0)
@@ -1224,7 +1702,7 @@ class HermesApp:
         await asyncio.sleep(0.09)
 
         self.sidebar_expanded = not self.sidebar_expanded
-        self.sidebar.width = 270 if self.sidebar_expanded else 126
+        self.sidebar.width = 292 if self.sidebar_expanded else 96
         self._render_sidebar()
         self.page.update()
         await asyncio.sleep(0.08)
@@ -1240,21 +1718,29 @@ class HermesApp:
         self.page.update()
 
     def _show_about(self, _event=None) -> None:
+        logo_source = (
+            CARMEL_ICON_WHITE_SOURCE
+            if self.page.theme_mode == ft.ThemeMode.DARK
+            else LOGO_SOURCE
+        )
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Row(
                 [
                     ft.Image(
-                        src=LOGO_SOURCE, width=34, height=34, fit=ft.BoxFit.CONTAIN
+                        src=logo_source,
+                        width=34,
+                        height=34,
+                        fit=ft.BoxFit.CONTAIN,
                     ),
-                    ft.Text("Sobre o HERMES", weight=ft.FontWeight.BOLD),
+                    ft.Text("HERMES | Carmel Hotéis", weight=ft.FontWeight.W_600),
                 ],
                 spacing=10,
                 tight=True,
             ),
             content=ft.Column(
                 [
-                    ft.Text("Painel de Automação de Planilhas", color=MUTED),
+                    ft.Text("Central de automações contábeis", color=MUTED),
                     ft.Text("Versão 1.0.0", size=12, color=MUTED),
                     ft.Divider(color=BORDER),
                     ft.Text("Desenvolvido por Magno Alves", weight=ft.FontWeight.W_600),
@@ -1268,20 +1754,48 @@ class HermesApp:
         self.page.show_dialog(dialog)
 
     def _render_sidebar(self) -> None:
-        logo_size = 38 if self.sidebar_expanded else 28
-        brand = ft.Row(
-            [
-                ft.Image(
-                    src=LOGO_SOURCE,
-                    width=logo_size,
-                    height=logo_size,
-                    fit=ft.BoxFit.CONTAIN,
-                    tooltip="HERMES",
-                ),
-                ft.Text("HERMES", size=18, weight=ft.FontWeight.BOLD, color=TEXT),
-            ],
-            spacing=7 if self.sidebar_expanded else 5,
-            tight=True,
+        logo_size = 42 if self.sidebar_expanded else 34
+        logo_source = (
+            CARMEL_ICON_WHITE_SOURCE
+            if self.page.theme_mode == ft.ThemeMode.DARK
+            else LOGO_SOURCE
+        )
+        logo = ft.Image(
+            src=logo_source,
+            width=logo_size,
+            height=logo_size,
+            fit=ft.BoxFit.CONTAIN,
+            tooltip="HERMES | Carmel Hotéis",
+        )
+        brand = (
+            ft.Row(
+                [
+                    logo,
+                    ft.Column(
+                        [
+                            ft.Text(
+                                "HERMES",
+                                size=17,
+                                weight=ft.FontWeight.W_600,
+                                color=TEXT,
+                            ),
+                            ft.Text(
+                                "CARMEL HOTÉIS",
+                                size=9,
+                                color=MUTED,
+                                weight=ft.FontWeight.W_600,
+                                style=ft.TextStyle(letter_spacing=1.4),
+                            ),
+                        ],
+                        spacing=0,
+                        tight=True,
+                    ),
+                ],
+                spacing=10,
+                tight=True,
+            )
+            if self.sidebar_expanded
+            else logo
         )
         toggle = ft.IconButton(
             ft.Icons.CHEVRON_LEFT if self.sidebar_expanded else ft.Icons.MENU,
@@ -1320,20 +1834,21 @@ class HermesApp:
             buttons.append(
                 ft.Container(
                     content=content,
-                    height=43,
+                    height=46,
                     padding=ft.Padding(
-                        left=18 if self.sidebar_expanded else 0,
+                        left=16 if self.sidebar_expanded else 0,
                         top=0,
                         right=12 if self.sidebar_expanded else 0,
                         bottom=0,
                     ),
+                    margin=ft.Margin(left=8, top=0, right=8, bottom=0),
                     alignment=ft.Alignment.CENTER_LEFT
                     if self.sidebar_expanded
                     else ft.Alignment.CENTER,
                     bgcolor=(
                         SELECTED_BACKGROUND if selected else ft.Colors.TRANSPARENT
                     ),
-                    border_radius=10,
+                    border_radius=12,
                     tooltip=None if self.sidebar_expanded else spec.name,
                     on_click=lambda _event, current=index: self._show(current),
                 )
@@ -1404,10 +1919,10 @@ class HermesApp:
         self.sidebar_body.content = ft.Column(
             [
                 ft.Container(
-                    header, padding=ft.Padding(left=16, top=14, right=10, bottom=8)
+                    header, padding=ft.Padding(left=14, top=16, right=10, bottom=12)
                 ),
                 ft.Divider(height=1, color=BORDER),
-                ft.Column(buttons, spacing=5, scroll=ft.ScrollMode.AUTO, expand=True),
+                ft.Column(buttons, spacing=4, scroll=ft.ScrollMode.AUTO, expand=True),
                 ft.Divider(height=1, color=BORDER),
                 ft.Container(
                     ft.Column([theme_toggle, about], spacing=2),
@@ -1448,7 +1963,7 @@ class AuthenticatedHermesSession:
             "Entrar",
             icon=ft.Icons.LOGIN,
             bgcolor=BLUE,
-            color=ft.Colors.WHITE,
+            color=ft.Colors.ON_PRIMARY,
             width=360,
             on_click=self._login,
         )
@@ -1456,7 +1971,7 @@ class AuthenticatedHermesSession:
 
     # Configuração visual compartilhada pela tela de login e pelo painel.
     def start(self) -> None:
-        self.page.title = "HERMES"
+        self.page.title = "HERMES | Carmel Hotéis"
         self.page.window.icon = str(WINDOW_ICON_PATH)
         self.page.theme_mode = ft.ThemeMode.DARK
         configure_page_appearance(self.page)
@@ -1548,33 +2063,57 @@ class AuthenticatedHermesSession:
                             [self.theme_button],
                             alignment=ft.MainAxisAlignment.END,
                         ),
-                        ft.Image(
-                            src=LOGO_SOURCE,
-                            width=72,
-                            height=72,
-                            fit=ft.BoxFit.CONTAIN,
+                        ft.Container(
+                            content=ft.Image(
+                                src=CARMEL_WORDMARK_SOURCE,
+                                width=210,
+                                height=82,
+                                fit=ft.BoxFit.CONTAIN,
+                            ),
+                            width=250,
+                            height=104,
+                            alignment=ft.Alignment.CENTER,
+                            bgcolor="#E8E7E1",
+                            border_radius=16,
                         ),
-                        ft.Text("HERMES", size=28, weight=ft.FontWeight.BOLD),
-                        ft.Text("Acesso às automações", color=MUTED, size=13),
-                        ft.Container(height=8),
+                        ft.Container(width=54, height=3, bgcolor=BLUE, border_radius=2),
+                        ft.Text(
+                            "HERMES",
+                            size=31,
+                            weight=ft.FontWeight.W_600,
+                            style=ft.TextStyle(letter_spacing=2.4),
+                        ),
+                        ft.Text(
+                            "CENTRAL DE AUTOMAÇÕES",
+                            color=MUTED,
+                            size=10,
+                            weight=ft.FontWeight.W_600,
+                            style=ft.TextStyle(letter_spacing=1.8),
+                        ),
+                        ft.Text(
+                            "Acesso seguro aos processos contábeis",
+                            color=MUTED,
+                            size=12,
+                        ),
+                        ft.Container(height=6),
                         self.username,
                         self.password,
                         self.message,
                         self.login_button,
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=12,
+                    spacing=11,
                     tight=True,
                 ),
-                width=430,
-                padding=ft.Padding(left=34, top=34, right=34, bottom=38),
+                width=470,
+                padding=ft.Padding(left=44, top=32, right=44, bottom=44),
                 bgcolor=CARD,
                 border=ft.Border.all(1, BORDER),
-                border_radius=18,
+                border_radius=24,
                 shadow=ft.BoxShadow(
-                    blur_radius=30,
-                    color="#66000000",
-                    offset=ft.Offset(0, 12),
+                    blur_radius=36,
+                    color="#40000000",
+                    offset=ft.Offset(0, 14),
                 ),
             )
         )

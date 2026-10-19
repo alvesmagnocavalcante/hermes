@@ -23,7 +23,12 @@ ENV PATH="/app/.venv/bin:$PATH" \
     FLET_FORCE_WEB_SERVER=true \
     FLET_SERVER_IP=0.0.0.0 \
     FLET_SERVER_PORT=8000 \
-    FLET_MAX_UPLOAD_SIZE=104857600
+    FLET_MAX_UPLOAD_SIZE=104857600 \
+    HERMES_CHROMIUM_PATH=/usr/bin/chromium
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends chromium fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --uid 10001 hermes
 

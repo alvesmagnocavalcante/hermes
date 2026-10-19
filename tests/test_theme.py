@@ -4,7 +4,11 @@ import flet as ft
 
 from hermes_ui.theme import (
     BORDER,
+    CARMEL_BROWN,
+    CARMEL_SAND,
     CARD,
+    DARK_SCHEME,
+    LIGHT_SCHEME,
     PAGE_BACKGROUND,
     TEXT,
     next_theme_mode,
@@ -21,3 +25,9 @@ class ThemeConfigurationTest(TestCase):
         self.assertEqual(CARD, ft.Colors.SURFACE_CONTAINER)
         self.assertEqual(BORDER, ft.Colors.OUTLINE_VARIANT)
         self.assertEqual(TEXT, ft.Colors.ON_SURFACE)
+
+    def test_color_schemes_follow_carmel_brand_palette(self):
+        self.assertEqual(LIGHT_SCHEME.primary, CARMEL_BROWN)
+        self.assertEqual(LIGHT_SCHEME.primary_container, CARMEL_SAND)
+        self.assertEqual(DARK_SCHEME.primary, CARMEL_SAND)
+        self.assertEqual(DARK_SCHEME.primary_container, CARMEL_BROWN)

@@ -12,6 +12,8 @@ def normalized(value: str) -> str:
 def status_kind(status: str) -> str:
     """Mapeia os status das automações para os três estados visuais da interface."""
     value = normalized(status)
+    if "divergent" in value:
+        return "error"
     if any(
         word in value
         for word in (

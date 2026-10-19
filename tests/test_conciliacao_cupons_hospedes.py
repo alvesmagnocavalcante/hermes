@@ -14,6 +14,7 @@ from automations.conciliacao_cupons_hospedes import (
     _read_journal,
     STATUS_MISSING,
     STATUS_RECONCILED,
+    STATUS_RECONCILED_VALUE_MISMATCH,
     analyze,
     parse_date,
 )
@@ -97,6 +98,77 @@ class MappingSelectionTest(TestCase):
             _match_account("0019330", accounts, "MAGNA PRAIA"), "10009330"
         )
         self.assertEqual(_match_account("30", accounts, "MAGNA PRAIA"), "30")
+
+    def test_matches_short_account_when_check_has_leading_zeroes(self):
+        accounts = {"32", "10009332"}
+
+        self.assertEqual(_match_account("0032", accounts, "MAGNA PRAIA"), "32")
+        self.assertEqual(_match_account("0060032", accounts, "MAGNA PRAIA"), "32")
+
+    def test_prioritizes_long_account_before_prefixed_short_account(self):
+        accounts = {"32", "10010032"}
+
+        self.assertEqual(
+            _match_account("0010032", accounts, "MAGNA PRAIA"), "10010032"
+        )
+
+    def test_uses_date_and_value_to_resolve_short_account(self):
+        paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
+        short = _Coupon(
+            "MAGNA PRAIA",
+            "PDV",
+            date(2026, 9, 1),
+            "13835",
+            "43",
+            "9500",
+            "INTERNO",
+            "Cupom",
+            Decimal("44.00"),
+        )
+        long = _Coupon(
+            "MAGNA PRAIA",
+            "PDV",
+            date(2026, 9, 23),
+            "15250",
+            "10010043",
+            "9600",
+            "PASSANTE",
+            "Cupom",
+            Decimal("7.00"),
+        )
+        journal = [
+            _JournalRow(
+                "2004", "0010043", date(2026, 9, 1), Decimal("38.50"), "9500"
+            ),
+            _JournalRow("2005", "0010043", date(2026, 9, 1), Decimal("5.50"), "9500"),
+        ]
+
+        with (
+            patch(
+                "automations.conciliacao_cupons_hospedes.identify_file",
+                side_effect=("pdv", "journal"),
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_pdv",
+                return_value={
+                    (item.company, item.account, item.issue_date, item.document): item
+                    for item in (short, long)
+                },
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes._read_journal",
+                return_value=journal,
+            ),
+            patch(
+                "automations.conciliacao_cupons_hospedes.transaction_codes_by_hotel",
+                return_value={"MAGNA": {"2004", "2005"}},
+            ),
+        ):
+            result = analyze(paths)
+
+        short_result = next(item for item in result.coupons if item.account == "43")
+        self.assertEqual(short_result.status, STATUS_RECONCILED)
+        self.assertEqual(short_result.journal_value, Decimal("44.00"))
 
     def test_matches_charme_accounts_using_outlet_prefix(self):
         accounts = {
@@ -247,6 +319,7 @@ class MappingSelectionTest(TestCase):
 
         missing_result = next(item for item in result.coupons if item.document == "2")
         self.assertEqual(missing_result.status, STATUS_MISSING)
+        self.assertEqual(missing_result.difference, Decimal("20.00"))
         self.assertIn("não localizado no Journal", missing_result.status)
 
     def test_reconciles_multiple_coupons_by_account_and_date_total(self):
@@ -300,7 +373,7 @@ class MappingSelectionTest(TestCase):
             all(item.journal_value == Decimal("57.00") for item in result.coupons)
         )
 
-    def test_reconciles_positive_reposting_after_reversal(self):
+    def test_flags_positive_reposting_when_net_total_is_different(self):
         paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
         coupon = _Coupon(
             "CHARME HOSPEDAGEM",
@@ -340,10 +413,13 @@ class MappingSelectionTest(TestCase):
         ):
             result = analyze(paths)
 
-        self.assertEqual(result.coupons[0].status, STATUS_RECONCILED)
-        self.assertEqual(result.coupons[0].journal_value, Decimal("6195.00"))
+        self.assertEqual(
+            result.coupons[0].status, STATUS_RECONCILED_VALUE_MISMATCH
+        )
+        self.assertEqual(result.coupons[0].journal_value, Decimal("-4870.00"))
+        self.assertEqual(result.coupons[0].difference, Decimal("11065.00"))
 
-    def test_reconciles_one_exact_occurrence_among_repeated_postings(self):
+    def test_flags_repeated_postings_when_net_total_is_different(self):
         paths = [Path("pdv.xlsx"), Path("journal.xlsx")]
         coupon = _Coupon(
             "CARMEL TAÍBA",
@@ -392,5 +468,13 @@ class MappingSelectionTest(TestCase):
         ):
             result = analyze(paths)
 
-        self.assertEqual(result.coupons[0].status, STATUS_RECONCILED)
-        self.assertEqual(result.coupons[0].journal_value, Decimal("63.00"))
+        self.assertEqual(
+            result.coupons[0].status, STATUS_RECONCILED_VALUE_MISMATCH
+        )
+        self.assertEqual(result.coupons[0].journal_value, Decimal("126.00"))
+        self.assertEqual(result.coupons[0].difference, Decimal("-63.00"))
+        self.assertEqual(result.total_pdv, Decimal("63.00"))
+        self.assertEqual(result.total_journal, Decimal("126.00"))
+        self.assertEqual(result.total_difference, Decimal("-63.00"))
+        self.assertEqual(result.reconciled, 0)
+        self.assertEqual(result.issues, 1)

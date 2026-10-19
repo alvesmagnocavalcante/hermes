@@ -12,3 +12,4 @@ class PresentationStatusTest(TestCase):
         self.assertEqual(status_kind("Conciliado"), "ok")
         self.assertEqual(status_kind("Cancelado"), "info")
         self.assertEqual(status_kind("Valor divergente"), "error")
+        self.assertEqual(status_kind("Conciliado com valor divergente"), "error")

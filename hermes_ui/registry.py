@@ -432,4 +432,19 @@ SPECS = (
             C("status", "Resultado"),
         ),
     ),
+    AutomationSpec(
+        "danfe",
+        "Download de DANFE",
+        "Baixa DANFEs individualmente pela chave ou em lote por planilha.",
+        "automations.download_danfe",
+        "read_spreadsheet_keys",
+        "entries",
+        (
+            C("key", "Chave de acesso"),
+            C("status", "Resultado"),
+            C("detail", "Detalhe"),
+        ),
+        extensions=("xlsx", "xls", "xlsm", "xltx", "xltm"),
+        formats=("PDF",),
+    ),
 )

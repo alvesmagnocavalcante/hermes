@@ -48,6 +48,7 @@ ACCOUNT_CHECK_PREFIXES = {
 
 STATUS_RECONCILED = "Conciliado"
 STATUS_RECONCILED_OTHER_DATE = "Conciliado em data diferente"
+STATUS_RECONCILED_VALUE_MISMATCH = "Conciliado com valor divergente"
 STATUS_CHECK_WITHOUT_VALUE = "CHECK# localizado sem valor cobrado"
 STATUS_VALUE_MISMATCH = "Valor divergente entre BI/PDV e Journal"
 STATUS_OUTSIDE_PERIOD = "Data do cupom fora do período do Journal"
@@ -74,13 +75,15 @@ class CouponResult:
 
     @property
     def difference(self) -> Decimal | None:
-        return (
-            None if self.journal_value is None else self.pdv_value - self.journal_value
-        )
+        if self.journal_value is not None:
+            return self.pdv_value - self.journal_value
+        if self.status == STATUS_MISSING:
+            return self.pdv_value
+        return None
 
     @property
     def reconciled(self) -> bool:
-        return self.status.startswith("Conciliado")
+        return self.status in {STATUS_RECONCILED, STATUS_RECONCILED_OTHER_DATE}
 
     @property
     def incomplete_period(self) -> bool:
@@ -111,6 +114,16 @@ class ReconciliationResult:
     @property
     def total_pdv(self) -> Decimal:
         return sum((item.pdv_value for item in self.coupons), Decimal())
+
+    @property
+    def total_journal(self) -> Decimal:
+        return sum(
+            (item.journal_value or Decimal() for item in self.coupons), Decimal()
+        )
+
+    @property
+    def total_difference(self) -> Decimal:
+        return self.total_pdv - self.total_journal
 
 
 @dataclass
@@ -299,6 +312,17 @@ def _read_journal(path: Path) -> list[_JournalRow]:
 def _match_account(check: str, accounts: set[str], company: str = "") -> str | None:
     if check in accounts:
         return check
+    # O Opera pode preencher CHECK# curtos com zeros à esquerda. A comparação
+    # numérica torna, por exemplo, 0032 e 32 equivalentes sem confundir 0032
+    # com contas longas que apenas terminam em 32.
+    normalized_check = check.lstrip("0") or "0"
+    zero_padded_matches = [
+        account
+        for account in accounts
+        if account.isdigit() and (account.lstrip("0") or "0") == normalized_check
+    ]
+    if len(zero_padded_matches) == 1:
+        return zero_padded_matches[0]
     # Contas curtas (ex.: 30, 32, 43) não identificam um CHECK por sufixo e
     # podem capturar indevidamente centenas de contas terminadas nesses dígitos.
     # A igualdade exata continua válida pelo teste anterior.
@@ -326,7 +350,50 @@ def _match_account(check: str, accounts: set[str], company: str = "") -> str | N
         if len(account) >= 5
         and prefixes.get(account[0], "") + account[-4:] == check
     ]
-    return transformed_matches[0] if len(transformed_matches) == 1 else None
+    if transformed_matches:
+        return transformed_matches[0] if len(transformed_matches) == 1 else None
+
+    # Contas curtas também recebem o prefixo do ponto de venda no Journal:
+    # na Magna, por exemplo, a conta 32 pode aparecer como CHECK# 0060032.
+    short_transformed_matches = [
+        account
+        for account in accounts
+        if account.isdigit()
+        and len(account) < 5
+        and any(
+            check == prefix + account.zfill(4) for prefix in set(prefixes.values())
+        )
+    ]
+    if len(short_transformed_matches) == 1:
+        return short_transformed_matches[0]
+
+    return None
+
+
+def _resolve_account_for_group(
+    check: str,
+    posting_date: date,
+    values: list[Decimal],
+    accounts: set[str],
+    company: str,
+    coupon_totals: dict[tuple[str, date], Decimal],
+) -> str | None:
+    """Usa data e valor para resolver contas curtas sem criar falsos positivos."""
+    default = _match_account(check, accounts, company)
+    if default is not None and (default, posting_date) in coupon_totals:
+        return default
+
+    journal_total = sum(values, Decimal()).quantize(Decimal("0.01"))
+    contextual = [
+        account
+        for account in accounts
+        if len(account) < 5
+        and check.endswith(account)
+        and (account, posting_date) in coupon_totals
+        and abs(coupon_totals[(account, posting_date)] - journal_total)
+        <= Decimal("0.01")
+    ]
+    return contextual[0] if len(contextual) == 1 else default
 
 
 def _mapping_matches_company(mapping_name: str, company: str) -> bool:
@@ -391,6 +458,14 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     selected_journal = [row for row in journal if row.code in mappings[mapping_name]]
     journal_start = min(row.posting_date for row in selected_journal)
     journal_end = max(row.posting_date for row in selected_journal)
+    company_coupons = [item for item in pdv.values() if item.company == company]
+    coupon_groups: dict[tuple[str, date], list[_Coupon]] = defaultdict(list)
+    coupon_totals: dict[tuple[str, date], Decimal] = defaultdict(Decimal)
+    for coupon in company_coupons:
+        key = (coupon.account, coupon.issue_date)
+        coupon_groups[key].append(coupon)
+        coupon_totals[key] += coupon.value
+
     postings: dict[str, dict[date, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
     positive_postings: dict[str, dict[date, Decimal]] = defaultdict(
         lambda: defaultdict(Decimal)
@@ -398,24 +473,28 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
     positive_posting_values: dict[str, dict[date, list[Decimal]]] = defaultdict(
         lambda: defaultdict(list)
     )
+    journal_groups: dict[tuple[str, date], list[_JournalRow]] = defaultdict(list)
     for row in selected_journal:
-        account = _match_account(row.check, accounts, company)
+        journal_groups[(row.check, row.posting_date)].append(row)
+
+    for (check, posting_date), group in journal_groups.items():
+        account = _resolve_account_for_group(
+            check,
+            posting_date,
+            [row.value for row in group],
+            accounts,
+            company,
+            coupon_totals,
+        )
         if account:
-            postings[account][row.posting_date] += row.value
-            if row.value > 0:
-                positive_postings[account][row.posting_date] += row.value
-                positive_posting_values[account][row.posting_date].append(row.value)
+            for row in group:
+                postings[account][posting_date] += row.value
+                if row.value > 0:
+                    positive_postings[account][posting_date] += row.value
+                    positive_posting_values[account][posting_date].append(row.value)
 
     # O Journal consolida a cobrança por conta/data. O BI pode dividir essa mesma
     # cobrança em mais de um cupom; por isso a comparação usa o total do grupo.
-    company_coupons = [item for item in pdv.values() if item.company == company]
-    coupon_totals: dict[tuple[str, date], Decimal] = defaultdict(Decimal)
-    coupon_counts: dict[tuple[str, date], int] = defaultdict(int)
-    for coupon in company_coupons:
-        key = (coupon.account, coupon.issue_date)
-        coupon_totals[key] += coupon.value
-        coupon_counts[key] += 1
-
     results = []
     for coupon in company_coupons:
         coupon_key = (coupon.account, coupon.issue_date)
@@ -458,22 +537,45 @@ def analyze(paths: list[Path]) -> ReconciliationResult:
         if posting_date is not None:
             journal_value = by_date[posting_date].quantize(Decimal("0.01"))
             if matched_total is not None:
-                journal_value = (
-                    coupon.value
-                    if coupon_counts[coupon_key] > 1
-                    else matched_total
-                )
-                status = (
-                    STATUS_RECONCILED_OTHER_DATE
-                    if posting_date != coupon.issue_date
-                    else STATUS_RECONCILED
-                )
-                if coupon_counts[coupon_key] > 1:
+                group_difference = journal_value - expected_total
+                group = coupon_groups[coupon_key]
+                is_primary = coupon is group[0]
+                if abs(group_difference) > Decimal("0.01"):
+                    if len(group) > 1:
+                        journal_value = (
+                            coupon.value + group_difference
+                            if is_primary
+                            else coupon.value
+                        )
+                    status = (
+                        STATUS_RECONCILED_VALUE_MISMATCH
+                        if is_primary
+                        else STATUS_RECONCILED
+                    )
+                    detail = (
+                        f"Conta localizada, mas o total líquido do Journal é "
+                        f"{money(by_date[posting_date])} e o total do BI/PDV é "
+                        f"{money(expected_total)}."
+                        if is_primary
+                        else "Divergência reportada em outro cupom da mesma conta e data."
+                    )
+                else:
+                    journal_value = coupon.value if len(group) > 1 else matched_total
+                    status = (
+                        STATUS_RECONCILED_OTHER_DATE
+                        if posting_date != coupon.issue_date
+                        else STATUS_RECONCILED
+                    )
+                if len(group) > 1 and abs(group_difference) <= Decimal("0.01"):
                     detail = (
                         f"Conta conciliada pelo total de {money(expected_total)} "
-                        f"de {coupon_counts[coupon_key]} cupons."
+                        f"de {len(group)} cupons."
                     )
-                elif matched_total != by_date[posting_date].quantize(Decimal("0.01")):
+                elif (
+                    abs(group_difference) <= Decimal("0.01")
+                    and matched_total
+                    != by_date[posting_date].quantize(Decimal("0.01"))
+                ):
                     detail = "Valor conciliado pelo relançamento positivo no Journal."
                 elif posting_date != coupon.issue_date:
                     detail = f"Cobrado no Journal em {posting_date:%d/%m/%Y}."
@@ -558,12 +660,15 @@ def save_excel(result: ReconciliationResult, path: Path) -> None:
         ("Conciliados", result.reconciled),
         ("Pendências", result.issues),
         ("Fora do período", result.incomplete),
-        ("Valor total dos cupons", float(result.total_pdv)),
+        ("Valor total BI/PDV", float(result.total_pdv)),
+        ("Valor total Journal", float(result.total_journal)),
+        ("Diferença total", float(result.total_difference)),
     ):
         summary.append([label, value])
     summary.column_dimensions["A"].width = 34
     summary.column_dimensions["B"].width = 42
-    summary["B9"].number_format = "R$ #,##0.00"
+    for cell in summary["B"][8:11]:
+        cell.number_format = "R$ #,##0.00"
 
     detail = workbook.create_sheet("Conferencia")
     detail.append(

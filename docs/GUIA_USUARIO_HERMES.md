@@ -67,7 +67,7 @@ Use **Cumbuco** para relatórios anteriormente identificados como Wind. Wind e C
 
 1. Abra o HERMES.
 2. Use o menu lateral para escolher a atividade.
-3. Para alterar a aparência, selecione **Modo claro** ou **Modo escuro** na parte inferior do menu. A troca não limpa a atividade nem os resultados abertos. O mesmo controle está disponível na tela de login.
+3. Para alterar a aparência, selecione **Modo claro** ou **Modo escuro** na parte inferior do menu. Os dois modos utilizam a identidade visual oficial da Carmel Hotéis. A troca não limpa a atividade nem os resultados abertos. O mesmo controle está disponível na tela de login.
 4. Leia a orientação abaixo de **Arquivos necessários**.
 5. Se houver o campo **Hotel**, selecione o hotel antes de carregar os arquivos.
 6. Clique em **Arquivos**.
@@ -291,6 +291,7 @@ O de/para dos `TRX_CODE` de Taíba, Charme, Magna e Cumbuco já está configurad
 
 - identifica automaticamente o hotel e aplica sua parametrização interna de `TRX_CODE`;
 - relaciona conta do PDV com `CHECK#` do Journal;
+- considera equivalentes números com zeros à esquerda e prefixo do ponto de venda, como conta `32` e `CHECK# 0060032` na Magna;
 - compara data e valor líquido;
 - procura cobrança em outra data quando há correspondência segura de valor.
 
@@ -298,6 +299,7 @@ O de/para dos `TRX_CODE` de Taíba, Charme, Magna e Cumbuco já está configurad
 
 - **Conciliado:** conta, data e valor localizados.
 - **Conciliado em data diferente:** valor localizado em outra data.
+- **Conciliado com valor divergente:** a conta e a data foram localizadas, mas o valor líquido total do Journal difere do BI/PDV. O registro é tratado como pendência.
 - **CHECK# localizado sem valor cobrado:** o `CHECK#` existe no Journal, mas o valor líquido é zero.
 - **Valor divergente entre BI/PDV e Journal:** as duas fontes apresentam valores diferentes.
 - **CHECK# localizado somente em outra data:** existe lançamento para a conta, mas sem correspondência segura de data e valor.
@@ -306,7 +308,7 @@ O de/para dos `TRX_CODE` de Taíba, Charme, Magna e Cumbuco já está configurad
 
 ### Exportação
 
-- Excel: `Resumo`, `Conferencia` e cópias consultáveis das abas do BI/PDV e do Journal utilizados.
+- Excel: `Resumo`, `Conferencia` e cópias consultáveis das abas do BI/PDV e do Journal utilizados. O resumo apresenta os totais do BI/PDV, do Journal e a diferença entre as fontes.
 - PDF: resumo da conferência.
 
 ## 5.5 RPS de Serviços Prestados
@@ -647,6 +649,58 @@ As duas análises não devem ser somadas nem comparadas entre si.
 
 - Excel: `Entradas`, `Saldo final` e cópias das quatro planilhas-base.
 - PDF: seções separadas para as duas conferências.
+
+## 5.13 Download de DANFE
+
+### Objetivo
+
+Consultar a chave de acesso de uma NF-e no portal Consulta DANFE e baixar o
+Documento Auxiliar da Nota Fiscal Eletrônica em PDF.
+
+### Modo individual
+
+1. Selecione **Individual**.
+2. Digite a chave numérica completa, com 44 dígitos.
+3. Clique em **Baixar DANFE**.
+4. Aguarde o navegador disponibilizar o arquivo PDF.
+
+O HERMES valida o tamanho e o dígito verificador da chave antes de consultar o
+portal. A chave não precisa conter espaços, pontos ou hífens.
+
+### Modo em lote
+
+1. Selecione **Em lote**.
+2. Carregue uma planilha `.xlsx` ou `.xls`.
+3. Clique em **Processar lote**.
+4. Ao concluir, baixe o arquivo ZIP.
+
+Durante o lote, a tela atualiza o andamento a cada chave concluída. São exibidos
+o número processado e o total, além das quantidades baixadas, com falha,
+inválidas e duplicadas. A última chave aparece mascarada pelos seis dígitos
+finais. Exemplo: `Processando DANFEs: 35 de 296`.
+
+A planilha deve ter uma coluna chamada `CHAVE`, `CHAVE DE ACESSO`, `CHAVE NF-E`
+ou `CHAVE FISCAL`. O HERMES procura o cabeçalho nas primeiras 20 linhas e pode
+usá-lo em qualquer coluna ou aba. Não é necessário renomear o arquivo nem mover
+a coluna. Chaves repetidas são processadas uma vez; linhas inválidas são
+informadas no resultado.
+
+O ZIP contém:
+
+- um PDF para cada DANFE baixado com sucesso;
+- `resultados.csv`, com linha de origem, chave, status e detalhe de cada item.
+
+O limite padrão é de 300 chaves únicas por lote. Se houver falha parcial, o ZIP
+continua disponível com os PDFs concluídos e o relatório das falhas.
+
+### Observações
+
+- A consulta depende da disponibilidade e do formato do portal externo.
+- O HERMES não contorna CAPTCHA. Se o portal exigir validação humana, tente
+  novamente mais tarde ou faça a consulta diretamente no portal.
+- Os PDFs e arquivos intermediários são temporários no servidor; somente o
+  arquivo baixado pelo usuário permanece.
+- A chave fiscal não é enviada à telemetria nem gravada nos logs operacionais.
 
 ## 6. Exportações
 

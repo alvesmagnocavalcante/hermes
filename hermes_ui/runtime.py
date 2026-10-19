@@ -30,6 +30,9 @@ MAX_TOTAL_UPLOAD_SIZE = positive_int_env(
     "HERMES_MAX_TOTAL_UPLOAD_SIZE", 200 * 1024 * 1024
 )
 JOB_LIMITER = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
+DANFE_JOB_LIMITER = asyncio.Semaphore(
+    positive_int_env("HERMES_MAX_CONCURRENT_DANFE_JOBS", 1)
+)
 
 
 def upload_size(files: Sequence[UploadedFile], web: bool) -> int:

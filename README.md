@@ -21,11 +21,13 @@ Painel web e desktop para conferências contábeis, financeiras, fiscais e opera
 10. Conferência do Contas a Receber.
 11. Conferência do Contas a Pagar.
 12. Custos da Mercadoria Vendida — CMV.
+13. Download de DANFE — consulta individual ou em lote.
 
 ## Requisitos
 
 - Python 3.12 ou superior;
 - `uv` para gerenciamento do ambiente;
+- Google Chrome ou Chromium para o download de DANFE na execução local;
 - Docker Desktop para execução em contêiner.
 
 ## Execução local
