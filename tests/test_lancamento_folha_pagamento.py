@@ -47,6 +47,11 @@ class PayrollSourceSelectionTest(TestCase):
         )
         self.assertTrue({"359", "392"}.issubset(mappings.excluded_events))
         self.assertTrue(NON_ACCOUNTING_EVENTS.issubset(mappings.excluded_events))
+        self.assertTrue(
+            {"1904", "1914", "201", "206", "230"}.issubset(
+                mappings.excluded_events
+            )
+        )
         self.assertIn("AJUDADETRANSPORTEESTAGIARIO", mappings.descriptions)
 
     def test_generates_additional_vacation_events(self):
