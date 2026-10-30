@@ -17,7 +17,7 @@ O catálogo atual contém 12 automações:
 |---|---|---:|---|---|---|
 | `receita` | Conciliação de Receita | 2 | Excel e PDF | Sim | Sim |
 | `diarias` | Conciliação da Receita de Diárias | 2 | Excel e PDF | Sim | Não |
-| `folha` | Lançamento da Folha de Pagamento | 6 ou 7 | Excel, CSV e PDF | Não | Não |
+| `folha` | Lançamento da Folha de Pagamento | 8 ou 9 | Excel, CSV e PDF | Não | Não |
 | `cupons_hospede` | Cupons Emitidos x Conta do Hóspede | 2 | Excel e PDF | Não; identificação automática | Sim |
 | `rps` | RPS de Serviços Prestados | 3 | Excel e PDF | Não; perfil automático | Não |
 | `debito` | Relatório de Notas de Débito | 1 ou mais | Excel e PDF | Não | Não |
@@ -168,14 +168,17 @@ Módulo: `automations/conciliacao_receita_diarias.py`.
 
 Módulo: `automations/lancamento_folha_pagamento.py`.
 
-- Sem férias exige seis relatórios: resumo mensal, INSS, FGTS, IRRF, provisão de férias e provisão de 13º.
-- Com férias exige sete relatórios: resumo mensal, INSS, FGTS, recibo de férias, líquido de férias, provisão de férias e provisão de 13º.
+- Nos hotéis, sem férias exige sete relatórios: resumo mensal, INSS, FGTS, IRRF, provisão de férias, provisão de 13º e líquido mensal.
+- Nos hotéis, com férias exige oito relatórios: resumo mensal, INSS, FGTS, recibo de férias, líquido de férias, provisão de férias, provisão de 13º e líquido mensal.
+- Na CM, o contracheque PDF é obrigatório e acrescenta um arquivo aos cenários anteriores. O IRRF permanece opcional quando há férias.
 - Recibo e líquido de férias são obrigatórios em conjunto.
 - Usa `assets/folha/modelo_folha.xlsm`, salvo quando o usuário envia um modelo junto aos relatórios.
 - Gera lançamentos por centro de custo, elimina totalizadores e evita duplicidade dos eventos detalhados em relatórios específicos.
 - Não gera `REF PLANO ODONTOLÓGICO` nem `REF PLANO DE SAÚDE`.
 - Eventos adicionais parametrizados: `271`, `311` e `359`.
-- Excel: `Resumo`, `Detalhamento`, `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, conforme existência de movimentos.
+- Eventos mensais com valor e sem contas de débito/crédito são preservados como `De/para incompleto`, exibidos na interface e relacionados na aba `Validacoes`.
+- Nos hotéis, o totalizador empresarial do líquido mensal é comparado ao líquido da folha. Na CM, soma-se também o `Total Líquido` extraído do contracheque PDF. A tolerância é de R$ 0,01.
+- Excel: `Resumo`, `Validacoes`, `Detalhamento`, `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, conforme existência de movimentos.
 - CSV: layout CMFlex com 13 campos, `;` como separador, vírgula decimal e sem cabeçalho.
 
 ### 7.4 Cupons Emitidos x Conta do Hóspede

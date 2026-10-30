@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import Workbook
+from pypdf import PdfReader
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -24,6 +25,9 @@ from automations.excel_reader import load_workbook_compatible as load_workbook
 
 SOURCE_LABELS = {
     "summary": "Folha mensal",
+    "advance_liquid": "Líquido de adiantamento",
+    "monthly_liquid": "Líquido mensal",
+    "payslip": "Contracheque",
     "inss": "INSS mensal",
     "fgts": "FGTS mensal",
     "irrf": "IRRF mensal",
@@ -34,6 +38,7 @@ SOURCE_LABELS = {
 }
 BASE_REQUIRED_SOURCES = {
     "summary",
+    "monthly_liquid",
     "inss",
     "fgts",
     "vacation_provision",
@@ -50,6 +55,24 @@ VACATION_EVENT_MAPPINGS = {
     "359": ("Horas Férias Noturnas", "201010601", "201010103"),
     "392": ("Med.Eve.Var.Abono Pecuniário", "201010601", "201010103"),
 }
+# Eventos informativos da folha que não geram lançamento contábil e, por isso,
+# não devem ser incluídos no de/para nem sinalizados como não parametrizados.
+NON_ACCOUNTING_EVENTS = frozenset(
+    {
+        "1900",
+        "1901",
+        "1902",
+        "1903",
+        "1908",
+        "1916",
+        "1917",
+        "1953",
+        "4000",
+        "4001",
+        "4002",
+        "4006",
+    }
+)
 
 
 # Modelos dos lançamentos contábeis, resultado e tabelas de relacionamento.
@@ -78,21 +101,49 @@ class PostingRow:
 
 
 @dataclass(frozen=True)
+class UnparameterizedEvent:
+    event: str
+    description: str
+    occurrences: int
+    value: Decimal
+    source_lines: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class PayrollResult:
     company: str
     period_end: datetime
     earnings: Decimal
     deductions: Decimal
     net_payable: Decimal
+    monthly_liquid: Decimal
+    payslip_liquid: Decimal
     rows: list[PostingRow]
     ignored_rows: int
     excluded_rows: int
     files: dict[str, str]
     warnings: list[str]
+    unparameterized_events: list[UnparameterizedEvent]
 
     @property
     def total(self) -> Decimal:
         return sum((row.value for row in self.rows), Decimal())
+
+    @property
+    def liquid_total(self) -> Decimal:
+        return self.monthly_liquid + self.payslip_liquid
+
+    @property
+    def liquid_difference(self) -> Decimal:
+        return self.liquid_total - self.net_payable
+
+    @property
+    def liquid_status(self) -> str:
+        return (
+            "Conciliado"
+            if abs(self.liquid_difference) <= Decimal("0.01")
+            else "Divergente"
+        )
 
     @property
     def ready(self) -> int:
@@ -156,7 +207,15 @@ def read_tabular(path: Path) -> list[list[str]]:
         workbook.close()
 
 
+def read_pdf_text(path: Path) -> str:
+    reader = PdfReader(path)
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
 def identify_file(path: Path) -> str:
+    if path.suffix.lower() == ".pdf":
+        sample = normalize(read_pdf_text(path))
+        return "payslip" if "DEMONSTRATIVODEPAGAMENTO" in sample else "unknown"
     if path.suffix.lower() not in {".csv", ".xlsx", ".xlsm", ".xls", ".xltx", ".xltm"}:
         return "unknown"
     if path.suffix.lower() != ".csv":
@@ -168,6 +227,11 @@ def identify_file(path: Path) -> str:
         if {"DEPARA", "RESULTADO"}.issubset(sheets):
             return "template"
     sample = normalize("\n".join(";".join(row) for row in read_tabular(path)[:80]))
+    if "RELACAODELIQUIDOSAPAGAR" in sample:
+        if "TP8ADIANTAMENTOSALARIAL" in sample:
+            return "advance_liquid"
+        if "TP1MENSAL" in sample:
+            return "monthly_liquid"
     markers = (
         ("DEMONSTRATIVODEINSS", "inss"),
         ("RELACAODEIRRFDOSEMPREGADOS", "irrf"),
@@ -283,7 +347,7 @@ def read_mappings(path: Path) -> Mappings:
             _account(sheet.cell(row, 16).value)
             for row in range(3, sheet.max_row + 1)
             if sheet.cell(row, 16).value is not None
-        ) | frozenset(VACATION_EVENT_MAPPINGS)
+        ) | frozenset(VACATION_EVENT_MAPPINGS) | NON_ACCOUNTING_EVENTS
 
         rate_events = (
             ("REF INSS MENSAL", 16),
@@ -349,6 +413,85 @@ def extract_payroll_totals(rows: list[list[str]]) -> tuple[Decimal, Decimal, Dec
     return earnings, deductions, net
 
 
+def extract_liquid_total(rows: list[list[str]]) -> Decimal:
+    """Retorna o total empresarial do relatório de líquidos a pagar."""
+    total_rows = [
+        row
+        for row in rows
+        if row and normalize(row[0]).startswith("REGISTROSPARAEMPRESA")
+    ]
+    if not total_rows:
+        raise ValueError(
+            "O relatório de líquidos não contém o totalizador 'Registros para Empresa'."
+        )
+    row = total_rows[-1]
+    return decimal_value(
+        next((value for value in reversed(row) if str(value).strip()), "")
+    )
+
+
+def extract_payslip_liquid(path: Path) -> Decimal:
+    """Soma o Total Líquido de todas as páginas de um contracheque PDF."""
+    total = Decimal()
+    found = 0
+    for page in PdfReader(path).pages:
+        text = page.extract_text() or ""
+        for line in text.splitlines():
+            marker = normalize(line)
+            if "TOTAL" not in marker or "QUIDO" not in marker:
+                continue
+            amounts = re.findall(r"-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2}", line)
+            if amounts:
+                total += decimal_value(amounts[-1])
+                found += 1
+    if not found:
+        raise ValueError(
+            f"{path.name}: não foi encontrado o campo 'Total Líquido' no contracheque."
+        )
+    return total
+
+
+def extract_payslip_period(path: Path) -> tuple[int, int]:
+    text = read_pdf_text(path)
+    match = re.search(r"\b(0[1-9]|1[0-2])/(\d{4})\b", text)
+    if not match:
+        raise ValueError(f"{path.name}: competência não encontrada no contracheque.")
+    return int(match.group(2)), int(match.group(1))
+
+
+def is_central_company(company: str) -> bool:
+    marker = normalize(company)
+    return marker.startswith("CMCENTRAL") or "CENTRALDESERVICOS" in marker
+
+
+def extract_company(rows: list[list[str]]) -> str:
+    """Identifica a empresa no cabeçalho do relatório da folha."""
+    header = rows[:40]
+    for row in header:
+        for value in row:
+            text = str(value or "").strip()
+            match = re.search(
+                r"FILIAL\s*:\s*\d+\s+(.+?)(?:\s+-\s+CNPJ/?CPF\s*:|$)",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if match:
+                return match.group(1).strip()
+
+    for row in header:
+        text = str(row[0] if row else "").strip()
+        match = re.match(r"^\d+\s*-\s*(.+)$", text)
+        if match:
+            return match.group(1).strip()
+
+    for row in header:
+        for value in row:
+            text = str(value or "").strip()
+            if "HOTEL" in normalize(text):
+                return text
+    return "Empresa não identificada"
+
+
 def parse_monthly(
     rows: list[list[str]], mappings: Mappings
 ) -> tuple[list[PostingRow], int]:
@@ -376,21 +519,19 @@ def parse_monthly(
                 completed, include = True, False
             elif not completed:
                 include = True
-        is_event = (
-            bool(re.fullmatch(r"\d+(?:\.0+)?", first))
-            and normalize(description) in mappings.descriptions
-        )
-        if not is_event:
-            continue
-        if completed or not include:
-            ignored += 1
-            continue
-        event = str(int(float(first)))
         earnings = decimal_value(row[3] if len(row) > 3 else None)
         deductions = decimal_value(row[4] if len(row) > 4 else None)
         value = earnings or deductions
-        if not value:
+        is_event = bool(re.fullmatch(r"\d+(?:\.0+)?", first)) and bool(value)
+        if not is_event:
             continue
+        if completed or not include:
+            # Preserva o indicador histórico: somente eventos já reconhecidos
+            # pelo de/para entram na contagem de exclusões aplicadas.
+            if normalize(description) in mappings.descriptions:
+                ignored += 1
+            continue
+        event = str(int(float(first)))
         debit, credit = mappings.events.get(event, ("", ""))
         cost_center, cost_center_name = lookup_organogram(mappings, current_organogram)
         result.append(
@@ -409,6 +550,43 @@ def parse_monthly(
         )
         selected_since_total += 1
     return result, ignored
+
+
+def find_unparameterized_events(
+    rows: list[PostingRow], excluded_events: frozenset[str] = frozenset()
+) -> list[UnparameterizedEvent]:
+    grouped: dict[tuple[str, str], list[PostingRow]] = defaultdict(list)
+    for row in rows:
+        if (
+            row.source == "Folha mensal"
+            and row.event not in excluded_events
+            and (not row.debit or not row.credit)
+        ):
+            grouped[(row.event, row.description)].append(row)
+    return [
+        UnparameterizedEvent(
+            event=event,
+            description=description,
+            occurrences=len(items),
+            value=sum((item.value for item in items), Decimal()),
+            source_lines=tuple(sorted({item.source_line for item in items})),
+        )
+        for (event, description), items in sorted(grouped.items())
+    ]
+
+
+def select_parameterized_events(
+    rows: list[PostingRow], mappings: Mappings
+) -> list[PostingRow]:
+    """Mantém no resultado contábil somente os eventos previstos no de/para.
+
+    A leitura completa da folha é usada para alertar sobre novos eventos, mas
+    esses itens ainda não configurados não são lançamentos importáveis e não
+    devem reduzir o indicador de qualidade.
+    """
+    return [
+        row for row in rows if normalize(row.description) in mappings.descriptions
+    ]
 
 
 def parse_provision(
@@ -678,7 +856,7 @@ def analyze(paths: list[Path]) -> PayrollResult:
     duplicated = [
         SOURCE_LABELS.get(kind, kind)
         for kind, items in grouped.items()
-        if kind != "template" and len(items) > 1
+        if kind not in {"template", "payslip"} and len(items) > 1
     ]
     if duplicated:
         raise ValueError(f"Há mais de um arquivo para: {', '.join(duplicated)}.")
@@ -700,16 +878,44 @@ def analyze(paths: list[Path]) -> PayrollResult:
     mappings = read_mappings(template)
     period_end = extract_period(sources["summary"])
     earnings, deductions, net_payable = extract_payroll_totals(sources["summary"])
-    company = next(
-        (
-            row[0].strip()
-            for row in sources["summary"]
-            if row and "HOTEL" in normalize(row[0])
-        ),
-        "Empresa não identificada",
-    )
+    monthly_liquid = extract_liquid_total(sources["monthly_liquid"])
+    liquid_period = extract_period(sources["monthly_liquid"])
+    if (liquid_period.year, liquid_period.month) != (
+        period_end.year,
+        period_end.month,
+    ):
+        raise ValueError(
+            f"{SOURCE_LABELS['monthly_liquid']} pertence à competência "
+            f"{liquid_period:%m/%Y}, mas a folha pertence a {period_end:%m/%Y}."
+        )
+    company = extract_company(sources["summary"])
+    central_company = is_central_company(company)
+    payslips = grouped.get("payslip", [])
+    if central_company and not payslips:
+        raise ValueError(
+            "Para a CM, selecione também o contracheque PDF usado na "
+            "conferência do líquido."
+        )
+    if not central_company and payslips:
+        raise ValueError("O contracheque PDF deve ser enviado somente para a CM.")
+    payslip_liquid = Decimal()
+    if central_company:
+        for payslip in payslips:
+            payslip_period = extract_payslip_period(payslip)
+            if payslip_period != (period_end.year, period_end.month):
+                raise ValueError(
+                    f"{payslip.name} pertence à competência "
+                    f"{payslip_period[1]:02d}/{payslip_period[0]}, mas a folha "
+                    f"pertence a {period_end:%m/%Y}."
+                )
+            payslip_liquid += extract_payslip_liquid(payslip)
+        selected_sources.add("payslip")
 
-    monthly, monthly_ignored = parse_monthly(sources["summary"], mappings)
+    monthly_candidates, monthly_ignored = parse_monthly(sources["summary"], mappings)
+    unparameterized_events = find_unparameterized_events(
+        monthly_candidates, mappings.excluded_events
+    )
+    monthly = select_parameterized_events(monthly_candidates, mappings)
     vacation_provision, vacation_ignored = parse_provision(
         sources["vacation_provision"], mappings, False
     )
@@ -773,6 +979,21 @@ def analyze(paths: list[Path]) -> PayrollResult:
         extract_fgts_total(sources["fgts"]),
         period_end,
     )
+    liquid_total = monthly_liquid + payslip_liquid
+    liquid_difference = liquid_total - net_payable
+    if abs(liquid_difference) > Decimal("0.01"):
+        validation.append(
+            "Conferência do líquido divergente: mensal "
+            f"{money(monthly_liquid)} + contracheque {money(payslip_liquid)} = "
+            f"{money(liquid_total)}; líquido a pagar da folha "
+            f"{money(net_payable)}; diferença {money(liquid_difference)}."
+        )
+    if unparameterized_events:
+        codes = ", ".join(event.event for event in unparameterized_events)
+        validation.append(
+            f"Há {len(unparameterized_events)} evento(s) sem parametrização "
+            f"contábil neste mês: {codes}."
+        )
     rows = monthly + vacations + vacation_provision + thirteenth + rates
     # A lista "Desconsiderar" elimina do resumo mensal os eventos que já são
     # detalhados pelos relatórios específicos. Aplicá-la novamente ao recibo
@@ -806,20 +1027,32 @@ def analyze(paths: list[Path]) -> PayrollResult:
         )
     )
     files = {
-        SOURCE_LABELS[kind]: grouped[kind][0].name
+        SOURCE_LABELS[kind]: (
+            ", ".join(path.name for path in grouped[kind])
+            if kind == "payslip"
+            else grouped[kind][0].name
+        )
         for kind in selected_sources
     }
     return PayrollResult(
-        company,
-        period_end,
-        earnings,
-        deductions,
-        net_payable,
-        rows,
-        monthly_ignored + vacation_ignored + thirteenth_ignored + liquid_ignored,
-        excluded_rows,
-        files,
-        validation,
+        company=company,
+        period_end=period_end,
+        earnings=earnings,
+        deductions=deductions,
+        net_payable=net_payable,
+        monthly_liquid=monthly_liquid,
+        payslip_liquid=payslip_liquid,
+        rows=rows,
+        ignored_rows=(
+            monthly_ignored
+            + vacation_ignored
+            + thirteenth_ignored
+            + liquid_ignored
+        ),
+        excluded_rows=excluded_rows,
+        files=files,
+        warnings=validation,
+        unparameterized_events=unparameterized_events,
     )
 
 
@@ -931,6 +1164,12 @@ def save_excel(
         ("Proventos da folha", float(result.earnings)),
         ("Descontos da folha", float(result.deductions)),
         ("Líquido a pagar", float(result.net_payable)),
+        ("Líquido mensal", float(result.monthly_liquid)),
+        ("Líquido do contracheque (CM)", float(result.payslip_liquid)),
+        ("Total conferido", float(result.liquid_total)),
+        ("Diferença dos líquidos x folha", float(result.liquid_difference)),
+        ("Status da conferência dos líquidos", result.liquid_status),
+        ("Eventos sem parametrização", len(result.unparameterized_events)),
         ("Totalizadores/duplicadores excluídos", result.ignored_rows),
         ("Eventos da lista Desconsiderar excluídos", result.excluded_rows),
         ("Funcionários em férias incluídos", result.vacation_employees),
@@ -948,12 +1187,17 @@ def save_excel(
         )
         posting_source = "Férias" if source == "Recibo de férias" else source
         rows = result.by_source.get(posting_source, [])
+        source_total = sum((row.value for row in rows), Decimal())
+        if source == SOURCE_LABELS["monthly_liquid"]:
+            source_total = result.monthly_liquid
+        elif source == SOURCE_LABELS["payslip"]:
+            source_total = result.payslip_liquid
         summary.append(
             [
                 label,
                 filename,
                 len(rows),
-                float(sum((row.value for row in rows), Decimal())),
+                float(source_total),
             ]
         )
     if result.warnings:
@@ -969,8 +1213,56 @@ def save_excel(
     summary.column_dimensions["D"].width = 22
     for row in summary.iter_rows():
         for cell in row:
-            if cell.column == 4 and isinstance(cell.value, float):
+            if cell.column in {2, 4} and isinstance(cell.value, float):
                 cell.number_format = "R$ #,##0.00"
+
+    validations = workbook.create_sheet("Validacoes", 1)
+    validations.append(["Conferência dos líquidos", "Valor"])
+    validations.append(["Líquido mensal", float(result.monthly_liquid)])
+    validations.append(["Líquido do contracheque (somente CM)", float(result.payslip_liquid)])
+    validations.append(["Total conferido", float(result.liquid_total)])
+    validations.append(["Líquido a pagar da folha", float(result.net_payable)])
+    validations.append(["Diferença", float(result.liquid_difference)])
+    validations.append(["Status", result.liquid_status])
+    validations.append([])
+    validations.append(
+        [
+            "Evento sem parametrização",
+            "Descrição",
+            "Ocorrências",
+            "Valor",
+            "Linhas no resumo da folha",
+        ]
+    )
+    if result.unparameterized_events:
+        for event in result.unparameterized_events:
+            validations.append(
+                [
+                    event.event,
+                    event.description,
+                    event.occurrences,
+                    float(event.value),
+                    ", ".join(map(str, event.source_lines)),
+                ]
+            )
+    else:
+        validations.append(["Nenhum evento sem parametrização encontrado."])
+    for row_number in (1, 9):
+        for cell in validations[row_number]:
+            cell.style = "Headline 4"
+    for row in validations.iter_rows(min_row=2):
+        for cell in row:
+            if cell.column in {2, 4} and isinstance(cell.value, float):
+                cell.number_format = "R$ #,##0.00"
+    for column, width in {
+        "A": 34,
+        "B": 58,
+        "C": 14,
+        "D": 18,
+        "E": 28,
+    }.items():
+        validations.column_dimensions[column].width = width
+    validations.freeze_panes = "A10"
 
     details = workbook.create_sheet("Detalhamento")
     details.append(
@@ -1099,6 +1391,17 @@ def save_pdf(result: PayrollResult, path: Path) -> None:
         ),
         Paragraph(f"Líquido a pagar: {money(result.net_payable)}", styles["Heading2"]),
         Paragraph(
+            "Conferência dos líquidos: "
+            f"mensal {money(result.monthly_liquid)} + "
+            f"contracheque {money(result.payslip_liquid)} = {money(result.liquid_total)}; "
+            f"diferença {money(result.liquid_difference)} — {result.liquid_status}.",
+            styles["BodyText"],
+        ),
+        Paragraph(
+            f"Eventos sem parametrização contábil: {len(result.unparameterized_events)}.",
+            styles["BodyText"],
+        ),
+        Paragraph(
             f"Exclusões aplicadas: {result.ignored_rows} totalizadores e "
             f"{result.excluded_rows} eventos duplicados do resumo mensal.",
             styles["BodyText"],
@@ -1111,6 +1414,14 @@ def save_pdf(result: PayrollResult, path: Path) -> None:
         Spacer(1, 5 * mm),
         table,
     ]
+    if result.warnings:
+        story.extend(
+            [
+                Spacer(1, 5 * mm),
+                Paragraph("Validações e alertas", styles["Heading2"]),
+                *[Paragraph(warning, styles["BodyText"]) for warning in result.warnings],
+            ]
+        )
     if vacation_groups:
         story.extend(
             [

@@ -305,7 +305,7 @@ class AutomationView:
         return {
             "receita": "Selecione 2 arquivos: Razão Analítico da Contabilidade e Journal de Receita do Opera.",
             "diarias": "Selecione 2 arquivos: planilha de Códigos de Transação e Journal de Receita do Opera.",
-            "folha": "Sem férias: selecione 6 arquivos (folha, INSS, FGTS, IRRF e provisões). Com férias: selecione 7 arquivos, substituindo IRRF por recibo e líquido de férias.",
+            "folha": "Hotéis: sem férias, selecione 7 arquivos; com férias, 8. Envie folha, INSS, FGTS, provisões e líquido mensal. Para a CM, inclua também o contracheque PDF. Com férias, o IRRF é opcional.",
             "cupons_hospede": "Selecione 2 arquivos: relatório BI/PDV e Journal do Opera. A correspondência de transações já está configurada no HERMES.",
             "rps": "Selecione 3 arquivos: encerramentos do Opera (XML), relatório Fiscal do CMFlex e relatório da Prefeitura.",
             "debito": "Selecione uma ou mais planilhas do Relatório de Notas de Débito.",
@@ -428,6 +428,11 @@ class AutomationView:
             )
             self.file_summary.tooltip = names
             self._show_result_details()
+            if self.spec.key == "folha" and (
+                self.result.unparameterized_events
+                or self.result.liquid_status != "Conciliado"
+            ):
+                self._show_payroll_warnings()
             self.file_info.visible = False
             self.metrics.visible = True
             self.details_button.visible = True
@@ -601,13 +606,27 @@ class AutomationView:
                     f"{result.company}  •  Competência {result.period_end:%m/%Y}  •  "
                     f"Proventos {format_value(result.earnings)}  •  Descontos {format_value(result.deductions)}  •  "
                     f"Líquido a pagar {format_value(result.net_payable)}  •  "
+                    f"Líquidos importados {format_value(result.liquid_total)} "
+                    f"({result.liquid_status}; diferença {format_value(result.liquid_difference)})  •  "
+                    f"Eventos sem parametrização: {len(result.unparameterized_events)}  •  "
                     f"Férias: {result.vacation_employees} funcionário(s), "
                     f"{result.vacation_entries} lançamento(s) individualizado(s)  •  "
                     f"Excluídos: {result.ignored_rows} totalizadores e "
                     f"{result.excluded_rows} eventos duplicados do resumo mensal",
                     color=MUTED,
                     size=12,
-                )
+                ),
+                *(
+                    [
+                        ft.Text(
+                            "⚠ " + self._unparameterized_events_message(),
+                            color=RED,
+                            size=12,
+                        )
+                    ]
+                    if result.unparameterized_events
+                    else []
+                ),
             ]
             return
         if self.spec.key == "entrada":
@@ -1056,13 +1075,18 @@ class AutomationView:
                 "Lançamentos",
                 "Prontos para importar",
                 "De/para incompleto",
-                "Exclusões aplicadas",
+                "Diferença dos líquidos",
             )
             values = (
                 total,
                 self.result.ready,
                 total - self.result.ready,
-                self.result.ignored_rows + self.result.excluded_rows,
+                format_value(self.result.liquid_difference),
+            )
+            self.card_values[3].color = (
+                GREEN
+                if self.result.liquid_status == "Conciliado"
+                else RED
             )
             ok, error, info = self.result.ready, total - self.result.ready, 0
         elif self.spec.key == "entrada":
@@ -1146,6 +1170,171 @@ class AutomationView:
             actions=[ft.Button("Fechar", on_click=lambda _: self.page.pop_dialog())],
         )
         self.page.show_dialog(dialog)
+
+    def _show_payroll_warnings(self) -> None:
+        events = self.result.unparameterized_events
+        liquid_ok = self.result.liquid_status == "Conciliado"
+        liquid_color = GREEN if liquid_ok else RED
+        dialog_width = min(max((self.page.width or 720) - 96, 320), 640)
+        event_badges = ft.Row(
+            controls=[
+                ft.Container(
+                    content=ft.Text(
+                        event.event,
+                        color=RED,
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    padding=ft.Padding(left=10, top=6, right=10, bottom=6),
+                    border=ft.Border.all(1, RED),
+                    border_radius=8,
+                )
+                for event in events
+            ],
+            spacing=8,
+            wrap=True,
+            run_spacing=8,
+        )
+        validation_sections: list[ft.Control] = [
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Icon(
+                                    (
+                                        ft.Icons.CHECK_CIRCLE_OUTLINE_ROUNDED
+                                        if liquid_ok
+                                        else ft.Icons.ERROR_OUTLINE_ROUNDED
+                                    ),
+                                    color=liquid_color,
+                                    size=20,
+                                ),
+                                ft.Text(
+                                    "Conferência dos líquidos",
+                                    weight=ft.FontWeight.BOLD,
+                                    expand=True,
+                                ),
+                                ft.Text(
+                                    self.result.liquid_status,
+                                    color=liquid_color,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                            ],
+                            spacing=10,
+                        ),
+                        ft.Text(
+                            f"Líquido mensal: {format_value(self.result.monthly_liquid)}",
+                            size=13,
+                        ),
+                        *(
+                            [
+                                ft.Text(
+                                    "Líquido do contracheque: "
+                                    f"{format_value(self.result.payslip_liquid)}",
+                                    size=13,
+                                )
+                            ]
+                            if self.result.payslip_liquid
+                            else []
+                        ),
+                        ft.Text(
+                            "Total conferido: "
+                            f"{format_value(self.result.liquid_total)}",
+                            size=13,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            "Líquido a pagar da folha: "
+                            f"{format_value(self.result.net_payable)}",
+                            size=13,
+                        ),
+                        ft.Text(
+                            f"Diferença: {format_value(self.result.liquid_difference)}",
+                            color=liquid_color,
+                            size=13,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                    ],
+                    spacing=6,
+                    tight=True,
+                ),
+                padding=14,
+                border=ft.Border.all(1, liquid_color),
+                border_radius=10,
+            )
+        ]
+        if events:
+            validation_sections.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Text(
+                                f"Foram encontrados {len(events)} evento(s) sem "
+                                "contas contábeis configuradas:",
+                                color=MUTED,
+                                size=13,
+                            ),
+                            event_badges,
+                        ],
+                        spacing=10,
+                        tight=True,
+                    ),
+                    padding=14,
+                    border=ft.Border.all(1, RED),
+                    border_radius=10,
+                )
+            )
+        self.page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                content=ft.Container(
+                    width=dialog_width,
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Icon(
+                                        ft.Icons.WARNING_AMBER_ROUNDED,
+                                        color=RED,
+                                        size=24,
+                                    ),
+                                    ft.Text(
+                                        "Validações da folha de pagamento",
+                                        size=22,
+                                        weight=ft.FontWeight.BOLD,
+                                        expand=True,
+                                    ),
+                                ],
+                                spacing=12,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                            ft.Divider(color=BORDER, height=20),
+                            *validation_sections,
+                        ],
+                        spacing=14,
+                        tight=True,
+                        scroll=ft.ScrollMode.AUTO,
+                    ),
+                ),
+                actions=[
+                    ft.Button(
+                        "Entendi",
+                        icon=ft.Icons.CHECK_ROUNDED,
+                        on_click=lambda _: self.page.pop_dialog(),
+                    )
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+        )
+
+    def _unparameterized_events_message(self) -> str:
+        events = self.result.unparameterized_events
+        codes = ", ".join(event.event for event in events)
+        return (
+            f"Há {len(events)} evento(s) sem parametrização contábil neste mês: "
+            f"{codes}."
+        )
 
     def _show_error(self, error: Exception) -> None:
         dialog = ft.AlertDialog(

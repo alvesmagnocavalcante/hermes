@@ -10,6 +10,7 @@ dependencies = [
     "flet[all,desktop]>=0.86.1,<0.87",
     "logfire[system-metrics]>=4.41.0",
     "openpyxl>=3.1.5",
+    "pypdf>=6.21.4",
     "reportlab>=4.4.2",
     "xlrd>=2.0.2",
 ]

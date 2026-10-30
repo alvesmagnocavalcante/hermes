@@ -4,15 +4,29 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
+from openpyxl import load_workbook
+from reportlab.pdfgen import canvas
+
 from automations.lancamento_folha_pagamento import (
     DEFAULT_TEMPLATE,
     Mappings,
+    NON_ACCOUNTING_EVENTS,
+    PayrollResult,
     PostingRow,
+    UnparameterizedEvent,
     build_rates,
+    extract_company,
+    extract_liquid_total,
+    extract_payslip_liquid,
+    extract_payslip_period,
+    find_unparameterized_events,
     identify_file,
+    parse_monthly,
     parse_vacation_receipts,
     read_mappings,
     required_sources,
+    save_excel,
+    select_parameterized_events,
 )
 
 
@@ -32,6 +46,7 @@ class PayrollSourceSelectionTest(TestCase):
             ("Med.Eve.Var.Abono Pecuniário", "201010601", "201010103"),
         )
         self.assertTrue({"359", "392"}.issubset(mappings.excluded_events))
+        self.assertTrue(NON_ACCOUNTING_EVENTS.issubset(mappings.excluded_events))
         self.assertIn("AJUDADETRANSPORTEESTAGIARIO", mappings.descriptions)
 
     def test_generates_additional_vacation_events(self):
@@ -109,6 +124,7 @@ class PayrollSourceSelectionTest(TestCase):
             kind: [Path(f"{kind}.csv")]
             for kind in (
                 "summary",
+                "monthly_liquid",
                 "inss",
                 "fgts",
                 "irrf",
@@ -125,11 +141,12 @@ class PayrollSourceSelectionTest(TestCase):
         with self.assertRaisesRegex(ValueError, "Líquido de férias"):
             required_sources(grouped)
 
-    def test_accepts_seven_reports_when_there_are_vacations(self):
+    def test_accepts_eight_reports_when_there_are_vacations(self):
         grouped = {
             kind: [Path(f"{kind}.csv")]
             for kind in (
                 "summary",
+                "monthly_liquid",
                 "inss",
                 "fgts",
                 "vacation_receipt",
@@ -150,3 +167,215 @@ class PayrollSourceSelectionTest(TestCase):
             )
 
             self.assertEqual(identify_file(path), "irrf")
+
+    def test_identifies_both_liquid_reports_by_payroll_type(self):
+        with TemporaryDirectory() as directory:
+            base = Path(directory)
+            advance = base / "arquivo_a.csv"
+            monthly = base / "arquivo_b.csv"
+            advance.write_text(
+                "RELAÇÃO DE LÍQUIDOS A PAGAR\n"
+                "Período: 01/10/2026 à 31/10/2026 - Tp: 8 - Adiantamento Salarial\n",
+                encoding="utf-8",
+            )
+            monthly.write_text(
+                "RELAÇÃO DE LÍQUIDOS A PAGAR\n"
+                "Período: 01/10/2026 à 31/10/2026 - Tp: 1 - Mensal\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(identify_file(advance), "advance_liquid")
+            self.assertEqual(identify_file(monthly), "monthly_liquid")
+
+    def test_summary_with_monthly_type_is_not_mistaken_for_liquid_report(self):
+        with TemporaryDirectory() as directory:
+            summary = Path(directory) / "arquivo_generico.csv"
+            summary.write_text(
+                "RELAÇÃO DE CÁLCULO\n"
+                "Período: 01/10/2026 à 31/10/2026 - Tp: 1 - Mensal\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(identify_file(summary), "summary")
+
+    def test_extracts_company_total_from_liquid_report(self):
+        rows = [
+            ["Registros para Organograma 3", "3.751,29"],
+            ["Registros para Empresa 92", "87.468,08"],
+        ]
+
+        self.assertEqual(extract_liquid_total(rows), Decimal("87468.08"))
+
+    def test_identifies_and_extracts_payslip_pdf(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "contracheque.pdf"
+            document = canvas.Canvas(str(path))
+            document.drawString(40, 780, "Demonstrativo de Pagamento 10/2026")
+            document.drawString(40, 740, "6.543,18 Total Liquido")
+            document.save()
+
+            self.assertEqual(identify_file(path), "payslip")
+            self.assertEqual(extract_payslip_liquid(path), Decimal("6543.18"))
+            self.assertEqual(extract_payslip_period(path), (2026, 10))
+
+    def test_extracts_company_from_filial_header(self):
+        rows = [
+            ["0008-CM CENTRAL DE SERVICOS ADMINISTRATIVOS LTDA", "28/10/2026"],
+            ["CNPJ/CPF: 35.428.047/0001-35", "Relação de Cálculo"],
+            [
+                "Filial: 1 CM CENTRAL DE SERVICOS ADMINISTRATIVOS LTDA "
+                "- CNPJ/CPF: 35.428.047/0001-35"
+            ],
+        ]
+
+        self.assertEqual(
+            extract_company(rows),
+            "CM CENTRAL DE SERVICOS ADMINISTRATIVOS LTDA",
+        )
+
+    def test_extracts_company_from_numbered_header_as_fallback(self):
+        rows = [["0008-CM CENTRAL DE SERVICOS ADMINISTRATIVOS LTDA"]]
+
+        self.assertEqual(
+            extract_company(rows),
+            "CM CENTRAL DE SERVICOS ADMINISTRATIVOS LTDA",
+        )
+
+    def test_monthly_event_without_mapping_is_reported(self):
+        mappings = Mappings(
+            descriptions=set(),
+            events={},
+            organograms={},
+            organogram_codes={"001": ("0101", "Administração")},
+            provisions={},
+            vacations={},
+            rate_totals={},
+            excluded_events=frozenset(),
+        )
+        rows = [
+            ["Organograma: 001 - Administração"],
+            ["Situação: Normal"],
+            ["Total IRRF"],
+            ["999", "Evento novo", "", "150,25", ""],
+        ]
+
+        postings, _ = parse_monthly(rows, mappings)
+        missing = find_unparameterized_events(postings)
+
+        self.assertEqual(len(postings), 1)
+        self.assertFalse(postings[0].ready)
+        self.assertEqual(len(missing), 1)
+        self.assertEqual(missing[0].event, "999")
+        self.assertEqual(missing[0].value, Decimal("150.25"))
+        self.assertEqual(
+            find_unparameterized_events(postings, frozenset({"999"})), []
+        )
+        self.assertEqual(select_parameterized_events(postings, mappings), [])
+
+    def test_unparameterized_event_does_not_reduce_result_quality(self):
+        mappings = Mappings(
+            descriptions={"SALARIO"},
+            events={"1": ("D", "C")},
+            organograms={},
+            organogram_codes={},
+            provisions={},
+            vacations={},
+            rate_totals={},
+            excluded_events=frozenset(),
+        )
+        candidates = [
+            PostingRow(
+                "Folha mensal",
+                10,
+                "",
+                "CC",
+                "",
+                "1",
+                "Salário",
+                "D",
+                "C",
+                Decimal("100"),
+            ),
+            PostingRow(
+                "Folha mensal",
+                11,
+                "",
+                "CC",
+                "",
+                "999",
+                "Evento novo",
+                "",
+                "",
+                Decimal("50"),
+            ),
+        ]
+
+        result_rows = select_parameterized_events(candidates, mappings)
+
+        self.assertEqual([row.event for row in result_rows], ["1"])
+        self.assertTrue(all(row.ready for row in result_rows))
+        self.assertEqual(
+            [event.event for event in find_unparameterized_events(candidates)],
+            ["999"],
+        )
+
+    def test_unknown_events_outside_target_section_do_not_change_exclusions(self):
+        mappings = Mappings(
+            descriptions={"SALARIO"},
+            events={"1": ("D", "C")},
+            organograms={},
+            organogram_codes={},
+            provisions={},
+            vacations={},
+            rate_totals={},
+            excluded_events=frozenset(),
+        )
+        rows = [
+            ["Organograma: 001 - Administração"],
+            ["999", "Evento desconhecido", "", "50,00", ""],
+            ["1", "Salário", "", "100,00", ""],
+        ]
+
+        postings, ignored = parse_monthly(rows, mappings)
+
+        self.assertEqual(postings, [])
+        self.assertEqual(ignored, 1)
+
+    def test_excel_contains_liquid_and_event_validations(self):
+        missing = UnparameterizedEvent(
+            event="999",
+            description="Evento novo",
+            occurrences=1,
+            value=Decimal("150.25"),
+            source_lines=(4,),
+        )
+        result = PayrollResult(
+            company="Empresa teste",
+            period_end=datetime(2026, 10, 31),
+            earnings=Decimal("300000"),
+            deductions=Decimal("212531.92"),
+            net_payable=Decimal("197842.61"),
+            monthly_liquid=Decimal("191299.43"),
+            payslip_liquid=Decimal("6543.18"),
+            rows=[],
+            ignored_rows=0,
+            excluded_rows=0,
+            files={
+                "Líquido mensal": "mensal.csv",
+                "Contracheque": "contracheque.pdf",
+            },
+            warnings=["Há 1 evento sem parametrização contábil neste mês: 999."],
+            unparameterized_events=[missing],
+        )
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "resultado.xlsx"
+            save_excel(result, output)
+            workbook = load_workbook(output, data_only=True, read_only=True)
+            try:
+                self.assertIn("Validacoes", workbook.sheetnames)
+                sheet = workbook["Validacoes"]
+                self.assertEqual(sheet["B4"].value, 197842.61)
+                self.assertEqual(sheet["B7"].value, "Conciliado")
+                self.assertEqual(sheet["A10"].value, "999")
+            finally:
+                workbook.close()

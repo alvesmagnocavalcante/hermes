@@ -214,7 +214,7 @@ Totalizar os códigos do Journal definidos como diária e diária média para o 
 
 Gerar lançamentos contábeis por centro de custo para folha mensal, férias, provisões, INSS e FGTS, removendo totalizadores e duplicidades.
 
-### Cenário sem férias — 6 arquivos
+### Cenário sem férias — 7 arquivos nos hotéis
 
 1. Resumo mensal da folha.
 2. Relação de INSS.
@@ -222,8 +222,11 @@ Gerar lançamentos contábeis por centro de custo para folha mensal, férias, pr
 4. Relação mensal de IRRF.
 5. Provisão de férias.
 6. Provisão de 13º salário.
+7. Relação de líquidos mensal.
 
-### Cenário com férias — 7 arquivos
+Na CM, inclua também o contracheque em PDF, totalizando 8 arquivos.
+
+### Cenário com férias — 8 arquivos nos hotéis
 
 1. Resumo mensal da folha.
 2. Relação de INSS.
@@ -232,8 +235,13 @@ Gerar lançamentos contábeis por centro de custo para folha mensal, férias, pr
 5. Líquido de férias.
 6. Provisão de férias.
 7. Provisão de 13º salário.
+8. Relação de líquidos mensal.
+
+Na CM, inclua também o contracheque em PDF, totalizando 9 arquivos. O relatório
+de IRRF pode ser enviado adicionalmente quando houver férias.
 
 Recibo e líquido de férias devem ser enviados juntos. No cenário com férias, a relação mensal de IRRF não substitui nenhum dos dois relatórios de férias.
+Se o IRRF mensal também for enviado nesse cenário, o HERMES aceita os dez arquivos e utiliza o relatório na conferência.
 
 ### Parametrização
 
@@ -255,11 +263,14 @@ Eventos adicionais:
 - **De/para incompleto:** falta conta ou centro de custo; não importe antes de corrigir.
 - **Totalizadores removidos:** linhas agregadas foram descartadas para evitar duplicidade.
 - **Eventos desconsiderados:** eventos detalhados em fontes específicas foram retirados do resumo mensal.
+- **Eventos sem parametrização:** aparecem na tela e na aba `Validacoes`, com código, descrição, quantidade, valor e linhas de origem. Esses eventos não são incluídos no CSV até que o de/para seja preenchido.
+- **Conferência dos líquidos nos hotéis:** compara o totalizador `Registros para Empresa` do líquido mensal com o `Líquido a pagar` do resumo da folha.
+- **Conferência dos líquidos na CM:** soma o totalizador do líquido mensal ao `Total Líquido` do contracheque e compara com o `Líquido a pagar` do resumo da folha.
 
 ### Exportação
 
-- Excel: resumo, detalhamento e abas por processo.
-- PDF: resumo executivo.
+- Excel: resumo, aba `Validacoes`, detalhamento e abas por processo.
+- PDF: resumo executivo com a conferência dos líquidos e os alertas encontrados.
 - CSV: arquivo de importação do CMFlex com 13 campos, sem cabeçalho e separado por `;`.
 
 Não abra e salve novamente o CSV no Excel. Isso pode alterar separadores, codificação, casas decimais e zeros dos códigos.
@@ -273,6 +284,8 @@ Não abra e salve novamente o CSV no Excel. Isso pode alterar separadores, codif
 5. Centros de custo.
 6. Linhas com `De/para incompleto`.
 7. Quantidade de funcionários e lançamentos de férias, quando houver.
+8. Status da conferência entre os líquidos importados e o líquido da folha.
+9. Relação de eventos sem parametrização na aba `Validacoes`.
 
 ## 5.4 Cupons Emitidos x Conta do Hóspede
 

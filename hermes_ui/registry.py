@@ -184,6 +184,8 @@ def result_details(result: Any) -> dict[str, str]:
         "earnings": "Proventos",
         "deductions": "Descontos",
         "net_payable": "Líquido a pagar",
+        "monthly_liquid": "Líquido mensal",
+        "payslip_liquid": "Líquido do contracheque",
         "ignored_rows": "Totalizadores removidos",
         "excluded_rows": "Eventos desconsiderados",
     }
@@ -256,6 +258,7 @@ SPECS = (
             C("accounting_origin", "Origem contábil"),
             C("status", "Resultado"),
         ),
+        extensions=("xlsx", "xlsm", "xls", "xltx", "xltm", "csv", "pdf"),
         formats=("Excel", "CSV", "PDF"),
     ),
     AutomationSpec(
