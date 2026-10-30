@@ -23,6 +23,7 @@ from automations.lancamento_folha_pagamento import (
     identify_file,
     parse_monthly,
     parse_vacation_receipts,
+    read_csv,
     read_mappings,
     required_sources,
     save_excel,
@@ -191,6 +192,21 @@ class PayrollSourceSelectionTest(TestCase):
 
             self.assertEqual(identify_file(advance), "advance_liquid")
             self.assertEqual(identify_file(monthly), "monthly_liquid")
+
+    def test_identifies_optional_wind_intermittent_liquid_by_filename(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "LIQUIDO DE INTERMITENTE WIND - 10.2026.csv"
+            path.write_text(
+                "RELAÇÃO DE LÍQUIDOS A PAGAR\n"
+                "Período: 01/10/2026 à 31/10/2026 - Tp: 1 - Mensal\n"
+                "Registros para Empresa 1;2.423,55\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(identify_file(path), "intermittent_liquid")
+            self.assertEqual(
+                extract_liquid_total(read_csv(path)), Decimal("2423.55")
+            )
 
     def test_summary_with_monthly_type_is_not_mistaken_for_liquid_report(self):
         with TemporaryDirectory() as directory:

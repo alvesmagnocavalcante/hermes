@@ -305,7 +305,7 @@ class AutomationView:
         return {
             "receita": "Selecione 2 arquivos: Razão Analítico da Contabilidade e Journal de Receita do Opera.",
             "diarias": "Selecione 2 arquivos: planilha de Códigos de Transação e Journal de Receita do Opera.",
-            "folha": "Hotéis: sem férias, selecione 7 arquivos; com férias, 8. Envie folha, INSS, FGTS, provisões e líquido mensal. Para a CM, inclua também o contracheque PDF. Com férias, o IRRF é opcional.",
+            "folha": "Hotéis: sem férias, selecione 7 arquivos; com férias, 8. Envie folha, INSS, FGTS, provisões e líquido mensal. No Wind, o líquido intermitente é opcional. Para a CM, inclua também o contracheque PDF. Com férias, o IRRF é opcional.",
             "cupons_hospede": "Selecione 2 arquivos: relatório BI/PDV e Journal do Opera. A correspondência de transações já está configurada no HERMES.",
             "rps": "Selecione 3 arquivos: encerramentos do Opera (XML), relatório Fiscal do CMFlex e relatório da Prefeitura.",
             "debito": "Selecione uma ou mais planilhas do Relatório de Notas de Débito.",
@@ -1226,6 +1226,17 @@ class AutomationView:
                         ft.Text(
                             f"Líquido mensal: {format_value(self.result.monthly_liquid)}",
                             size=13,
+                        ),
+                        *(
+                            [
+                                ft.Text(
+                                    "Líquido intermitente: "
+                                    f"{format_value(self.result.intermittent_liquid)}",
+                                    size=13,
+                                )
+                            ]
+                            if self.result.intermittent_liquid
+                            else []
                         ),
                         *(
                             [

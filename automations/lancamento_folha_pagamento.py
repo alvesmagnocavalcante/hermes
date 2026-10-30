@@ -27,6 +27,7 @@ SOURCE_LABELS = {
     "summary": "Folha mensal",
     "advance_liquid": "Líquido de adiantamento",
     "monthly_liquid": "Líquido mensal",
+    "intermittent_liquid": "Líquido intermitente",
     "payslip": "Contracheque",
     "inss": "INSS mensal",
     "fgts": "FGTS mensal",
@@ -129,6 +130,7 @@ class PayrollResult:
     files: dict[str, str]
     warnings: list[str]
     unparameterized_events: list[UnparameterizedEvent]
+    intermittent_liquid: Decimal = Decimal()
 
     @property
     def total(self) -> Decimal:
@@ -136,7 +138,7 @@ class PayrollResult:
 
     @property
     def liquid_total(self) -> Decimal:
-        return self.monthly_liquid + self.payslip_liquid
+        return self.monthly_liquid + self.intermittent_liquid + self.payslip_liquid
 
     @property
     def liquid_difference(self) -> Decimal:
@@ -236,6 +238,8 @@ def identify_file(path: Path) -> str:
         if "TP8ADIANTAMENTOSALARIAL" in sample:
             return "advance_liquid"
         if "TP1MENSAL" in sample:
+            if "INTERMITENTE" in normalize(path.stem):
+                return "intermittent_liquid"
             return "monthly_liquid"
     markers = (
         ("DEMONSTRATIVODEINSS", "inss"),
@@ -878,7 +882,11 @@ def analyze(paths: list[Path]) -> PayrollResult:
     if not template:
         raise ValueError("A planilha modelo da atividade 2 não foi encontrada.")
 
-    selected_sources = required | ({"irrf"} if grouped.get("irrf") else set())
+    selected_sources = (
+        required
+        | ({"irrf"} if grouped.get("irrf") else set())
+        | ({"intermittent_liquid"} if grouped.get("intermittent_liquid") else set())
+    )
     sources = {kind: read_tabular(grouped[kind][0]) for kind in selected_sources}
     mappings = read_mappings(template)
     period_end = extract_period(sources["summary"])
@@ -895,6 +903,25 @@ def analyze(paths: list[Path]) -> PayrollResult:
         )
     company = extract_company(sources["summary"])
     central_company = is_central_company(company)
+    intermittent_liquid = Decimal()
+    if "intermittent_liquid" in sources:
+        if "WIND" not in normalize(company):
+            raise ValueError(
+                "O relatório de líquido intermitente deve ser enviado somente para o Wind."
+            )
+        intermittent_period = extract_period(sources["intermittent_liquid"])
+        if (intermittent_period.year, intermittent_period.month) != (
+            period_end.year,
+            period_end.month,
+        ):
+            raise ValueError(
+                f"{SOURCE_LABELS['intermittent_liquid']} pertence à competência "
+                f"{intermittent_period:%m/%Y}, mas a folha pertence a "
+                f"{period_end:%m/%Y}."
+            )
+        intermittent_liquid = extract_liquid_total(
+            sources["intermittent_liquid"]
+        )
     payslips = grouped.get("payslip", [])
     if central_company and not payslips:
         raise ValueError(
@@ -984,12 +1011,14 @@ def analyze(paths: list[Path]) -> PayrollResult:
         extract_fgts_total(sources["fgts"]),
         period_end,
     )
-    liquid_total = monthly_liquid + payslip_liquid
+    liquid_total = monthly_liquid + intermittent_liquid + payslip_liquid
     liquid_difference = liquid_total - net_payable
     if abs(liquid_difference) > Decimal("0.01"):
         validation.append(
             "Conferência do líquido divergente: mensal "
-            f"{money(monthly_liquid)} + contracheque {money(payslip_liquid)} = "
+            f"{money(monthly_liquid)} + intermitente "
+            f"{money(intermittent_liquid)} + contracheque "
+            f"{money(payslip_liquid)} = "
             f"{money(liquid_total)}; líquido a pagar da folha "
             f"{money(net_payable)}; diferença {money(liquid_difference)}."
         )
@@ -1058,6 +1087,7 @@ def analyze(paths: list[Path]) -> PayrollResult:
         files=files,
         warnings=validation,
         unparameterized_events=unparameterized_events,
+        intermittent_liquid=intermittent_liquid,
     )
 
 
@@ -1170,6 +1200,7 @@ def save_excel(
         ("Descontos da folha", float(result.deductions)),
         ("Líquido a pagar", float(result.net_payable)),
         ("Líquido mensal", float(result.monthly_liquid)),
+        ("Líquido intermitente (Wind)", float(result.intermittent_liquid)),
         ("Líquido do contracheque (CM)", float(result.payslip_liquid)),
         ("Total conferido", float(result.liquid_total)),
         ("Diferença dos líquidos x folha", float(result.liquid_difference)),
@@ -1195,6 +1226,8 @@ def save_excel(
         source_total = sum((row.value for row in rows), Decimal())
         if source == SOURCE_LABELS["monthly_liquid"]:
             source_total = result.monthly_liquid
+        elif source == SOURCE_LABELS["intermittent_liquid"]:
+            source_total = result.intermittent_liquid
         elif source == SOURCE_LABELS["payslip"]:
             source_total = result.payslip_liquid
         summary.append(
@@ -1224,6 +1257,10 @@ def save_excel(
     validations = workbook.create_sheet("Validacoes", 1)
     validations.append(["Conferência dos líquidos", "Valor"])
     validations.append(["Líquido mensal", float(result.monthly_liquid)])
+    if result.intermittent_liquid:
+        validations.append(
+            ["Líquido intermitente (somente Wind)", float(result.intermittent_liquid)]
+        )
     validations.append(["Líquido do contracheque (somente CM)", float(result.payslip_liquid)])
     validations.append(["Total conferido", float(result.liquid_total)])
     validations.append(["Líquido a pagar da folha", float(result.net_payable)])
@@ -1398,6 +1435,7 @@ def save_pdf(result: PayrollResult, path: Path) -> None:
         Paragraph(
             "Conferência dos líquidos: "
             f"mensal {money(result.monthly_liquid)} + "
+            f"intermitente {money(result.intermittent_liquid)} + "
             f"contracheque {money(result.payslip_liquid)} = {money(result.liquid_total)}; "
             f"diferença {money(result.liquid_difference)} — {result.liquid_status}.",
             styles["BodyText"],

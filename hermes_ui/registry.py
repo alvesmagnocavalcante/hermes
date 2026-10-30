@@ -185,6 +185,7 @@ def result_details(result: Any) -> dict[str, str]:
         "deductions": "Descontos",
         "net_payable": "Líquido a pagar",
         "monthly_liquid": "Líquido mensal",
+        "intermittent_liquid": "Líquido intermitente",
         "payslip_liquid": "Líquido do contracheque",
         "ignored_rows": "Totalizadores removidos",
         "excluded_rows": "Eventos desconsiderados",
