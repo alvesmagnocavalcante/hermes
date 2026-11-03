@@ -474,9 +474,11 @@ def is_central_company(company: str) -> bool:
     return marker.startswith("CMCENTRAL") or "CENTRALDESERVICOS" in marker
 
 
-def accepts_intermittent_liquid(company: str) -> bool:
-    marker = normalize(company)
-    return "WIND" in marker or "CHARME" in marker
+def accepts_intermittent_liquid(*identifiers: str) -> bool:
+    return any(
+        "WIND" in normalize(identifier) or "CHARME" in normalize(identifier)
+        for identifier in identifiers
+    )
 
 
 def extract_company(rows: list[list[str]]) -> str:
@@ -911,10 +913,17 @@ def analyze(paths: list[Path]) -> PayrollResult:
     central_company = is_central_company(company)
     intermittent_liquid = Decimal()
     if "intermittent_liquid" in sources:
-        if not accepts_intermittent_liquid(company):
+        intermittent_path = grouped["intermittent_liquid"][0]
+        intermittent_company = extract_company(sources["intermittent_liquid"])
+        if not accepts_intermittent_liquid(
+            company,
+            intermittent_company,
+            intermittent_path.stem,
+        ):
             raise ValueError(
                 "O relatório de líquido intermitente deve ser enviado somente "
-                "para o Wind ou Charme."
+                "para o Wind ou Charme. Empresa identificada: "
+                f"{company}."
             )
         intermittent_period = extract_period(sources["intermittent_liquid"])
         if (intermittent_period.year, intermittent_period.month) != (

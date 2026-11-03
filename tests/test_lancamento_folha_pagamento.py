@@ -212,6 +212,13 @@ class PayrollSourceSelectionTest(TestCase):
     def test_accepts_intermittent_liquid_only_for_wind_and_charme(self):
         self.assertTrue(accepts_intermittent_liquid("CARMEL WIND RESORT LTDA"))
         self.assertTrue(accepts_intermittent_liquid("CARMEL CHARME RESORT LTDA"))
+        self.assertTrue(
+            accepts_intermittent_liquid(
+                "EMPRESA LEGAL SEM NOME DO HOTEL",
+                "EMPRESA LEGAL SEM NOME DO HOTEL",
+                "LIQUIDO DE INTERMITENTE CHARME - 10.2026",
+            )
+        )
         self.assertFalse(accepts_intermittent_liquid("CARMEL MAGNA PRAIA HOTEL"))
         self.assertFalse(accepts_intermittent_liquid("CM CENTRAL DE SERVICOS"))
 
