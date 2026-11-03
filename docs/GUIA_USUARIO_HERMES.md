@@ -225,7 +225,7 @@ Gerar lançamentos contábeis por centro de custo para folha mensal, férias, pr
 7. Relação de líquidos mensal.
 
 Na CM, inclua também o contracheque em PDF, totalizando 8 arquivos.
-No Wind, quando houver pagamento de intermitentes, envie adicionalmente o relatório
+No Wind ou Charme, quando houver pagamento de intermitentes, envie adicionalmente o relatório
 `Líquido de intermitente`. Esse arquivo é opcional e deve manter `INTERMITENTE` no nome.
 
 ### Cenário com férias — 8 arquivos nos hotéis
@@ -267,7 +267,7 @@ Eventos adicionais:
 - **Eventos desconsiderados:** eventos detalhados em fontes específicas foram retirados do resumo mensal.
 - **Eventos sem parametrização:** aparecem na tela e na aba `Validacoes`, com código, descrição, quantidade, valor e linhas de origem. Esses eventos não são incluídos no CSV até que o de/para seja preenchido.
 - **Conferência dos líquidos nos hotéis:** compara o totalizador `Registros para Empresa` do líquido mensal com o `Líquido a pagar` do resumo da folha.
-- **Conferência dos líquidos no Wind:** quando enviado, soma o `Líquido intermitente` ao líquido mensal antes da comparação. O relatório é opcional.
+- **Conferência dos líquidos no Wind e Charme:** quando enviado, soma o `Líquido intermitente` ao líquido mensal antes da comparação. O relatório é opcional.
 - **Conferência dos líquidos na CM:** soma o totalizador do líquido mensal ao `Total Líquido` do contracheque e compara com o `Líquido a pagar` do resumo da folha.
 
 ### Exportação

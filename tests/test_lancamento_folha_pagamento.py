@@ -14,6 +14,7 @@ from automations.lancamento_folha_pagamento import (
     PayrollResult,
     PostingRow,
     UnparameterizedEvent,
+    accepts_intermittent_liquid,
     build_rates,
     extract_company,
     extract_liquid_total,
@@ -49,7 +50,7 @@ class PayrollSourceSelectionTest(TestCase):
         self.assertTrue({"359", "392"}.issubset(mappings.excluded_events))
         self.assertTrue(NON_ACCOUNTING_EVENTS.issubset(mappings.excluded_events))
         self.assertTrue(
-            {"1904", "1914", "201", "206", "230"}.issubset(
+            {"1904", "1914", "201", "205", "206", "230"}.issubset(
                 mappings.excluded_events
             )
         )
@@ -207,6 +208,12 @@ class PayrollSourceSelectionTest(TestCase):
             self.assertEqual(
                 extract_liquid_total(read_csv(path)), Decimal("2423.55")
             )
+
+    def test_accepts_intermittent_liquid_only_for_wind_and_charme(self):
+        self.assertTrue(accepts_intermittent_liquid("CARMEL WIND RESORT LTDA"))
+        self.assertTrue(accepts_intermittent_liquid("CARMEL CHARME RESORT LTDA"))
+        self.assertFalse(accepts_intermittent_liquid("CARMEL MAGNA PRAIA HOTEL"))
+        self.assertFalse(accepts_intermittent_liquid("CM CENTRAL DE SERVICOS"))
 
     def test_summary_with_monthly_type_is_not_mistaken_for_liquid_report(self):
         with TemporaryDirectory() as directory:

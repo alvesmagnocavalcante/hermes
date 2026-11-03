@@ -71,6 +71,7 @@ NON_ACCOUNTING_EVENTS = frozenset(
         "1917",
         "1953",
         "201",
+        "205",
         "206",
         "230",
         "4000",
@@ -471,6 +472,11 @@ def extract_payslip_period(path: Path) -> tuple[int, int]:
 def is_central_company(company: str) -> bool:
     marker = normalize(company)
     return marker.startswith("CMCENTRAL") or "CENTRALDESERVICOS" in marker
+
+
+def accepts_intermittent_liquid(company: str) -> bool:
+    marker = normalize(company)
+    return "WIND" in marker or "CHARME" in marker
 
 
 def extract_company(rows: list[list[str]]) -> str:
@@ -905,9 +911,10 @@ def analyze(paths: list[Path]) -> PayrollResult:
     central_company = is_central_company(company)
     intermittent_liquid = Decimal()
     if "intermittent_liquid" in sources:
-        if "WIND" not in normalize(company):
+        if not accepts_intermittent_liquid(company):
             raise ValueError(
-                "O relatório de líquido intermitente deve ser enviado somente para o Wind."
+                "O relatório de líquido intermitente deve ser enviado somente "
+                "para o Wind ou Charme."
             )
         intermittent_period = extract_period(sources["intermittent_liquid"])
         if (intermittent_period.year, intermittent_period.month) != (
@@ -1200,7 +1207,7 @@ def save_excel(
         ("Descontos da folha", float(result.deductions)),
         ("Líquido a pagar", float(result.net_payable)),
         ("Líquido mensal", float(result.monthly_liquid)),
-        ("Líquido intermitente (Wind)", float(result.intermittent_liquid)),
+        ("Líquido intermitente (Wind/Charme)", float(result.intermittent_liquid)),
         ("Líquido do contracheque (CM)", float(result.payslip_liquid)),
         ("Total conferido", float(result.liquid_total)),
         ("Diferença dos líquidos x folha", float(result.liquid_difference)),
@@ -1259,7 +1266,10 @@ def save_excel(
     validations.append(["Líquido mensal", float(result.monthly_liquid)])
     if result.intermittent_liquid:
         validations.append(
-            ["Líquido intermitente (somente Wind)", float(result.intermittent_liquid)]
+            [
+                "Líquido intermitente (Wind/Charme)",
+                float(result.intermittent_liquid),
+            ]
         )
     validations.append(["Líquido do contracheque (somente CM)", float(result.payslip_liquid)])
     validations.append(["Total conferido", float(result.liquid_total)])

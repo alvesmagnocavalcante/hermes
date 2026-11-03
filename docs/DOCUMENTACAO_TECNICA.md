@@ -178,7 +178,7 @@ Módulo: `automations/lancamento_folha_pagamento.py`.
 - Eventos adicionais parametrizados: `271`, `311` e `359`.
 - Eventos mensais com valor e sem contas de débito/crédito são preservados como `De/para incompleto`, exibidos na interface e relacionados na aba `Validacoes`.
 - Nos hotéis, o totalizador empresarial do líquido mensal é comparado ao líquido da folha. Na CM, soma-se também o `Total Líquido` extraído do contracheque PDF. A tolerância é de R$ 0,01.
-- No Wind, o relatório de líquido intermitente é opcional, identificado pelo termo `INTERMITENTE` no nome e somado ao líquido mensal quando enviado.
+- No Wind e Charme, o relatório de líquido intermitente é opcional, identificado pelo termo `INTERMITENTE` no nome e somado ao líquido mensal quando enviado.
 - Excel: `Resumo`, `Validacoes`, `Detalhamento`, `Folha_Mensal`, `Ferias`, `Provisao_Ferias`, `Provisao_13` e `Rateios_Mensais`, conforme existência de movimentos.
 - CSV: layout CMFlex com 13 campos, `;` como separador, vírgula decimal e sem cabeçalho.
 
